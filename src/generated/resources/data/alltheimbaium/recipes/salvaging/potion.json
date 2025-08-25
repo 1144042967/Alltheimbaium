@@ -1,0 +1,16 @@
+{
+  "type": "silentgear:salvaging",
+  "ingredient": {
+    "item": "minecraft:potion"
+  },
+  "results": [
+    {
+      "count": 1,
+      "item": "minecraft:glass"
+    },
+    {
+      "count": 1,
+      "item": "mysticalagriculture:water_essence"
+    }
+  ]
+}

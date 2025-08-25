@@ -1,0 +1,16 @@
+{
+  "type": "silentgear:salvaging",
+  "ingredient": {
+    "item": "minecraft:enchanted_book"
+  },
+  "results": [
+    {
+      "count": 1,
+      "item": "minecraft:book"
+    },
+    {
+      "count": 1,
+      "item": "minecraft:experience_bottle"
+    }
+  ]
+}
