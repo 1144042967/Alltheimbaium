@@ -1,0 +1,17 @@
+{
+  "type": "mekanism:crushing",
+  "input": {
+    "ingredient": {
+      "item": "minecraft:netherrack"
+    }
+  },
+  "output": {
+    "item": "exdeorum:crushed_netherrack"
+  },
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "mekanism"
+    }
+  ]
+}

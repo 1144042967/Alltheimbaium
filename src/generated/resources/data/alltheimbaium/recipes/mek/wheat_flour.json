@@ -1,0 +1,17 @@
+{
+  "type": "mekanism:crushing",
+  "input": {
+    "ingredient": {
+      "item": "minecraft:wheat"
+    }
+  },
+  "output": {
+    "item": "minecraft:wheat_flour"
+  },
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "mekanism"
+    }
+  ]
+}

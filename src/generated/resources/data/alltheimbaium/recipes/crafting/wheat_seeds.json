@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "food",
+  "group": "wooden_button",
+  "ingredients": [
+    {
+      "item": "minecraft:wheat"
+    }
+  ],
+  "result": {
+    "item": "minecraft:wheat_seeds"
+  }
+}

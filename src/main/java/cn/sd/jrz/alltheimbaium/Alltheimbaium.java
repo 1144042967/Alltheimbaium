@@ -1,6 +1,6 @@
-package cn.sd.jrz.neatchunk;
+package cn.sd.jrz.alltheimbaium;
 
-import cn.sd.jrz.neatchunk.setup.Registration;
+import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
