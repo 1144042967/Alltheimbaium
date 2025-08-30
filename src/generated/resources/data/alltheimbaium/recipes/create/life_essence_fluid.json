@@ -1,0 +1,19 @@
+{
+  "type": "create:mixing",
+  "ingredients": [
+    {
+      "amount": 250,
+      "fluid": "industrialforegoing:meat"
+    },
+    {
+      "amount": 250,
+      "fluid": "minecraft:water"
+    }
+  ],
+  "results": [
+    {
+      "amount": 500,
+      "fluid": "bloodmagic:life_essence_fluid"
+    }
+  ]
+}

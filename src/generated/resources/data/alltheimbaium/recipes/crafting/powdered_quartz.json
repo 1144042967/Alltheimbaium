@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "dust",
+  "ingredients": [
+    {
+      "item": "ae2:certus_quartz_dust"
+    },
+    {
+      "item": "minecraft:lava_bucket"
+    }
+  ],
+  "result": {
+    "item": "enderio:powdered_quartz"
+  }
+}

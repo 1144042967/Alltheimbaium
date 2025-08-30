@@ -1,0 +1,21 @@
+{
+  "type": "mekanism:metallurgic_infusing",
+  "itemInput": {
+    "ingredient": {
+      "item": "ae2:certus_quartz_dust"
+    }
+  },
+  "chemicalInput": {
+    "amount": 5,
+    "tag": "mekanism:carbon"
+  },
+  "output": {
+    "item": "ae2:sky_dust"
+  },
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "mekanism"
+    }
+  ]
+}

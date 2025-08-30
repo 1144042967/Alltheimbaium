@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "dust",
+  "ingredients": [
+    {
+      "item": "enderio:powdered_quartz"
+    },
+    {
+      "item": "minecraft:water_bucket"
+    }
+  ],
+  "result": {
+    "item": "ae2:certus_quartz_dust"
+  }
+}

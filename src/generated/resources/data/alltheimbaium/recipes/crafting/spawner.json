@@ -5,19 +5,16 @@
     "A": {
       "item": "allthemodium:allthemodium_ingot"
     },
-    "B": {
-      "item": "minecraft:sculk"
-    },
     "#": {
-      "item": "minecraft:netherite_ingot"
+      "item": "minecraft:chain"
     }
   },
   "pattern": [
+    "###",
     "#A#",
-    "#B#",
     "###"
   ],
   "result": {
-    "item": "allthemodium:allthemodium_upgrade_smithing_template"
+    "item": "minecraft:spawner"
   }
 }

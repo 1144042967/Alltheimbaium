@@ -1,0 +1,21 @@
+{
+  "type": "mekanism:metallurgic_infusing",
+  "itemInput": {
+    "ingredient": {
+      "item": "minecraft:iron_ingot"
+    }
+  },
+  "chemicalInput": {
+    "amount": 20,
+    "tag": "mekanism:carbon"
+  },
+  "output": {
+    "item": "alltheores:steel_ingot"
+  },
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "mekanism"
+    }
+  ]
+}
