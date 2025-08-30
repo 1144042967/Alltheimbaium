@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "block",
+  "key": {
+    "A": {
+      "item": "allthemodium:vibranium_ingot"
+    },
+    "B": {
+      "item": "minecraft:gilded_blackstone"
+    },
+    "#": {
+      "item": "allthemodium:allthemodium_ingot"
+    }
+  },
+  "pattern": [
+    "#A#",
+    "#B#",
+    "###"
+  ],
+  "result": {
+    "item": "allthemodium:vibranium_upgrade_smithing_template"
+  }
+}

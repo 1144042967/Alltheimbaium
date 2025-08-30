@@ -59,9 +59,6 @@ public class AlltheimbaiumFarmlandBlock extends FarmBlock implements EntityBlock
         BlockPos pos = tile.getBlockPos().above();
         BlockState state = level.getBlockState(pos);
         Block block = state.getBlock();
-        if (block instanceof StemBlock) {
-            return;
-        }
         if (block instanceof BonemealableBlock bonemealable) {
             bonemealable.performBonemeal((ServerLevel) level, level.random, pos, state);
         }
@@ -97,8 +94,9 @@ public class AlltheimbaiumFarmlandBlock extends FarmBlock implements EntityBlock
 
     @Override
     public boolean canSustainPlant(@Nonnull BlockState state, @Nonnull BlockGetter level, BlockPos pos, @Nonnull Direction facing, IPlantable plantable) {
+        BlockState plant = plantable.getPlant(level, pos.relative(facing));
         var type = plantable.getPlantType(level, pos.relative(facing));
-        return type == PlantType.CROP;
+        return type == PlantType.CROP || plant.getBlock() instanceof StemBlock;
     }
 
     @Override

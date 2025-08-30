@@ -1,12 +1,13 @@
 {
-  "type": "mekanism:crushing",
+  "type": "mekanism:enriching",
   "input": {
     "ingredient": {
       "item": "minecraft:wheat"
     }
   },
   "output": {
-    "item": "minecraft:wheat_flour"
+    "count": 2,
+    "item": "create:wheat_flour"
   },
   "conditions": [
     {

@@ -1,0 +1,12 @@
+{
+  "type": "silentgear:salvaging",
+  "ingredient": {
+    "item": "allthemodium:vibranium_shovel"
+  },
+  "results": [
+    {
+      "count": 2,
+      "item": "allthemodium:vibranium_ingot"
+    }
+  ]
+}

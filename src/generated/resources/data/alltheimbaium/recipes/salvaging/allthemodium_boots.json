@@ -1,0 +1,12 @@
+{
+  "type": "silentgear:salvaging",
+  "ingredient": {
+    "item": "allthemodium:allthemodium_boots"
+  },
+  "results": [
+    {
+      "count": 2,
+      "item": "allthemodium:allthemodium_ingot"
+    }
+  ]
+}

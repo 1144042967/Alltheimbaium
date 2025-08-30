@@ -1,0 +1,12 @@
+{
+  "type": "silentgear:salvaging",
+  "ingredient": {
+    "item": "allthemodium:unobtainium_boots"
+  },
+  "results": [
+    {
+      "count": 2,
+      "item": "allthemodium:unobtainium_ingot"
+    }
+  ]
+}
