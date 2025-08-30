@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "mystical_agriculture_crux",
+  "key": {
+    "S": {
+      "item": "mysticalagradditions:insanium_farmland"
+    },
+    "A": {
+      "item": "mysticalagradditions:dragon_scale"
+    },
+    "#": {
+      "item": "mysticalagradditions:insanium_block"
+    }
+  },
+  "pattern": [
+    "#A#",
+    "ASA",
+    "#A#"
+  ],
+  "result": {
+    "item": "kubejs:magical_soil"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "type": "crafting_shaped",
+  "key": {
+    "E": {
+      "item": "mysticalagradditions:insanium_essence"
+    },
+    "H": {
+      "item": "botania:terrasteel_block"
+    },
+    "W": {
+      "item": "botania:gaia_ingot"
+    },
+    "D": {
+      "tag": "forge:storage_blocks/diamond"
+    }
+  },
+  "pattern": [
+    "EHE",
+    "WDW",
+    "EWE"
+  ],
+  "result": {
+    "item": "mysticalagradditions:gaia_spirit_crux"
+  }
+}
