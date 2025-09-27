@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "alltheimbaium_tool",
+  "key": {
+    "S": {
+      "item": "minecraft:stick"
+    },
+    "X": {
+      "item": "minecraft:stone"
+    }
+  },
+  "pattern": [
+    " XS",
+    "SSX",
+    "SS "
+  ],
+  "result": {
+    "item": "alltheimbaium:tool",
+    "count": 64
+  }
+}

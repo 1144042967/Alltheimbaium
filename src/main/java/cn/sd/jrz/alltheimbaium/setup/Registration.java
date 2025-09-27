@@ -3,6 +3,7 @@ package cn.sd.jrz.alltheimbaium.setup;
 import cn.sd.jrz.alltheimbaium.Alltheimbaium;
 import cn.sd.jrz.alltheimbaium.block.AlltheimbaiumFarmlandBlock;
 import cn.sd.jrz.alltheimbaium.entity.CommonEntity;
+import cn.sd.jrz.alltheimbaium.item.HeatBallItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
@@ -31,6 +32,7 @@ public class Registration {
                 .icon(() -> new ItemStack(Registration.FARMLAND_ITEM.get()))
                 .displayItems((parameters, output) -> {
                     output.accept(Registration.FARMLAND_ITEM.get());
+                    output.accept(Registration.HEAT_BALL_ITEM.get());
                 })
                 .build()
         );
@@ -44,6 +46,7 @@ public class Registration {
     //ITEM
 
     public static final RegistryObject<Item> FARMLAND_ITEM = ITEMS.register("farmland", () -> new BlockItem(FARMLAND_BLOCK.get(), new Item.Properties()));
+    public static final RegistryObject<HeatBallItem> HEAT_BALL_ITEM = ITEMS.register("heat_ball", HeatBallItem::new);
 
     //Entities
 

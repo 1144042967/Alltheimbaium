@@ -2,7 +2,7 @@
   "type": "mekanism:metallurgic_infusing",
   "itemInput": {
     "ingredient": {
-      "item": "minecraft:iron_ingot"
+      "item": "alltheores:iron_dust"
     }
   },
   "chemicalInput": {

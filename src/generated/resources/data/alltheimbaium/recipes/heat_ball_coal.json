@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "heat_ball",
+  "ingredients": [
+    {
+      "item": "minecraft:coal"
+    },
+    {
+      "item": "alltheimbaium:tool"
+    }
+  ],
+  "result": {
+    "item": "alltheimbaium:heat_ball",
+    "count": 8
+  }
+}
