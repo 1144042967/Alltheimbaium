@@ -29,10 +29,11 @@ public class Registration {
         ENTITIES.register(context.getModEventBus());
         CREATIVE_MODE_TABS.register(Alltheimbaium.MODID, () -> CreativeModeTab.builder()
                 .title(Component.translatable("itemGroup." + Alltheimbaium.MODID))
-                .icon(() -> new ItemStack(Registration.FARMLAND_ITEM.get()))
+                .icon(() -> new ItemStack(Registration.TOOL_ITEM.get()))
                 .displayItems((parameters, output) -> {
-                    output.accept(Registration.FARMLAND_ITEM.get());
+                    output.accept(Registration.TOOL_ITEM.get());
                     output.accept(Registration.HEAT_BALL_ITEM.get());
+                    output.accept(Registration.FARMLAND_ITEM.get());
                 })
                 .build()
         );
@@ -44,9 +45,9 @@ public class Registration {
     public static final RegistryObject<Block> FARMLAND_BLOCK = BLOCKS.register("farmland", AlltheimbaiumFarmlandBlock::new);
 
     //ITEM
-
-    public static final RegistryObject<Item> FARMLAND_ITEM = ITEMS.register("farmland", () -> new BlockItem(FARMLAND_BLOCK.get(), new Item.Properties()));
+    public static final RegistryObject<Item> TOOL_ITEM = ITEMS.register("tool", () -> new Item(new Item.Properties()));
     public static final RegistryObject<HeatBallItem> HEAT_BALL_ITEM = ITEMS.register("heat_ball", HeatBallItem::new);
+    public static final RegistryObject<Item> FARMLAND_ITEM = ITEMS.register("farmland", () -> new BlockItem(FARMLAND_BLOCK.get(), new Item.Properties()));
 
     //Entities
 

@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "minecraft:item/tool"
+    "layer0": "alltheimbaium:item/tool"
   }
 }

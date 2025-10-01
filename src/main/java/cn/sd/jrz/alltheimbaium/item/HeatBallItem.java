@@ -23,7 +23,7 @@ import javax.annotation.Nonnull;
 
 public class HeatBallItem extends Item {
     public HeatBallItem() {
-        super(new Item.Properties().durability(64));
+        super(new Item.Properties());
     }
 
     @Override

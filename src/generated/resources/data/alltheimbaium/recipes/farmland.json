@@ -2,38 +2,23 @@
   "type": "minecraft:crafting_shaped",
   "group": "mystical_agriculture_growth_accelerator",
   "key": {
-    "S": {
-      "item": "mysticalagradditions:insanium_farmland"
-    },
-    "X": {
-      "item": "minecraft:water_bucket"
-    },
-    "Y": {
-      "item": "mysticalagriculture:supremium_growth_accelerator"
-    },
     "A": {
-      "item": "mysticalagradditions:nether_star_crux"
+      "item": "minecraft:dragon_egg"
     },
     "B": {
-      "item": "mysticalagradditions:dragon_egg_crux"
+      "item": "minecraft:dirt"
     },
     "C": {
-      "item": "kubejs:magical_soil"
+      "item": "minecraft:nether_star"
     },
     "D": {
-      "item": "mysticalagradditions:gaia_spirit_crux"
-    },
-    "E": {
-      "item": "mysticalagradditions:awakened_draconium_crux"
-    },
-    "F": {
-      "item": "mysticalagradditions:nitro_crystal_crux"
+      "item": "minecraft:bone_block"
     }
   },
   "pattern": [
-    "AXD",
-    "BSE",
-    "CYF"
+    "DAD",
+    "CBC",
+    "DCD"
   ],
   "result": {
     "item": "alltheimbaium:farmland"
