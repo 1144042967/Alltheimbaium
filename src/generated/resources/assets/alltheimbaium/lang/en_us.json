@@ -1,6 +1,17 @@
 {
   "itemGroup.alltheimbaium": "Alltheimbaium",
-  "block.alltheimbaium.farmland": "Alltheimbaium Farmland",
-  "item.alltheimbaium.heat_ball": "Alltheimbaium Heat Ball",
-  "item.alltheimbaium.tool": "Alltheimbaium Tool"
+  "screen.alltheimbaium.farm.description": "Level: %s",
+  "screen.alltheimbaium.farm.product": "%s, Current: %s, Output: %s/tick",
+  "item.alltheimbaium.package_material_x8": "ATI Package Material X8",
+  "item.alltheimbaium.package_material_x64": "ATI Package Material X64",
+  "item.alltheimbaium.package_material_x512": "ATI Package Material X512",
+  "item.alltheimbaium.package_material_x4k": "ATI Package Material X4K",
+  "item.alltheimbaium.package_material_x32k": "ATI Package Material X32K",
+  "item.alltheimbaium.package_material_x256k": "ATI Package Material X256K",
+  "item.alltheimbaium.package_material_x2m": "ATI Package Material X2M",
+  "item.alltheimbaium.package_material_x16m": "ATI Package Material X16M",
+  "item.alltheimbaium.package_material_x128m": "ATI Package Material X128M",
+  "item.alltheimbaium.package_material_xg": "ATI Package Material XG",
+  "block.alltheimbaium.farmland": "ATI Farmland",
+  "block.alltheimbaium.farm_iron_golem": "ATI Iron Golem Farm"
 }

@@ -1,6 +1,17 @@
 {
   "itemGroup.alltheimbaium": "Alltheimbaium",
-  "block.alltheimbaium.farmland": "Alltheimbaium 耕地",
-  "item.alltheimbaium.heat_ball": "Alltheimbaium 热能球",
-  "item.alltheimbaium.tool": "Alltheimbaium 工具"
+  "screen.alltheimbaium.farm.description": "等级: %s",
+  "screen.alltheimbaium.farm.product": "%s, 存量: %s, 输出: %s/tick",
+  "item.alltheimbaium.package_material_x8": "ATI 打包材料 X8",
+  "item.alltheimbaium.package_material_x64": "ATI 打包材料 X64",
+  "item.alltheimbaium.package_material_x512": "ATI 打包材料 X512",
+  "item.alltheimbaium.package_material_x4k": "ATI 打包材料 X4K",
+  "item.alltheimbaium.package_material_x32k": "ATI 打包材料 X32K",
+  "item.alltheimbaium.package_material_x256k": "ATI 打包材料 X256K",
+  "item.alltheimbaium.package_material_x2m": "ATI 打包材料 X2M",
+  "item.alltheimbaium.package_material_x16m": "ATI 打包材料 X16M",
+  "item.alltheimbaium.package_material_x128m": "ATI 打包材料 X128M",
+  "item.alltheimbaium.package_material_xg": "ATI 打包材料 XG",
+  "block.alltheimbaium.farmland": "ATI 耕地",
+  "block.alltheimbaium.farm_iron_golem": "ATI 刷铁机"
 }

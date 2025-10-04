@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AlltheimbaiumFarmlandBlock extends FarmBlock implements EntityBlock {
+public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.FarmBlock implements EntityBlock {
     public AlltheimbaiumFarmlandBlock() {
         super(Properties.copy(Blocks.FARMLAND));
     }
