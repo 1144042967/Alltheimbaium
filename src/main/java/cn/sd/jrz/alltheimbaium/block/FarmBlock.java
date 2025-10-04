@@ -5,6 +5,8 @@ import cn.sd.jrz.alltheimbaium.setup.DataConfig;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -63,7 +65,7 @@ public class FarmBlock extends Block implements EntityBlock {
         List<DataConfig.ItemProduct> productList = config.getProductList();
         for (int i = 0; i < productList.size(); i++) {
             DataConfig.ItemProduct product = productList.get(i);
-            generator.outputArray[i] = Tool.suit(generator.outputArray[i] + product.count);
+            generator.outputArray[i] = Tool.suit(generator.outputArray[i] + product.count * generator.level);
         }
         //传输
         BlockPos blockPos = generator.getBlockPos();
@@ -179,8 +181,17 @@ public class FarmBlock extends Block implements EntityBlock {
 
     private void addLevel(Player player, FarmEntity generator, ItemStack stackInHand) {
         long count = stackInHand.getCount();
+        long level = 1;
+        if (stackInHand.hasTag()) {
+            CompoundTag tag = stackInHand.getTagElement("BlockEntityTag");
+            if (tag != null) {
+                if (tag.contains("level", Tag.TAG_LONG)) {
+                    level = Tool.suit(tag.getLong("level"));
+                }
+            }
+        }
         long old = generator.level;
-        generator.level = Tool.suit(old + count);
+        generator.level = Tool.suit(old + count * level);
         count = generator.level - old;
         player.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(stackInHand.getItem(), (int) (stackInHand.getCount() - count)));
     }
@@ -195,6 +206,7 @@ public class FarmBlock extends Block implements EntityBlock {
                 return false;
             }
             Tool.takeItem(player, new ItemStack(product.item));
+            generator.outputArray[i] -= 1000L;
             return true;
         }
         return false;

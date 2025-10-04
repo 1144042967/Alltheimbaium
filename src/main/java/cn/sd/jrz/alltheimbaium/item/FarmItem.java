@@ -22,7 +22,7 @@ public class FarmItem extends BlockItem {
     private final DataConfig config;
 
     public FarmItem(Block block, DataConfig config) {
-        super(block, new Properties().stacksTo(1).fireResistant());
+        super(block, new Properties().fireResistant());
         this.config = config;
     }
 
@@ -36,10 +36,10 @@ public class FarmItem extends BlockItem {
             CompoundTag tag = stack.getTagElement("BlockEntityTag");
             if (tag != null) {
                 if (tag.contains("level", Tag.TAG_LONG)) {
-                    level = Tool.suit(tag.getLong("output"));
+                    level = Tool.suit(tag.getLong("level"));
                 }
-                if (tag.contains("outputArray", Tag.TAG_LONG_ARRAY)) {
-                    long[] tempArray = tag.getLongArray("outputArray");
+                if (tag.contains("output_array", Tag.TAG_LONG_ARRAY)) {
+                    long[] tempArray = tag.getLongArray("output_array");
                     for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
                         outputArray[i] = Tool.suit(tempArray[i]);
                     }

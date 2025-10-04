@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
 public class FarmEntity extends BlockEntity implements ICapabilityProvider {
     private final LazyOptional<FarmConnection> fecOptional = LazyOptional.of(() -> new FarmConnection(this));
     public final DataConfig config;
-    public long level = 1;
+    public long level;
     public long[] outputArray;
 
     public FarmEntity(BlockPos pos, BlockState state, DataConfig config) {
@@ -40,17 +40,17 @@ public class FarmEntity extends BlockEntity implements ICapabilityProvider {
     public void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
         nbt.putLong("level", level);
-        nbt.putLongArray("outputArray", outputArray);
+        nbt.putLongArray("output_array", outputArray);
     }
 
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
         if (nbt.contains("level", Tag.TAG_LONG)) {
-            this.level = Tool.suit(nbt.getLong("output"));
+            this.level = Tool.suit(nbt.getLong("level"));
         }
-        if (nbt.contains("outputArray", Tag.TAG_LONG_ARRAY)) {
-            long[] tempArray = nbt.getLongArray("outputArray");
+        if (nbt.contains("output_array", Tag.TAG_LONG_ARRAY)) {
+            long[] tempArray = nbt.getLongArray("output_array");
             for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
                 this.outputArray[i] = Tool.suit(tempArray[i]);
             }
