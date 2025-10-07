@@ -29,7 +29,7 @@ public class FarmConnection implements IItemHandler {
             return ItemStack.EMPTY;
         }
         Item item = config.getProductList().get(slot).item;
-        int maxOutput = Tool.suitInt(owner.outputArray[slot] / 1000);
+        int maxOutput = Tool.suitInt(owner.saveArray[slot]);
         return new ItemStack(item, maxOutput);
     }
 
@@ -43,13 +43,13 @@ public class FarmConnection implements IItemHandler {
         if (slot < 0 || slot >= config.getProductList().size()) {
             return ItemStack.EMPTY;
         }
-        int maxOutput = Tool.suitInt(owner.outputArray[slot] / 1000);
+        int maxOutput = Tool.suitInt(owner.saveArray[slot]);
         if (maxOutput <= 0 || amount <= 0) {
             return ItemStack.EMPTY;
         }
         int ret = Math.min(maxOutput, amount);
         if (!simulate) {
-            owner.outputArray[slot] -= ret * 1000L;
+            owner.saveArray[slot] = Tool.suit(owner.saveArray[slot] - ret);
             owner.setChanged();
         }
         Item item = config.getProductList().get(slot).item;

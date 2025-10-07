@@ -1,5 +1,6 @@
 package cn.sd.jrz.alltheimbaium.item;
 
+import cn.sd.jrz.alltheimbaium.block.FarmBlock;
 import cn.sd.jrz.alltheimbaium.setup.DataConfig;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.nbt.CompoundTag;
@@ -16,6 +17,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 public class FarmItem extends BlockItem {
@@ -31,17 +34,17 @@ public class FarmItem extends BlockItem {
     public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
         super.appendHoverText(stack, worldIn, tooltip, flagIn);
         long level = 1;
-        long[] outputArray = new long[config.getProductList().size()];
+        long[] saveArray = new long[config.getProductList().size()];
         if (stack.hasTag()) {
             CompoundTag tag = stack.getTagElement("BlockEntityTag");
             if (tag != null) {
                 if (tag.contains("level", Tag.TAG_LONG)) {
                     level = Tool.suit(tag.getLong("level"));
                 }
-                if (tag.contains("output_array", Tag.TAG_LONG_ARRAY)) {
-                    long[] tempArray = tag.getLongArray("output_array");
+                if (tag.contains("save_array", Tag.TAG_LONG_ARRAY)) {
+                    long[] tempArray = tag.getLongArray("save_array");
                     for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
-                        outputArray[i] = Tool.suit(tempArray[i]);
+                        saveArray[i] = Tool.suit(tempArray[i]);
                     }
                 }
             }
@@ -51,8 +54,8 @@ public class FarmItem extends BlockItem {
             DataConfig.ItemProduct product = config.getProductList().get(i);
             Item item = product.item;
             String name = item.getName(new ItemStack(item)).getString();
-            long current = outputArray[i] / 1000;
-            double output = level * product.count / 1000D;
+            long current = saveArray[i];
+            BigDecimal output = new BigDecimal(level * product.count).divide(new BigDecimal(FarmBlock.CARRY), 6, RoundingMode.HALF_UP);
             tooltip.add(Component.translatable("screen.alltheimbaium.farm.product", name, current, output));
         }
     }

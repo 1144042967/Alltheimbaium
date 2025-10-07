@@ -29,11 +29,14 @@ import net.minecraftforge.items.ItemHandlerHelper;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class FarmBlock extends Block implements EntityBlock {
+    public static final long CARRY = 1000000;
     private final DataConfig config;
     private final Direction[] directions = Direction.values();
     private int findIndex = 0;
@@ -65,7 +68,11 @@ public class FarmBlock extends Block implements EntityBlock {
         List<DataConfig.ItemProduct> productList = config.getProductList();
         for (int i = 0; i < productList.size(); i++) {
             DataConfig.ItemProduct product = productList.get(i);
-            generator.outputArray[i] = Tool.suit(generator.outputArray[i] + product.count * generator.level);
+            generator.outputArray[i] = Tool.suit(generator.outputArray[i] + Tool.suit(product.count * generator.level));
+            if (generator.outputArray[i] > CARRY) {
+                generator.saveArray[i] = Tool.suit(generator.saveArray[i] + generator.outputArray[i] / CARRY);
+                generator.outputArray[i] = generator.outputArray[i] % CARRY;
+            }
         }
         //传输
         BlockPos blockPos = generator.getBlockPos();
@@ -92,10 +99,10 @@ public class FarmBlock extends Block implements EntityBlock {
 
     private List<Integer> canTransport(FarmEntity generator) {
         List<Integer> indexList = new ArrayList<>();
-        long[] outputArray = generator.outputArray;
-        for (int i = 0; i < outputArray.length; i++) {
-            long output = outputArray[i];
-            if (output >= 1000) {
+        long[] saveArray = generator.saveArray;
+        for (int i = 0; i < saveArray.length; i++) {
+            long save = saveArray[i];
+            if (save >= 1) {
                 indexList.add(i);
             }
         }
@@ -115,17 +122,17 @@ public class FarmBlock extends Block implements EntityBlock {
 
     private void transport(FarmEntity generator, int index, IItemHandler handler) {
         DataConfig.ItemProduct product = config.getProductList().get(index);
-        long output = generator.outputArray[index];
-        int maxOutput = Tool.suitInt(output / 1000);
-        ItemStack result = ItemHandlerHelper.insertItemStacked(handler, new ItemStack(product.item, maxOutput), false);
+        long save = generator.saveArray[index];
+        int maxSave = Tool.suitInt(save);
+        ItemStack result = ItemHandlerHelper.insertItemStacked(handler, new ItemStack(product.item, maxSave), false);
         int count = result.getCount();
         if (count < 0) {
             count = 0;
         }
-        if (count > maxOutput) {
-            count = maxOutput;
+        if (count > maxSave) {
+            count = maxSave;
         }
-        generator.outputArray[index] -= (maxOutput - count) * 1000L;
+        generator.saveArray[index] = Tool.suit(generator.saveArray[index] - (maxSave - count));
     }
 
     @SuppressWarnings("deprecation")
@@ -164,7 +171,7 @@ public class FarmBlock extends Block implements EntityBlock {
             return false;
         }
         Tool.takeItem(player, new ItemStack(config.getProductList().get(canOutputIndex).item));
-        generator.outputArray[canOutputIndex] -= 1000L;
+        generator.saveArray[canOutputIndex] = Tool.suitInt(generator.saveArray[canOutputIndex] - 1);
         return true;
     }
 
@@ -190,10 +197,8 @@ public class FarmBlock extends Block implements EntityBlock {
                 }
             }
         }
-        long old = generator.level;
-        generator.level = Tool.suit(old + count * level);
-        count = generator.level - old;
-        player.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(stackInHand.getItem(), (int) (stackInHand.getCount() - count)));
+        generator.level = Tool.suit(generator.level + Tool.suit(count * level));
+        player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
     }
 
     private boolean takeItem(Player player, FarmEntity generator, ItemStack stackInHand) {
@@ -202,11 +207,11 @@ public class FarmBlock extends Block implements EntityBlock {
             if (!stackInHand.is(product.item)) {
                 continue;
             }
-            if (generator.outputArray[i] < 1000L) {
+            if (generator.saveArray[i] < 1) {
                 return false;
             }
             Tool.takeItem(player, new ItemStack(product.item));
-            generator.outputArray[i] -= 1000L;
+            generator.saveArray[i] = Tool.suitInt(generator.saveArray[i] - 1);
             return true;
         }
         return false;
@@ -220,8 +225,8 @@ public class FarmBlock extends Block implements EntityBlock {
             DataConfig.ItemProduct product = productList.get(i);
             Item item = product.item;
             String name = item.getName(new ItemStack(item)).getString();
-            long current = generator.outputArray[i] / 1000;
-            double output = level * product.count / 1000D;
+            long current = generator.saveArray[i];
+            BigDecimal output = new BigDecimal(level * product.count).divide(new BigDecimal(FarmBlock.CARRY), 6, RoundingMode.HALF_UP);
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.farm.product", name, current, output));
         }
     }

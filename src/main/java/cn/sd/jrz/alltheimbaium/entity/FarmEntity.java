@@ -22,12 +22,14 @@ public class FarmEntity extends BlockEntity implements ICapabilityProvider {
     public final DataConfig config;
     public long level;
     public long[] outputArray;
+    public long[] saveArray;
 
     public FarmEntity(BlockPos pos, BlockState state, DataConfig config) {
         super(config.getType(), pos, state);
         this.config = config;
         this.level = 1;
         this.outputArray = new long[config.getProductList().size()];
+        this.saveArray = new long[this.outputArray.length];
     }
 
     @Override
@@ -41,6 +43,7 @@ public class FarmEntity extends BlockEntity implements ICapabilityProvider {
         super.saveAdditional(nbt);
         nbt.putLong("level", level);
         nbt.putLongArray("output_array", outputArray);
+        nbt.putLongArray("save_array", saveArray);
     }
 
     @Override
@@ -53,6 +56,12 @@ public class FarmEntity extends BlockEntity implements ICapabilityProvider {
             long[] tempArray = nbt.getLongArray("output_array");
             for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
                 this.outputArray[i] = Tool.suit(tempArray[i]);
+            }
+        }
+        if (nbt.contains("save_array", Tag.TAG_LONG_ARRAY)) {
+            long[] tempArray = nbt.getLongArray("save_array");
+            for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
+                this.saveArray[i] = Tool.suit(tempArray[i]);
             }
         }
     }
