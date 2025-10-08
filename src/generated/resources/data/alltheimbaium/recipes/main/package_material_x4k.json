@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "package_material",
+  "key": {
+    "A": {
+      "item": "alltheimbaium:package_material_x512"
+    }
+  },
+  "pattern": [
+    "AAA",
+    "A A",
+    "AAA"
+  ],
+  "result": {
+    "item": "alltheimbaium:package_material_x4k"
+  }
+}

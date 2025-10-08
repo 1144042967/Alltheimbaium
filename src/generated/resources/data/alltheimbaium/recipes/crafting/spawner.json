@@ -3,7 +3,7 @@
   "group": "template",
   "key": {
     "A": {
-      "item": "allthemodium:allthemodium_ingot"
+      "item": "minecraft:nether_start"
     },
     "#": {
       "item": "minecraft:chain"

@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "farm",
+  "key": {
+    "A": {
+      "item": "alltheimbaium:farm_bone_meal"
+    },
+    "B": {
+      "item": "minecraft:dirt"
+    },
+    "C": {
+      "item": "minecraft:nether_star"
+    },
+    "D": {
+      "item": "minecraft:bone_block"
+    }
+  },
+  "pattern": [
+    "DAD",
+    "CBC",
+    "DCD"
+  ],
+  "result": {
+    "item": "alltheimbaium:farm_wood"
+  }
+}
