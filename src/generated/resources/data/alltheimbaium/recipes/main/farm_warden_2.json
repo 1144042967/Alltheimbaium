@@ -1,17 +1,20 @@
 {
   "type": "minecraft:crafting_shaped",
-  "group": "package_material",
+  "group": "farm",
   "key": {
     "A": {
       "item": "alltheimbaium:package_material_x256k"
+    },
+    "B": {
+      "item": "minecraft:sculk_shrieker"
     }
   },
   "pattern": [
     "AAA",
-    "A A",
+    "ABA",
     "AAA"
   ],
   "result": {
-    "item": "alltheimbaium:package_material_x2m"
+    "item": "alltheimbaium:farm_warden"
   }
 }

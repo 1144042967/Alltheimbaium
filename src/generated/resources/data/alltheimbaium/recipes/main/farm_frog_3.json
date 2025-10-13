@@ -1,12 +1,12 @@
 {
   "type": "minecraft:crafting_shaped",
-  "group": "package_material",
+  "group": "farm",
   "key": {
     "A": {
-      "tag": "minecraft:planks"
+      "item": "alltheimbaium:package_material_x8"
     },
     "B": {
-      "item": "minecraft:cobblestone"
+      "item": "minecraft:verdant_froglight"
     }
   },
   "pattern": [
@@ -15,6 +15,6 @@
     "AAA"
   ],
   "result": {
-    "item": "alltheimbaium:package_material_x8"
+    "item": "alltheimbaium:farm_frog"
   }
 }

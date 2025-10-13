@@ -54,9 +54,17 @@ public abstract class DataConfig {
             return Registration.FARM_CHICKEN_ENTITY.get();
         }
     };
+    public static final DataConfig FARM_COBBLESTONE = new DataConfig(
+            product(Items.COBBLESTONE, 10000)
+    ) {
+        @Override
+        public BlockEntityType<?> getType() {
+            return Registration.FARM_COBBLESTONE_ENTITY.get();
+        }
+    };
     public static final DataConfig FARM_COW = new DataConfig(
             product(Items.BEEF, 4000)
-            , product(Items.FEATHER, 2000)
+            , product(Items.LEATHER, 2000)
             , product(Items.COW_SPAWN_EGG, 1)
     ) {
         @Override
@@ -150,7 +158,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_HOGLIN = new DataConfig(
-            product(Items.PORKCHOP, 6000)
+            product(Items.COOKED_PORKCHOP, 6000)
             , product(Items.LEATHER, 1000)
             , product(Items.HOGLIN_SPAWN_EGG, 1)
     ) {

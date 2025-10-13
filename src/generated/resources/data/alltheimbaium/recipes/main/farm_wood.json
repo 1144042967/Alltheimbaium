@@ -3,22 +3,16 @@
   "group": "farm",
   "key": {
     "A": {
-      "item": "alltheimbaium:farm_bone_meal"
+      "item": "alltheimbaium:package_material_x8"
     },
     "B": {
-      "item": "minecraft:dirt"
-    },
-    "C": {
-      "item": "minecraft:nether_star"
-    },
-    "D": {
-      "item": "minecraft:bone_block"
+      "tag": "minecraft:logs"
     }
   },
   "pattern": [
-    "DAD",
-    "CBC",
-    "DCD"
+    "AAA",
+    "ABA",
+    "AAA"
   ],
   "result": {
     "item": "alltheimbaium:farm_wood"
