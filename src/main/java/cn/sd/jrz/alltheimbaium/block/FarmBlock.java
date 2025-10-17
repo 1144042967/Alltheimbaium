@@ -40,6 +40,7 @@ public class FarmBlock extends Block implements EntityBlock {
     private final DataConfig config;
     private final Direction[] directions = Direction.values();
     private int findIndex = 0;
+    private int tickCount = 0;
 
     public FarmBlock(Properties properties, DataConfig config) {
         super(properties);
@@ -63,6 +64,12 @@ public class FarmBlock extends Block implements EntityBlock {
         }
         if (!(tile instanceof FarmEntity generator)) {
             return;
+        }
+        //增加等级
+        tickCount++;
+        if (tickCount >= 20 * 20) {
+            generator.level++;
+            tickCount = 0;
         }
         //计算产量
         List<DataConfig.ItemProduct> productList = config.getProductList();

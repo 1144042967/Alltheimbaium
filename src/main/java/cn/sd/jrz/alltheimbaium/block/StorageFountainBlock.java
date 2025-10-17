@@ -36,6 +36,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     public static final long CARRY = 10000;
     private final Direction[] directions = Direction.values();
     private int findIndex = 0;
+    private int tickCount = 0;
 
     public StorageFountainBlock(Properties properties) {
         super(properties);
@@ -60,6 +61,12 @@ public class StorageFountainBlock extends Block implements EntityBlock {
             return;
         }
         BlockPos blockPos = generator.getBlockPos();
+        //增加等级
+        tickCount++;
+        if (tickCount >= 20 * 20) {
+            generator.level++;
+            tickCount = 0;
+        }
         //计算产量
         Map<Item, Integer> outputMap = calcOutputMap(blockPos, level);
         //清除无用
@@ -98,7 +105,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
             if (state.is(Tags.Blocks.STORAGE_BLOCKS)) {
                 Item item = state.getBlock().asItem();
                 if (outputMap.containsKey(item)) {
-                    outputMap.put(item, outputMap.get(item) * 2);
+                    outputMap.put(item, Math.max(outputMap.get(item) * 2, outputMap.get(item) * outputMap.get(item)));
                 } else {
                     outputMap.put(item, 1);
                 }
