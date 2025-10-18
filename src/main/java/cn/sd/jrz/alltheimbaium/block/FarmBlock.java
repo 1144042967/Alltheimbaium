@@ -36,7 +36,8 @@ import java.util.Collections;
 import java.util.List;
 
 public class FarmBlock extends Block implements EntityBlock {
-    public static final long CARRY = 1000000;
+    public static final long CARRY = 10000;
+    public static final int SCALE = String.valueOf(CARRY).length() - 1;
     private final DataConfig config;
     private final Direction[] directions = Direction.values();
     private int findIndex = 0;
@@ -233,7 +234,7 @@ public class FarmBlock extends Block implements EntityBlock {
             Item item = product.item;
             String name = item.getName(new ItemStack(item)).getString();
             long current = generator.saveArray[i];
-            BigDecimal output = new BigDecimal(level * product.count).divide(new BigDecimal(FarmBlock.CARRY), 6, RoundingMode.HALF_UP);
+            BigDecimal output = new BigDecimal(level * product.count).divide(new BigDecimal(FarmBlock.CARRY), SCALE, RoundingMode.HALF_UP);
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.farm.product", name, current, output));
         }
     }

@@ -10,7 +10,7 @@ import java.util.List;
 
 public abstract class DataConfig {
     public static final DataConfig FARM_BAMBOO = new DataConfig(
-            product(Items.BAMBOO, 10000)
+            product(Items.BAMBOO, 500)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -18,8 +18,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_BEE = new DataConfig(
-            product(Items.HONEYCOMB, 6000)
-            , product(Items.HONEY_BLOCK, 500)
+            product(Items.HONEYCOMB, 500)
+            , product(Items.HONEY_BLOCK, 400)
             , product(Items.BEE_SPAWN_EGG, 1)
     ) {
         @Override
@@ -28,7 +28,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_BLAZE = new DataConfig(
-            product(Items.BLAZE_ROD, 1000)
+            product(Items.BLAZE_ROD, 500)
             , product(Items.BLAZE_SPAWN_EGG, 1)
     ) {
         @Override
@@ -37,7 +37,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_BONE_MEAL = new DataConfig(
-            product(Items.BONE_MEAL, 10000)
+            product(Items.BONE_MEAL, 500)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -45,8 +45,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_CHICKEN = new DataConfig(
-            product(Items.CHICKEN, 2000)
-            , product(Items.FEATHER, 2000)
+            product(Items.CHICKEN, 50)
+            , product(Items.FEATHER, 500)
             , product(Items.CHICKEN_SPAWN_EGG, 1)
     ) {
         @Override
@@ -55,7 +55,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_COBBLESTONE = new DataConfig(
-            product(Items.COBBLESTONE, 10000)
+            product(Items.COBBLESTONE, 500)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -63,8 +63,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_COW = new DataConfig(
-            product(Items.BEEF, 4000)
-            , product(Items.LEATHER, 2000)
+            product(Items.BEEF, 50)
+            , product(Items.LEATHER, 500)
             , product(Items.COW_SPAWN_EGG, 1)
     ) {
         @Override
@@ -73,7 +73,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_CREEPER = new DataConfig(
-            product(Items.GUNPOWDER, 2000)
+            product(Items.GUNPOWDER, 500)
             , product(Items.CREEPER_SPAWN_EGG, 1)
     ) {
         @Override
@@ -82,10 +82,10 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_DROWNED = new DataConfig(
-            product(Items.ROTTEN_FLESH, 2000)
-            , product(Items.COPPER_INGOT, 220)
-            , product(Items.TRIDENT, 6)
-            , product(Items.NAUTILUS_SHELL, 2)
+            product(Items.ROTTEN_FLESH, 500)
+            , product(Items.COPPER_INGOT, 400)
+            , product(Items.TRIDENT, 50)
+            , product(Items.NAUTILUS_SHELL, 50)
             , product(Items.DROWNED_SPAWN_EGG, 1)
     ) {
         @Override
@@ -94,7 +94,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_ENDERMAN = new DataConfig(
-            product(Items.ENDER_PEARL, 1000)
+            product(Items.ENDER_PEARL, 500)
             , product(Items.ENDERMAN_SPAWN_EGG, 1)
     ) {
         @Override
@@ -103,8 +103,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_ENDER_DRAGON = new DataConfig(
-            product(Items.DRAGON_EGG, 2000)
-            , product(Items.DRAGON_BREATH, 16000)
+            product(Items.DRAGON_EGG, 500)
+            , product(Items.DRAGON_BREATH, 400)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -112,8 +112,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_EVOKER = new DataConfig(
-            product(Items.TOTEM_OF_UNDYING, 2000)
-            , product(Items.EMERALD, 1000)
+            product(Items.TOTEM_OF_UNDYING, 250)
+            , product(Items.EMERALD, 500)
             , product(Items.EVOKER_SPAWN_EGG, 1)
     ) {
         @Override
@@ -122,9 +122,9 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_FROG = new DataConfig(
-            product(Items.OCHRE_FROGLIGHT, 2000)
-            , product(Items.PEARLESCENT_FROGLIGHT, 2000)
-            , product(Items.VERDANT_FROGLIGHT, 2000)
+            product(Items.OCHRE_FROGLIGHT, 500)
+            , product(Items.PEARLESCENT_FROGLIGHT, 500)
+            , product(Items.VERDANT_FROGLIGHT, 500)
             , product(Items.FROG_SPAWN_EGG, 1)
     ) {
         @Override
@@ -133,8 +133,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_GHAST = new DataConfig(
-            product(Items.GHAST_TEAR, 1000)
-            , product(Items.GUNPOWDER, 2000)
+            product(Items.GHAST_TEAR, 250)
+            , product(Items.GUNPOWDER, 500)
             , product(Items.GHAST_SPAWN_EGG, 1)
     ) {
         @Override
@@ -143,13 +143,13 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_GUARDIAN = new DataConfig(
-            product(Items.PRISMARINE_SHARD, 2000)
-            , product(Items.PRISMARINE_CRYSTALS, 800)
-            , product(Items.COD, 800)
-            , product(Items.SALMON, 2)
-            , product(Items.PUFFERFISH, 1)
-            , product(Items.TROPICAL_FISH, 1)
-            , product(Items.SPONGE, 1)
+            product(Items.PRISMARINE_SHARD, 500)
+            , product(Items.PRISMARINE_CRYSTALS, 250)
+            , product(Items.COD, 50)
+            , product(Items.SALMON, 50)
+            , product(Items.PUFFERFISH, 50)
+            , product(Items.TROPICAL_FISH, 50)
+            , product(Items.SPONGE, 50)
             , product(Items.GUARDIAN_SPAWN_EGG, 1)
     ) {
         @Override
@@ -158,8 +158,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_HOGLIN = new DataConfig(
-            product(Items.COOKED_PORKCHOP, 6000)
-            , product(Items.LEATHER, 1000)
+            product(Items.COOKED_PORKCHOP, 500)
+            , product(Items.LEATHER, 100)
             , product(Items.HOGLIN_SPAWN_EGG, 1)
     ) {
         @Override
@@ -168,7 +168,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_ICE = new DataConfig(
-            product(Items.ICE, 2000)
+            product(Items.ICE, 500)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -176,8 +176,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_IRON_GOLEM = new DataConfig(
-            product(Items.IRON_INGOT, 8000)
-            , product(Items.POPPY, 2000)
+            product(Items.IRON_INGOT, 500)
+            , product(Items.POPPY, 50)
             , product(Items.IRON_GOLEM_SPAWN_EGG, 1)
     ) {
         @Override
@@ -195,7 +195,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_PHANTOM = new DataConfig(
-            product(Items.PHANTOM_MEMBRANE, 1000)
+            product(Items.PHANTOM_MEMBRANE, 500)
             , product(Items.PHANTOM_SPAWN_EGG, 1)
     ) {
         @Override
@@ -204,7 +204,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_PIG = new DataConfig(
-            product(Items.PORKCHOP, 4000)
+            product(Items.PORKCHOP, 500)
             , product(Items.PIG_SPAWN_EGG, 1)
     ) {
         @Override
@@ -213,8 +213,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_PILLAGER = new DataConfig(
-            product(Items.ARROW, 2000)
-            , product(Items.CROSSBOW, 50)
+            product(Items.ARROW, 500)
+            , product(Items.CROSSBOW, 10)
             , product(Items.PILLAGER_SPAWN_EGG, 1)
     ) {
         @Override
@@ -223,9 +223,9 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_RABBIT = new DataConfig(
-            product(Items.RABBIT_HIDE, 1000)
-            , product(Items.RABBIT, 2000)
-            , product(Items.RABBIT_FOOT, 200)
+            product(Items.RABBIT_HIDE, 100)
+            , product(Items.RABBIT, 300)
+            , product(Items.RABBIT_FOOT, 100)
             , product(Items.RABBIT_SPAWN_EGG, 1)
     ) {
         @Override
@@ -234,7 +234,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_RAVAGER = new DataConfig(
-            product(Items.SADDLE, 2000)
+            product(Items.SADDLE, 500)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -242,23 +242,23 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_SHEEP = new DataConfig(
-            product(Items.MUTTON, 3000)
-            , product(Items.WHITE_WOOL, 125)
-            , product(Items.LIGHT_GRAY_WOOL, 125)
-            , product(Items.GRAY_WOOL, 125)
-            , product(Items.BLACK_WOOL, 125)
-            , product(Items.BROWN_WOOL, 125)
-            , product(Items.RED_WOOL, 125)
-            , product(Items.ORANGE_WOOL, 125)
-            , product(Items.YELLOW_WOOL, 125)
-            , product(Items.LIME_WOOL, 125)
-            , product(Items.GREEN_WOOL, 125)
-            , product(Items.CYAN_WOOL, 125)
-            , product(Items.LIGHT_BLUE_WOOL, 125)
-            , product(Items.BLUE_WOOL, 125)
-            , product(Items.PURPLE_WOOL, 125)
-            , product(Items.MAGENTA_WOOL, 125)
-            , product(Items.PINK_WOOL, 125)
+            product(Items.MUTTON, 50)
+            , product(Items.WHITE_WOOL, 500)
+            , product(Items.LIGHT_GRAY_WOOL, 50)
+            , product(Items.GRAY_WOOL, 50)
+            , product(Items.BLACK_WOOL, 50)
+            , product(Items.BROWN_WOOL, 50)
+            , product(Items.RED_WOOL, 50)
+            , product(Items.ORANGE_WOOL, 50)
+            , product(Items.YELLOW_WOOL, 50)
+            , product(Items.LIME_WOOL, 50)
+            , product(Items.GREEN_WOOL, 50)
+            , product(Items.CYAN_WOOL, 50)
+            , product(Items.LIGHT_BLUE_WOOL, 50)
+            , product(Items.BLUE_WOOL, 50)
+            , product(Items.PURPLE_WOOL, 50)
+            , product(Items.MAGENTA_WOOL, 50)
+            , product(Items.PINK_WOOL, 50)
             , product(Items.SHEEP_SPAWN_EGG, 1)
     ) {
         @Override
@@ -267,7 +267,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_SHULKER = new DataConfig(
-            product(Items.SHULKER_SHELL, 1000)
+            product(Items.SHULKER_SHELL, 500)
             , product(Items.SHULKER_SPAWN_EGG, 1)
     ) {
         @Override
@@ -276,8 +276,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_SKELETON = new DataConfig(
-            product(Items.BONE, 2000)
-            , product(Items.ARROW, 2000)
+            product(Items.BONE, 500)
+            , product(Items.ARROW, 100)
             , product(Items.SKELETON_SPAWN_EGG, 1)
     ) {
         @Override
@@ -286,7 +286,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_SLIME = new DataConfig(
-            product(Items.SLIME_BALL, 3000)
+            product(Items.SLIME_BALL, 500)
             , product(Items.SLIME_SPAWN_EGG, 1)
     ) {
         @Override
@@ -295,8 +295,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_SPIDER = new DataConfig(
-            product(Items.STRING, 2000)
-            , product(Items.SPIDER_EYE, 660)
+            product(Items.STRING, 500)
+            , product(Items.SPIDER_EYE, 50)
             , product(Items.SPIDER_SPAWN_EGG, 1)
     ) {
         @Override
@@ -305,8 +305,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_SQUID = new DataConfig(
-            product(Items.INK_SAC, 4000)
-            , product(Items.GLOW_INK_SAC, 1000)
+            product(Items.INK_SAC, 500)
+            , product(Items.GLOW_INK_SAC, 200)
             , product(Items.SQUID_SPAWN_EGG, 1)
             , product(Items.GLOW_SQUID_SPAWN_EGG, 1)
     ) {
@@ -316,7 +316,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_SUGAR_CANES = new DataConfig(
-            product(Items.SUGAR_CANE, 10000)
+            product(Items.SUGAR_CANE, 500)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -324,7 +324,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_VILLAGER = new DataConfig(
-            product(Items.VILLAGER_SPAWN_EGG, 50)
+            product(Items.VILLAGER_SPAWN_EGG, 500)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -332,11 +332,11 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_WARDEN = new DataConfig(
-            product(Items.SCULK_CATALYST, 2000),
-            product(Items.SCULK_SHRIEKER, 500),
-            product(Items.SCULK_SENSOR, 500),
-            product(Items.SCULK_VEIN, 500),
-            product(Items.ECHO_SHARD, 500)
+            product(Items.SCULK_CATALYST, 100),
+            product(Items.SCULK_SHRIEKER, 100),
+            product(Items.SCULK_SENSOR, 100),
+            product(Items.SCULK_VEIN, 100),
+            product(Items.ECHO_SHARD, 100)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -344,13 +344,13 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_WITCH = new DataConfig(
-            product(Items.REDSTONE, 12000)
-            , product(Items.GLASS_BOTTLE, 580)
-            , product(Items.GLOWSTONE_DUST, 580)
-            , product(Items.GUNPOWDER, 580)
-            , product(Items.SPIDER_EYE, 580)
-            , product(Items.SUGAR, 580)
-            , product(Items.STICK, 1140)
+            product(Items.REDSTONE, 500)
+            , product(Items.GLASS_BOTTLE, 50)
+            , product(Items.GLOWSTONE_DUST, 50)
+            , product(Items.GUNPOWDER, 50)
+            , product(Items.SPIDER_EYE, 50)
+            , product(Items.SUGAR, 50)
+            , product(Items.STICK, 50)
             , product(Items.WITCH_SPAWN_EGG, 1)
     ) {
         @Override
@@ -359,7 +359,7 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_WITHER = new DataConfig(
-            product(Items.NETHER_STAR, 2000)
+            product(Items.NETHER_STAR, 500)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -367,9 +367,9 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_WITHER_SKELETON = new DataConfig(
-            product(Items.COAL, 660)
-            , product(Items.BONE, 2000)
-            , product(Items.WITHER_SKELETON_SKULL, 60)
+            product(Items.COAL, 500)
+            , product(Items.BONE, 100)
+            , product(Items.WITHER_SKELETON_SKULL, 50)
             , product(Items.WITHER_SKELETON_SPAWN_EGG, 1)
     ) {
         @Override
@@ -378,15 +378,15 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_WOOD = new DataConfig(
-            product(Items.OAK_LOG, 1250)
-            , product(Items.BIRCH_LOG, 1250)
-            , product(Items.SPRUCE_LOG, 1250)
-            , product(Items.JUNGLE_LOG, 1250)
-            , product(Items.ACACIA_LOG, 1250)
-            , product(Items.DARK_OAK_LOG, 1250)
-            , product(Items.MANGROVE_LOG, 1250)
-            , product(Items.CHERRY_LOG, 1250)
-            , product(Items.APPLE, 100)
+            product(Items.OAK_LOG, 500)
+            , product(Items.BIRCH_LOG, 50)
+            , product(Items.SPRUCE_LOG, 50)
+            , product(Items.JUNGLE_LOG, 50)
+            , product(Items.ACACIA_LOG, 50)
+            , product(Items.DARK_OAK_LOG, 50)
+            , product(Items.MANGROVE_LOG, 50)
+            , product(Items.CHERRY_LOG, 50)
+            , product(Items.APPLE, 10)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -394,10 +394,10 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_ZOMBIE = new DataConfig(
-            product(Items.ROTTEN_FLESH, 2000)
-            , product(Items.IRON_INGOT, 20)
-            , product(Items.CARROT, 20)
-            , product(Items.POTATO, 20)
+            product(Items.ROTTEN_FLESH, 500)
+            , product(Items.IRON_INGOT, 250)
+            , product(Items.CARROT, 10)
+            , product(Items.POTATO, 10)
             , product(Items.ZOMBIE_SPAWN_EGG, 1)
     ) {
         @Override
@@ -406,9 +406,9 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_ZOMBIFIED_PIGLIN = new DataConfig(
-            product(Items.ROTTEN_FLESH, 1000)
-            , product(Items.GOLD_NUGGET, 1000)
-            , product(Items.GOLD_INGOT, 60)
+            product(Items.ROTTEN_FLESH, 500)
+            , product(Items.GOLD_NUGGET, 250)
+            , product(Items.GOLD_INGOT, 250)
             , product(Items.ZOMBIFIED_PIGLIN_SPAWN_EGG, 1)
     ) {
         @Override
