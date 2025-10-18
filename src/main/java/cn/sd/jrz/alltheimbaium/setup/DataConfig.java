@@ -378,14 +378,14 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_WOOD = new DataConfig(
-            product(Items.OAK_WOOD, 1250)
-            , product(Items.BIRCH_WOOD, 1250)
-            , product(Items.SPRUCE_WOOD, 1250)
-            , product(Items.JUNGLE_WOOD, 1250)
-            , product(Items.ACACIA_WOOD, 1250)
-            , product(Items.DARK_OAK_WOOD, 1250)
-            , product(Items.MANGROVE_WOOD, 1250)
-            , product(Items.CHERRY_WOOD, 1250)
+            product(Items.OAK_LOG, 1250)
+            , product(Items.BIRCH_LOG, 1250)
+            , product(Items.SPRUCE_LOG, 1250)
+            , product(Items.JUNGLE_LOG, 1250)
+            , product(Items.ACACIA_LOG, 1250)
+            , product(Items.DARK_OAK_LOG, 1250)
+            , product(Items.MANGROVE_LOG, 1250)
+            , product(Items.CHERRY_LOG, 1250)
             , product(Items.APPLE, 100)
     ) {
         @Override
