@@ -102,12 +102,12 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         for (Direction direction : directions) {
             BlockPos pos = blockPos.relative(direction);
             BlockState state = level.getBlockState(pos);
-            if (state.is(Tags.Blocks.STORAGE_BLOCKS)) {
+            if (state.is(Tags.Blocks.STORAGE_BLOCKS) || state.is(Tags.Blocks.ORES)) {
                 Item item = state.getBlock().asItem();
                 if (outputMap.containsKey(item)) {
-                    outputMap.put(item, Math.max(outputMap.get(item) * 2, outputMap.get(item) * outputMap.get(item)));
+                    outputMap.put(item, outputMap.get(item) + 100);
                 } else {
-                    outputMap.put(item, 1);
+                    outputMap.put(item, 100);
                 }
             }
         }

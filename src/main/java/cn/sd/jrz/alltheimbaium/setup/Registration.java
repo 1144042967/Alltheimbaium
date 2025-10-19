@@ -83,12 +83,9 @@ public class Registration {
                     output.accept(Registration.FARM_WITHER_ITEM.get());//凋零 6
                     output.accept(Registration.FARM_ENDER_DRAGON_ITEM.get());//末影龙 6
 
-                    output.accept(Registration.PACKAGE_MATERIAL_X8.get());
-                    output.accept(Registration.PACKAGE_MATERIAL_X64.get());
-                    output.accept(Registration.PACKAGE_MATERIAL_X512.get());
-                    output.accept(Registration.PACKAGE_MATERIAL_X4K.get());
-                    output.accept(Registration.PACKAGE_MATERIAL_X32K.get());
-                    output.accept(Registration.PACKAGE_MATERIAL_X256K.get());
+                    output.accept(Registration.PACKAGE_MATERIAL_X1.get());
+                    output.accept(Registration.PACKAGE_MATERIAL_X2.get());
+                    output.accept(Registration.PACKAGE_MATERIAL_X3.get());
                 })
                 .build()
         );
@@ -147,12 +144,9 @@ public class Registration {
     //ITEM
     public static final RegistryObject<BlockItem> FARMLAND_ITEM = ITEMS.register("farmland", () -> new BlockItem(FARMLAND_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<BlockItem> STORAGE_FOUNTAIN_ITEM = ITEMS.register("storage_fountain", () -> new StorageFountainItem(STORAGE_FOUNTAIN_BLOCK.get()));
-    public static final RegistryObject<Item> PACKAGE_MATERIAL_X8 = ITEMS.register("package_material_x8", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> PACKAGE_MATERIAL_X64 = ITEMS.register("package_material_x64", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> PACKAGE_MATERIAL_X512 = ITEMS.register("package_material_x512", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> PACKAGE_MATERIAL_X4K = ITEMS.register("package_material_x4k", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> PACKAGE_MATERIAL_X32K = ITEMS.register("package_material_x32k", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> PACKAGE_MATERIAL_X256K = ITEMS.register("package_material_x256k", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> PACKAGE_MATERIAL_X2 = ITEMS.register("package_material_x2", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> PACKAGE_MATERIAL_X3 = ITEMS.register("package_material_x3", () -> new Item(new Item.Properties()));
     public static final RegistryObject<FarmItem> FARM_BAMBOO_ITEM = ITEMS.register("farm_bamboo", () -> new FarmItem(FARM_BAMBOO_BLOCK.get(), DataConfig.FARM_BAMBOO));
     public static final RegistryObject<FarmItem> FARM_BEE_ITEM = ITEMS.register("farm_bee", () -> new FarmItem(FARM_BEE_BLOCK.get(), DataConfig.FARM_BEE));
     public static final RegistryObject<FarmItem> FARM_BLAZE_ITEM = ITEMS.register("farm_blaze", () -> new FarmItem(FARM_BLAZE_BLOCK.get(), DataConfig.FARM_BLAZE));

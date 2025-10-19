@@ -3,7 +3,7 @@
   "group": "package_material",
   "key": {
     "A": {
-      "item": "alltheimbaium:package_material_x512"
+      "item": "alltheimbaium:package_material_x1"
     }
   },
   "pattern": [
@@ -12,6 +12,7 @@
     "AAA"
   ],
   "result": {
-    "item": "alltheimbaium:package_material_x4k"
+    "item": "alltheimbaium:package_material_x2",
+    "count": 8
   }
 }

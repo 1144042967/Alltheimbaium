@@ -6,15 +6,16 @@
       "tag": "minecraft:planks"
     },
     "B": {
-      "item": "minecraft:cobblestone"
+      "tag": "forge:cobblestone"
     }
   },
   "pattern": [
-    "BBB",
-    "BAB",
-    "BBB"
+    "AAA",
+    "ABA",
+    "AAA"
   ],
   "result": {
-    "item": "alltheimbaium:package_material_x8"
+    "item": "alltheimbaium:package_material_x1",
+    "count": 8
   }
 }

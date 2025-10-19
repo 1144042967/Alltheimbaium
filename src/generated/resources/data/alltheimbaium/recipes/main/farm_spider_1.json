@@ -3,7 +3,7 @@
   "group": "farm",
   "key": {
     "A": {
-      "item": "alltheimbaium:package_material_x512"
+      "item": "alltheimbaium:package_material_x2"
     },
     "B": {
       "item": "minecraft:string"

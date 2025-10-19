@@ -45,6 +45,7 @@ public class StorageFountainItem extends BlockItem {
             }
         }
         tooltip.add(Component.translatable("screen.alltheimbaium.farm.description", level));
+        int oldSize = tooltip.size();
         for (ItemStack temp : saveItems) {
             if (temp == null || temp.isEmpty()) {
                 continue;
@@ -53,6 +54,9 @@ public class StorageFountainItem extends BlockItem {
             String name = item.getName(new ItemStack(item)).getString();
             int current = temp.getCount();
             tooltip.add(Component.translatable("screen.alltheimbaium.fountain.current", name, current));
+        }
+        if (oldSize == tooltip.size()) {
+            tooltip.add(Component.translatable("screen.alltheimbaium.fountain.empty"));
         }
     }
 }
