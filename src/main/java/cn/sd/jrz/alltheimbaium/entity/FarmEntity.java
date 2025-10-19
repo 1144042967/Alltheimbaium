@@ -19,6 +19,8 @@ import javax.annotation.Nullable;
 
 public class FarmEntity extends BlockEntity implements ICapabilityProvider {
     private final LazyOptional<FarmConnection> fecOptional = LazyOptional.of(() -> new FarmConnection(this));
+    public int findIndex = 0;
+    public int tickCount = 0;
     public final DataConfig config;
     public long level;
     public long[] outputArray;

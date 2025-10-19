@@ -39,9 +39,7 @@ public class FarmBlock extends Block implements EntityBlock {
     public static final long CARRY = 10000;
     public static final int SCALE = String.valueOf(CARRY).length() - 1;
     private final DataConfig config;
-    private final Direction[] directions = Direction.values();
-    private int findIndex = 0;
-    private int tickCount = 0;
+    public final Direction[] directions = Direction.values();
 
     public FarmBlock(Properties properties, DataConfig config) {
         super(properties);
@@ -67,10 +65,10 @@ public class FarmBlock extends Block implements EntityBlock {
             return;
         }
         //增加等级
-        tickCount++;
-        if (tickCount >= 20 * 20) {
+        generator.tickCount++;
+        if (generator.tickCount >= 20 * 20) {
             generator.level++;
-            tickCount = 0;
+            generator.tickCount = 0;
         }
         //计算产量
         List<DataConfig.ItemProduct> productList = config.getProductList();
@@ -85,8 +83,8 @@ public class FarmBlock extends Block implements EntityBlock {
         //传输
         BlockPos blockPos = generator.getBlockPos();
         for (int i = 0; i < directions.length; i++) {
-            findIndex = (findIndex + 1) % directions.length;
-            Direction direction = directions[findIndex];
+            generator.findIndex = (generator.findIndex + 1) % directions.length;
+            Direction direction = directions[generator.findIndex];
             BlockPos pos = blockPos.relative(direction);
             BlockEntity entity = level.getBlockEntity(pos);
             if (entity == null) {

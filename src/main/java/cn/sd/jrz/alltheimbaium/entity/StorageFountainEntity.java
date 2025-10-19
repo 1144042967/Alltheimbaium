@@ -22,6 +22,8 @@ import javax.annotation.Nullable;
 
 public class StorageFountainEntity extends BlockEntity implements ICapabilityProvider {
     private final LazyOptional<StorageFountainConnection> fecOptional = LazyOptional.of(() -> new StorageFountainConnection(this));
+    public int findIndex = 0;
+    public int tickCount = 0;
     public int level = 1;
     public ItemStack[] saveItems = new ItemStack[6];
     public ItemStack[] saveArray = new ItemStack[6];

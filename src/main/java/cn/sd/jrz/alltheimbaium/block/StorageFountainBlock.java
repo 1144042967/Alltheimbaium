@@ -34,9 +34,7 @@ import java.util.*;
 
 public class StorageFountainBlock extends Block implements EntityBlock {
     public static final long CARRY = 10000;
-    private final Direction[] directions = Direction.values();
-    private int findIndex = 0;
-    private int tickCount = 0;
+    public final Direction[] directions = Direction.values();
 
     public StorageFountainBlock(Properties properties) {
         super(properties);
@@ -62,10 +60,10 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         }
         BlockPos blockPos = generator.getBlockPos();
         //增加等级
-        tickCount++;
-        if (tickCount >= 20 * 20) {
+        generator.tickCount++;
+        if (generator.tickCount >= 20 * 20) {
             generator.level++;
-            tickCount = 0;
+            generator.tickCount = 0;
         }
         //计算产量
         Map<Item, Integer> outputMap = calcOutputMap(blockPos, level);
@@ -77,8 +75,8 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         calcItem(generator);
         //传输
         for (int i = 0; i < directions.length; i++) {
-            findIndex = (findIndex + 1) % directions.length;
-            Direction direction = directions[findIndex];
+            generator.findIndex = (generator.findIndex + 1) % directions.length;
+            Direction direction = directions[generator.findIndex];
             BlockPos pos = blockPos.relative(direction);
             BlockEntity entity = level.getBlockEntity(pos);
             if (entity == null) {
