@@ -16,13 +16,13 @@
               "ops": [
                 {
                   "op": "replace",
-                  "source": "level",
-                  "target": "BlockEntityTag.level"
+                  "source": "output",
+                  "target": "BlockEntityTag.output"
                 },
                 {
                   "op": "replace",
-                  "source": "save_item",
-                  "target": "BlockEntityTag.save_item"
+                  "source": "save_stick",
+                  "target": "BlockEntityTag.save_stick"
                 }
               ],
               "source": "block_entity"

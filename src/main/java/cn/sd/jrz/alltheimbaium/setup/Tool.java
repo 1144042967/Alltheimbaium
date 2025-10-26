@@ -1,14 +1,19 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class Tool {
     private static final Logger log = LoggerFactory.getLogger(Tool.class);
@@ -31,46 +36,42 @@ public class Tool {
         }
     }
 
-    public static JsonArray fromArray(ItemStack[] array) {
+    public static JsonArray toJsonArray(List<Item> itemList, List<Long> blockList) {
         JsonArray a = new JsonArray();
-        for (ItemStack stack : array) {
-            a.add(fromItem(stack));
-        }
-        return a;
-    }
-
-    public static JsonObject fromItem(ItemStack stack) {
-        JsonObject o = new JsonObject();
-        if (stack == null || stack.isEmpty()) {
-            return o;
-        }
-        //noinspection deprecation
-        ResourceLocation resourcelocation = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        o.addProperty("id", resourcelocation.toString());
-        o.addProperty("c", stack.getCount());
-        return o;
-    }
-
-    public static ItemStack[] toArray(JsonArray array) {
-        ItemStack[] a = new ItemStack[array.size()];
-        for (int i = 0; i < array.size(); i++) {
-            a[i] = toItem(array.get(i).getAsJsonObject());
-        }
-        return a;
-    }
-
-    public static ItemStack toItem(JsonObject object) {
-        if (!object.has("id")) {
-            return null;
-        }
-        try {
-            String id = object.get("id").getAsString();
-            int count = object.get("c").getAsInt();
+        for (int i = 0; i < itemList.size(); i++) {
+            Item item = itemList.get(i);
+            Long count = blockList.get(i);
+            if (item == null || count == null) {
+                continue;
+            }
+            JsonObject stack = new JsonObject();
             //noinspection deprecation
-            return new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(id)), count);
-        } catch (Exception e) {
-            log.error("Failed to parse item", e);
-            return null;
+            stack.addProperty("id", BuiltInRegistries.ITEM.getKey(item).toString());
+            stack.addProperty("c", count);
+            a.add(stack);
         }
+        return a;
+    }
+
+    public static List<Item> toItemList(JsonArray array) {
+        List<Item> itemList = new ArrayList<>();
+        for (JsonElement element : array) {
+            JsonObject stack = element.getAsJsonObject();
+            String id = stack.get("id").getAsString();
+            //noinspection deprecation
+            Item item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(id));
+            itemList.add(item);
+        }
+        return itemList;
+    }
+
+    public static List<Long> toBlockList(JsonArray array) {
+        List<Long> blockList = new ArrayList<>();
+        for (JsonElement element : array) {
+            JsonObject stack = element.getAsJsonObject();
+            long count = stack.get("c").getAsLong();
+            blockList.add(count);
+        }
+        return blockList;
     }
 }

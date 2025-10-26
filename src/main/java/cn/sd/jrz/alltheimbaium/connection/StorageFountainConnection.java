@@ -1,7 +1,9 @@
 package cn.sd.jrz.alltheimbaium.connection;
 
+import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
 
@@ -16,19 +18,20 @@ public class StorageFountainConnection implements IItemHandler {
 
     @Override
     public int getSlots() {
-        return owner.saveItems.length;
+        return owner.itemList.size();
     }
 
     @Override
     public @Nonnull ItemStack getStackInSlot(int slot) {
-        if (slot < 0 || slot >= owner.saveItems.length) {
+        if (slot < 0 || slot >= owner.itemList.size()) {
             return ItemStack.EMPTY;
         }
-        ItemStack stack = owner.saveItems[slot];
-        if (stack == null || stack.isEmpty()) {
+        Item item = owner.itemList.get(slot);
+        Long count = owner.blockList.get(slot);
+        if (count <= 0) {
             return ItemStack.EMPTY;
         }
-        return stack.copy();
+        return new ItemStack(item, Tool.suitInt(count / StorageFountainBlock.CARRY));
     }
 
     @Override
@@ -38,21 +41,21 @@ public class StorageFountainConnection implements IItemHandler {
 
     @Override
     public @Nonnull ItemStack extractItem(int slot, int amount, boolean simulate) {
-        if (slot < 0 || slot >= owner.saveItems.length) {
+        if (slot < 0 || slot >= owner.itemList.size()) {
             return ItemStack.EMPTY;
         }
-        ItemStack stack = owner.saveItems[slot];
-        if (stack == null || stack.isEmpty()) {
+        Item item = owner.itemList.get(slot);
+        Long block = owner.blockList.get(slot);
+        int maxAmount = Tool.suitInt(block / StorageFountainBlock.CARRY);
+        if (maxAmount <= 0) {
             return ItemStack.EMPTY;
         }
-        int ret = Math.min(stack.getCount(), amount);
+        int ret = Math.min(maxAmount, amount);
         if (!simulate) {
-            stack.setCount(Tool.suitInt(stack.getCount() - ret));
+            owner.blockList.set(slot, block - ret * StorageFountainBlock.CARRY);
             owner.setChanged();
         }
-        ItemStack copy = stack.copy();
-        copy.setCount(ret);
-        return copy;
+        return new ItemStack(item, ret);
     }
 
     @Override

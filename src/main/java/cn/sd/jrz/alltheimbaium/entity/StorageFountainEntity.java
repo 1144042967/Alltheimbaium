@@ -9,7 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
@@ -19,14 +19,16 @@ import net.minecraftforge.common.util.LazyOptional;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class StorageFountainEntity extends BlockEntity implements ICapabilityProvider {
     private final LazyOptional<StorageFountainConnection> fecOptional = LazyOptional.of(() -> new StorageFountainConnection(this));
     public int findIndex = 0;
-    public int tickCount = 0;
-    public int level = 1;
-    public ItemStack[] saveItems = new ItemStack[6];
-    public ItemStack[] saveArray = new ItemStack[6];
+    public long output = 5;
+    public List<Item> itemList = new ArrayList<>();
+    public List<Long> blockList = new ArrayList<>();
+    public long tickCount = 0;
 
     public StorageFountainEntity(BlockPos pos, BlockState state) {
         super(Registration.STORAGE_FOUNTAIN_ENTITY.get(), pos, state);
@@ -41,26 +43,37 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
     @Override
     public void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
-        nbt.putInt("level", level);
-        nbt.putString("save_item", Tool.fromArray(saveItems).toString());
-        nbt.putString("save_array", Tool.fromArray(saveArray).toString());
+        nbt.putLong("output", output);
+        nbt.putString("save_stick", Tool.toJsonArray(itemList, blockList).toString());
     }
 
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
-        if (nbt.contains("level", Tag.TAG_INT)) {
-            this.level = Tool.suitInt(nbt.getInt("level"));
+        if (nbt.contains("output", Tag.TAG_LONG)) {
+            this.output = Tool.suit(nbt.getLong("output"));
         }
-        if (nbt.contains("save_item", Tag.TAG_STRING)) {
-            String json = nbt.getString("save_item");
-            JsonArray a = JsonParser.parseString(json).getAsJsonArray();
-            saveItems = Tool.toArray(a);
-        }
-        if (nbt.contains("save_array", Tag.TAG_STRING)) {
-            String json = nbt.getString("save_array");
-            JsonArray a = JsonParser.parseString(json).getAsJsonArray();
-            saveArray = Tool.toArray(a);
+        if (nbt.contains("save_stick", Tag.TAG_STRING)) {
+            String json = nbt.getString("save_stick");
+            JsonArray array = JsonParser.parseString(json).getAsJsonArray();
+            List<Item> tempItemList = Tool.toItemList(array);
+            List<Long> tempBlockList = Tool.toBlockList(array);
+            nextItem:
+            for (int i = 0; i < Math.min(tempItemList.size(), tempBlockList.size()); i++) {
+                Item item = tempItemList.get(i);
+                Long block = tempBlockList.get(i);
+                if (item == null || block == null) {
+                    continue;
+                }
+                for (int index = 0; index < Math.min(itemList.size(), blockList.size()); index++) {
+                    if (itemList.get(index) == item) {
+                        blockList.set(index, blockList.get(index) + block);
+                        continue nextItem;
+                    }
+                }
+                itemList.add(item);
+                blockList.add(block);
+            }
         }
     }
 }
