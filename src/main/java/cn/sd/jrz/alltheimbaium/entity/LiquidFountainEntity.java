@@ -32,7 +32,7 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
     @Override
     @Nonnull
     public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        return capability == ForgeCapabilities.ITEM_HANDLER ? fecOptional.cast() : super.getCapability(capability, direction);
+        return capability == ForgeCapabilities.FLUID_HANDLER ? fecOptional.cast() : super.getCapability(capability, direction);
     }
 
     @Override
