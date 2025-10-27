@@ -54,6 +54,7 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
             }
             return;
         }
+        generator.stack.setAmount(LiquidFountainBlock.MAX);
         BlockPos blockPos = generator.getBlockPos();
         //传输
         for (Direction direction : Direction.values()) {

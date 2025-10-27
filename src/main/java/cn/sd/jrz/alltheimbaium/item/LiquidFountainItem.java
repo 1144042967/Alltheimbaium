@@ -58,9 +58,9 @@ public class LiquidFountainItem extends BlockItem {
             return;
         }
         if (fluidStack.getAmount() < LiquidFountainBlock.MAX) {
-            tooltip.add(Component.translatable("screen.alltheimbaium.liquid.fountain.current", stack.getDisplayName(), fluidStack.getAmount(), LiquidFountainBlock.MAX));
+            tooltip.add(Component.translatable("screen.alltheimbaium.liquid.fountain.current", fluidStack.getDisplayName(), fluidStack.getAmount(), LiquidFountainBlock.MAX));
             return;
         }
-        tooltip.add(Component.translatable("screen.alltheimbaium.liquid.fountain.max", stack.getDisplayName()));
+        tooltip.add(Component.translatable("screen.alltheimbaium.liquid.fountain.max", fluidStack.getDisplayName()));
     }
 }

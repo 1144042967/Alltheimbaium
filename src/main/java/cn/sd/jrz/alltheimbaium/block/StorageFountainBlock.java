@@ -230,6 +230,9 @@ public class StorageFountainBlock extends Block implements EntityBlock {
                 return;
             }
         }
+        if (generator.itemList.size() >= 9) {
+            return;
+        }
         generator.itemList.add(stackInHand.getItem());
         generator.blockList.add(0L);
     }
