@@ -1,0 +1,38 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "function": "minecraft:copy_name",
+              "source": "block_entity"
+            },
+            {
+              "function": "minecraft:copy_nbt",
+              "ops": [
+                {
+                  "op": "replace",
+                  "source": "fluid_id",
+                  "target": "BlockEntityTag.fluid_id"
+                },
+                {
+                  "op": "replace",
+                  "source": "fluid_amount",
+                  "target": "BlockEntityTag.fluid_amount"
+                }
+              ],
+              "source": "block_entity"
+            }
+          ],
+          "name": "alltheimbaium:liquid_fountain"
+        }
+      ],
+      "name": "liquid_fountain",
+      "rolls": 1.0
+    }
+  ]
+}

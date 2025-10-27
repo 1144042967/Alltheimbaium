@@ -58,8 +58,12 @@ public class Tool {
         for (JsonElement element : array) {
             JsonObject stack = element.getAsJsonObject();
             String id = stack.get("id").getAsString();
-            //noinspection deprecation
-            Item item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(id));
+            Item item = null;
+            try {
+                //noinspection deprecation
+                item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(id));
+            } catch (Exception ignored) {
+            }
             itemList.add(item);
         }
         return itemList;

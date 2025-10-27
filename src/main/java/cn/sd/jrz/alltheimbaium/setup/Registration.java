@@ -3,11 +3,14 @@ package cn.sd.jrz.alltheimbaium.setup;
 import cn.sd.jrz.alltheimbaium.Alltheimbaium;
 import cn.sd.jrz.alltheimbaium.block.AlltheimbaiumFarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.FarmBlock;
+import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.CommonEntity;
 import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
+import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.item.FarmItem;
+import cn.sd.jrz.alltheimbaium.item.LiquidFountainItem;
 import cn.sd.jrz.alltheimbaium.item.StorageFountainItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -38,6 +41,7 @@ public class Registration {
                 .displayItems((parameters, output) -> {
                     output.accept(Registration.FARMLAND_ITEM.get());
                     output.accept(Registration.STORAGE_FOUNTAIN_ITEM.get());
+                    output.accept(Registration.LIQUID_FOUNTAIN_ITEM.get());
 
                     output.accept(Registration.FARM_COBBLESTONE_ITEM.get());//圆石 1
                     output.accept(Registration.FARM_WOOD_ITEM.get());//树 1
@@ -100,6 +104,7 @@ public class Registration {
     //BLOCK
 
     public static final RegistryObject<AlltheimbaiumFarmlandBlock> FARMLAND_BLOCK = BLOCKS.register("farmland", AlltheimbaiumFarmlandBlock::new);
+    public static final RegistryObject<LiquidFountainBlock> LIQUID_FOUNTAIN_BLOCK = BLOCKS.register("liquid_fountain", () -> new LiquidFountainBlock(BLOCK_PROPERTIES));
     public static final RegistryObject<StorageFountainBlock> STORAGE_FOUNTAIN_BLOCK = BLOCKS.register("storage_fountain", () -> new StorageFountainBlock(BLOCK_PROPERTIES));
     public static final RegistryObject<FarmBlock> FARM_BAMBOO_BLOCK = BLOCKS.register("farm_bamboo", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_BAMBOO));
     public static final RegistryObject<FarmBlock> FARM_BEE_BLOCK = BLOCKS.register("farm_bee", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_BEE));
@@ -143,6 +148,7 @@ public class Registration {
 
     //ITEM
     public static final RegistryObject<BlockItem> FARMLAND_ITEM = ITEMS.register("farmland", () -> new BlockItem(FARMLAND_BLOCK.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> LIQUID_FOUNTAIN_ITEM = ITEMS.register("liquid_fountain", () -> new LiquidFountainItem(LIQUID_FOUNTAIN_BLOCK.get()));
     public static final RegistryObject<BlockItem> STORAGE_FOUNTAIN_ITEM = ITEMS.register("storage_fountain", () -> new StorageFountainItem(STORAGE_FOUNTAIN_BLOCK.get()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X2 = ITEMS.register("package_material_x2", () -> new Item(new Item.Properties()));
@@ -189,6 +195,7 @@ public class Registration {
 
     //Entities
     public static final RegistryObject<BlockEntityType<CommonEntity>> FARMLAND_ENTITY = ENTITIES.register("farmland", () -> BlockEntityType.Builder.of((pos, state) -> new CommonEntity(pos, state, Registration.FARMLAND_ENTITY::get), FARMLAND_BLOCK.get()).build(null));
+    public static final RegistryObject<BlockEntityType<LiquidFountainEntity>> LIQUID_FOUNTAIN_ENTITY = ENTITIES.register("liquid_fountain", () -> BlockEntityType.Builder.of(LiquidFountainEntity::new, LIQUID_FOUNTAIN_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<StorageFountainEntity>> STORAGE_FOUNTAIN_ENTITY = ENTITIES.register("storage_fountain", () -> BlockEntityType.Builder.of(StorageFountainEntity::new, STORAGE_FOUNTAIN_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<FarmEntity>> FARM_BAMBOO_ENTITY = ENTITIES.register("farm_bamboo", () -> BlockEntityType.Builder.of((pos, state) -> new FarmEntity(pos, state, DataConfig.FARM_BAMBOO), FARM_BAMBOO_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<FarmEntity>> FARM_BEE_ENTITY = ENTITIES.register("farm_bee", () -> BlockEntityType.Builder.of((pos, state) -> new FarmEntity(pos, state, DataConfig.FARM_BEE), FARM_BEE_BLOCK.get()).build(null));
