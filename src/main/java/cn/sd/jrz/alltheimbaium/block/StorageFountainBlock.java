@@ -236,6 +236,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         }
         generator.itemList.add(stackInHand.getItem());
         generator.blockList.add(0L);
+        Tool.sort(generator.itemList, generator.blockList);
     }
 
     private boolean takeItem(Player player, StorageFountainEntity generator, ItemStack stackInHand) {
