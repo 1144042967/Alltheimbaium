@@ -153,6 +153,13 @@ public class Registration {
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X2 = ITEMS.register("package_material_x2", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X3 = ITEMS.register("package_material_x3", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> BLOCK_DIAMOND_X8 = ITEMS.register("block_diamond_x8", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> BLOCK_GOLD_X8 = ITEMS.register("block_gold_x8", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> BLOCK_SILICON_X8 = ITEMS.register("block_silicon_x8", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> BLOCK_QUANTUM_ALLOY_X8 = ITEMS.register("block_quantum_alloy_x8", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> BLOCK_SKY_STEEL_X8 = ITEMS.register("block_sky_steel_x8", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> BLOCK_QUARTZ_X8 = ITEMS.register("block_quartz_x8", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> BLOCK_QUARTZ_X16 = ITEMS.register("block_quartz_x16", () -> new Item(new Item.Properties()));
     public static final RegistryObject<FarmItem> FARM_BAMBOO_ITEM = ITEMS.register("farm_bamboo", () -> new FarmItem(FARM_BAMBOO_BLOCK.get(), DataConfig.FARM_BAMBOO));
     public static final RegistryObject<FarmItem> FARM_BEE_ITEM = ITEMS.register("farm_bee", () -> new FarmItem(FARM_BEE_BLOCK.get(), DataConfig.FARM_BEE));
     public static final RegistryObject<FarmItem> FARM_BLAZE_ITEM = ITEMS.register("farm_blaze", () -> new FarmItem(FARM_BLAZE_BLOCK.get(), DataConfig.FARM_BLAZE));
