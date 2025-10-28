@@ -78,4 +78,34 @@ public class Tool {
         }
         return blockList;
     }
+
+    @SuppressWarnings("deprecation")
+    public static void sort(List<Item> itemList, List<Long> blockList) {
+        for (int i = 0; i < Math.min(itemList.size(), blockList.size()); i++) {
+            for (int j = i + 1; j < Math.min(itemList.size(), blockList.size()); j++) {
+                Item aItem = itemList.get(i);
+                Item bItem = itemList.get(j);
+                String a = BuiltInRegistries.ITEM.getKey(aItem).toString();
+                String b = BuiltInRegistries.ITEM.getKey(bItem).toString();
+                if (compareName(a, b) > 0) {
+                    itemList.set(i, bItem);
+                    itemList.set(j, aItem);
+                    Long aBlock = blockList.get(i);
+                    Long bBlock = blockList.get(j);
+                    blockList.set(i, bBlock);
+                    blockList.set(j, aBlock);
+                }
+            }
+        }
+    }
+
+    private static int compareName(String a, String b) {
+        if (a.startsWith("minecraft:") && b.startsWith("minecraft:")) {
+            return a.compareTo(b);
+        }
+        if (!a.startsWith("minecraft:") && !b.startsWith("minecraft:")) {
+            return a.compareTo(b);
+        }
+        return a.startsWith("minecraft:") ? -1 : 1;
+    }
 }

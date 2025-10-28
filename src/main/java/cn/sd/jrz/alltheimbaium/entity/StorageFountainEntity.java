@@ -74,6 +74,7 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
                 itemList.add(item);
                 blockList.add(block);
             }
+            Tool.sort(itemList, blockList);
         }
     }
 }

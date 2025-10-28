@@ -215,6 +215,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
                         }
                         generator.itemList.add(item);
                         generator.blockList.add(block * count);
+                        Tool.sort(generator.itemList, generator.blockList);
                     }
                 }
             }
