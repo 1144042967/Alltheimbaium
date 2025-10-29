@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "alltheimbaium:item/block_silicon_x8"
+  }
+}

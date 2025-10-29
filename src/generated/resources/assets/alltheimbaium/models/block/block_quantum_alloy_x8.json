@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "alltheimbaium:item/block_quantum_alloy_x8"
+  }
+}

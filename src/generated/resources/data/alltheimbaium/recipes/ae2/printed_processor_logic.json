@@ -1,0 +1,32 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "expatternprovider"
+        }
+      ],
+      "recipe": {
+        "type": "expatternprovider:circuit_cutter",
+        "fluid_input": {
+          "amount": 800,
+          "ingredient": {
+            "fluid": "minecraft:water"
+          }
+        },
+        "item_input": {
+          "amount": 1,
+          "ingredient": {
+            "item": "alltheimbaium:block_gold_x8"
+          }
+        },
+        "output": {
+          "count": 64,
+          "item": "ae2:printed_logic_processor"
+        }
+      }
+    }
+  ]
+}

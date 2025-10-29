@@ -13,18 +13,18 @@
         "fluid_input": {
           "amount": 800,
           "ingredient": {
-            "fluid": "minecraft:water"
+            "fluid": "minecraft:lava"
           }
         },
         "item_input": {
-          "amount": 64,
+          "amount": 1,
           "ingredient": {
-            "item": "minecraft:diamond"
+            "item": "alltheimbaium:block_sky_steel_x8"
           }
         },
         "output": {
           "count": 64,
-          "item": "ae2:printed_engineering_processor"
+          "item": "megacells:printed_accumulation_processor"
         }
       }
     }

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "alltheimbaium:item/block_sky_steel_x8"
+  }
+}
