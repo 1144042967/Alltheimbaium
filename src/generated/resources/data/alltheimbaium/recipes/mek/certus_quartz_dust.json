@@ -1,0 +1,18 @@
+{
+  "type": "mekanism:crushing",
+  "input": {
+    "ingredient": {
+      "item": "ae2:chipped_budding_quartz"
+    }
+  },
+  "output": {
+    "count": 64,
+    "item": "ae2:certus_quartz_dust"
+  },
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "mekanism"
+    }
+  ]
+}

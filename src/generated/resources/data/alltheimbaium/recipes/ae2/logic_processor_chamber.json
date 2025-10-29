@@ -4,7 +4,7 @@
   "fluid": {
     "fluidStack": {
       "Amount": 1600,
-      "FluidName": "minecraft:water"
+      "FluidName": "minecraft:lava"
     }
   },
   "input_items": [
