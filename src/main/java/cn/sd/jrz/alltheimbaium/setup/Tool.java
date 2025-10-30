@@ -1,13 +1,11 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,60 +34,58 @@ public class Tool {
         }
     }
 
-    public static JsonArray toJsonArray(List<Item> itemList, List<Long> blockList) {
-        JsonArray a = new JsonArray();
+    public static ListTag toJsonArray(List<ItemStack> itemList, List<Long> blockList) {
+        ListTag list = new ListTag();
         for (int i = 0; i < itemList.size(); i++) {
-            Item item = itemList.get(i);
+            ItemStack item = itemList.get(i);
             Long count = blockList.get(i);
             if (item == null || count == null) {
                 continue;
             }
-            JsonObject stack = new JsonObject();
-            //noinspection deprecation
-            stack.addProperty("id", BuiltInRegistries.ITEM.getKey(item).toString());
-            stack.addProperty("c", count);
-            a.add(stack);
+            CompoundTag tag = new CompoundTag();
+            item.save(tag);
+            tag.putLong("Long_Count", count);
+            list.add(tag);
         }
-        return a;
+        return list;
     }
 
-    public static List<Item> toItemList(JsonArray array) {
-        List<Item> itemList = new ArrayList<>();
-        for (JsonElement element : array) {
-            JsonObject stack = element.getAsJsonObject();
-            String id = stack.get("id").getAsString();
-            Item item = null;
-            try {
-                //noinspection deprecation
-                item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(id));
-            } catch (Exception ignored) {
+    public static List<ItemStack> toItemList(ListTag array) {
+        List<ItemStack> itemList = new ArrayList<>();
+        for (Tag value : array) {
+            CompoundTag tag = (CompoundTag) value;
+            ItemStack stack = ItemStack.of(tag);
+            if (stack != ItemStack.EMPTY) {
+                stack.setCount(1);
+                itemList.add(stack);
             }
-            itemList.add(item);
         }
         return itemList;
     }
 
-    public static List<Long> toBlockList(JsonArray array) {
+    public static List<Long> toBlockList(ListTag array) {
         List<Long> blockList = new ArrayList<>();
-        for (JsonElement element : array) {
-            JsonObject stack = element.getAsJsonObject();
-            long count = stack.get("c").getAsLong();
-            blockList.add(count);
+        for (Tag value : array) {
+            CompoundTag tag = (CompoundTag) value;
+            ItemStack stack = ItemStack.of(tag);
+            if (stack != ItemStack.EMPTY) {
+                blockList.add(tag.getLong("Long_Count"));
+            }
         }
         return blockList;
     }
 
     @SuppressWarnings("deprecation")
-    public static void sort(List<Item> itemList, List<Long> blockList) {
+    public static void sort(List<ItemStack> itemList, List<Long> blockList) {
         for (int i = 0; i < Math.min(itemList.size(), blockList.size()); i++) {
             for (int j = i + 1; j < Math.min(itemList.size(), blockList.size()); j++) {
-                Item aItem = itemList.get(i);
-                Item bItem = itemList.get(j);
-                String a = BuiltInRegistries.ITEM.getKey(aItem).toString();
-                String b = BuiltInRegistries.ITEM.getKey(bItem).toString();
+                ItemStack aStack = itemList.get(i);
+                ItemStack bStack = itemList.get(j);
+                String a = BuiltInRegistries.ITEM.getKey(aStack.getItem()).toString();
+                String b = BuiltInRegistries.ITEM.getKey(bStack.getItem()).toString();
                 if (compareName(a, b) > 0) {
-                    itemList.set(i, bItem);
-                    itemList.set(j, aItem);
+                    itemList.set(i, bStack);
+                    itemList.set(j, aStack);
                     Long aBlock = blockList.get(i);
                     Long bBlock = blockList.get(j);
                     blockList.set(i, bBlock);

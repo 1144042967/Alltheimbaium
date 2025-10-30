@@ -3,13 +3,12 @@ package cn.sd.jrz.alltheimbaium.entity;
 import cn.sd.jrz.alltheimbaium.connection.StorageFountainConnection;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
@@ -26,7 +25,7 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
     private final LazyOptional<StorageFountainConnection> fecOptional = LazyOptional.of(() -> new StorageFountainConnection(this));
     public int findIndex = 0;
     public long output = 5;
-    public List<Item> itemList = new ArrayList<>();
+    public List<ItemStack> itemList = new ArrayList<>();
     public List<Long> blockList = new ArrayList<>();
     public long tickCount = 0;
 
@@ -44,7 +43,7 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
     public void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
         nbt.putLong("output", output);
-        nbt.putString("save_stick", Tool.toJsonArray(itemList, blockList).toString());
+        nbt.put("save_stick", Tool.toJsonArray(itemList, blockList));
     }
 
     @Override
@@ -53,28 +52,13 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
         if (nbt.contains("output", Tag.TAG_LONG)) {
             this.output = Tool.suit(nbt.getLong("output"));
         }
-        if (nbt.contains("save_stick", Tag.TAG_STRING)) {
-            String json = nbt.getString("save_stick");
-            JsonArray array = JsonParser.parseString(json).getAsJsonArray();
-            List<Item> tempItemList = Tool.toItemList(array);
-            List<Long> tempBlockList = Tool.toBlockList(array);
-            nextItem:
-            for (int i = 0; i < Math.min(tempItemList.size(), tempBlockList.size()) && i < 9; i++) {
-                Item item = tempItemList.get(i);
-                Long block = tempBlockList.get(i);
-                if (item == null || block == null) {
-                    continue;
-                }
-                for (int index = 0; index < Math.min(itemList.size(), blockList.size()); index++) {
-                    if (itemList.get(index) == item) {
-                        blockList.set(index, blockList.get(index) + block);
-                        continue nextItem;
-                    }
-                }
-                itemList.add(item);
-                blockList.add(block);
+        if (nbt.contains("save_stick")) {
+            ListTag list = (ListTag) nbt.get("save_stick");
+            if (list != null) {
+                this.itemList = Tool.toItemList(list);
+                this.blockList = Tool.toBlockList(list);
+                Tool.sort(itemList, blockList);
             }
-            Tool.sort(itemList, blockList);
         }
     }
 }

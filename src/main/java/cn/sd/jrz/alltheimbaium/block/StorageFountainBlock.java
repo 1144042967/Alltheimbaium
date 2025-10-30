@@ -2,11 +2,10 @@ package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.TagKey;
@@ -119,10 +118,11 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     }
 
     private void transport(StorageFountainEntity generator, int index, IItemHandler handler) {
-        Item item = generator.itemList.get(index);
+        ItemStack stack = generator.itemList.get(index).copy();
         Long block = generator.blockList.get(index);
         long maxOutputCount = block / StorageFountainBlock.CARRY;
-        ItemStack result = ItemHandlerHelper.insertItemStacked(handler, new ItemStack(item, Tool.suitInt(maxOutputCount)), false);
+        stack.setCount(Tool.suitInt(maxOutputCount));
+        ItemStack result = ItemHandlerHelper.insertItemStacked(handler, stack, false);
         int count = result.getCount();
         if (count < 0) {
             count = 0;
@@ -184,9 +184,10 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         } else {
             index = indexList.get((int) (Math.random() * indexList.size()));
         }
-        Item item = generator.itemList.get(index);
+        ItemStack stack = generator.itemList.get(index).copy();
         Long count = generator.blockList.get(index);
-        Tool.takeItem(player, new ItemStack(item, 1));
+        stack.setCount(1);
+        Tool.takeItem(player, stack);
         generator.blockList.set(index, count - StorageFountainBlock.CARRY);
         return true;
     }
@@ -200,26 +201,30 @@ public class StorageFountainBlock extends Block implements EntityBlock {
                 if (tag.contains("output", Tag.TAG_LONG)) {
                     output = Tool.suit(tag.getLong("output"));
                 }
-                if (tag.contains("save_stick", Tag.TAG_STRING)) {
-                    String json = tag.getString("save_stick");
-                    JsonArray array = JsonParser.parseString(json).getAsJsonArray();
-                    List<Item> tempItemList = Tool.toItemList(array);
-                    List<Long> tempBlockList = Tool.toBlockList(array);
-                    nextItem:
-                    for (int i = 0; i < Math.min(tempItemList.size(), tempBlockList.size()); i++) {
-                        Item item = tempItemList.get(i);
-                        Long block = tempBlockList.get(i);
-                        if (item == null || block == null) {
-                            continue;
-                        }
-                        for (int index = 0; index < Math.min(generator.itemList.size(), generator.blockList.size()); i++) {
-                            if (generator.itemList.get(index) == item) {
-                                generator.blockList.set(index, generator.blockList.get(index) + block * count);
-                                continue nextItem;
+                if (tag.contains("save_stick")) {
+                    ListTag array = (ListTag) tag.get("save_stick");
+                    if (array != null) {
+                        List<ItemStack> tempItemList = Tool.toItemList(array);
+                        List<Long> tempBlockList = Tool.toBlockList(array);
+                        nextItem:
+                        for (int i = 0; i < Math.min(tempItemList.size(), tempBlockList.size()); i++) {
+                            ItemStack stack = tempItemList.get(i);
+                            Long block = tempBlockList.get(i);
+                            if (stack == null || block == null) {
+                                continue;
+                            }
+                            stack.setCount(1);
+                            for (int index = 0; index < Math.min(generator.itemList.size(), generator.blockList.size()); i++) {
+                                if (generator.itemList.get(index).equals(stack, true)) {
+                                    generator.blockList.set(index, generator.blockList.get(index) + block * count);
+                                    continue nextItem;
+                                }
+                            }
+                            if (generator.itemList.size() < 9) {
+                                generator.itemList.add(stack);
+                                generator.blockList.add(block * count);
                             }
                         }
-                        generator.itemList.add(item);
-                        generator.blockList.add(block * count);
                         Tool.sort(generator.itemList, generator.blockList);
                     }
                 }
@@ -230,28 +235,29 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     }
 
     private void addOutputByBlock(StorageFountainEntity generator, ItemStack stackInHand) {
-        List<Item> itemList = generator.itemList;
-        for (Item item : itemList) {
-            if (item == stackInHand.getItem()) {
+        List<ItemStack> itemList = generator.itemList;
+        for (ItemStack stack : itemList) {
+            if (stackInHand.equals(stack, true)) {
                 return;
             }
         }
         if (generator.itemList.size() >= 9) {
             return;
         }
-        generator.itemList.add(stackInHand.getItem());
+        generator.itemList.add(stackInHand);
         generator.blockList.add(0L);
         Tool.sort(generator.itemList, generator.blockList);
     }
 
     private boolean takeItem(Player player, StorageFountainEntity generator, ItemStack stackInHand) {
-        Item target = stackInHand.getItem();
-        List<Item> itemList = generator.itemList;
+        stackInHand = stackInHand.copy();
+        stackInHand.setCount(1);
+        List<ItemStack> stackList = generator.itemList;
         List<Long> blockList = generator.blockList;
-        for (int i = 0; i < Math.min(itemList.size(), blockList.size()); i++) {
-            if (itemList.get(i) == target) {
+        for (int i = 0; i < Math.min(stackList.size(), blockList.size()); i++) {
+            if (stackList.get(i).equals(stackInHand, true)) {
                 if (blockList.get(i) >= StorageFountainBlock.CARRY) {
-                    Tool.takeItem(player, new ItemStack(target, 1));
+                    Tool.takeItem(player, stackInHand);
                     blockList.set(i, blockList.get(i) - StorageFountainBlock.CARRY);
                     return true;
                 }
@@ -264,18 +270,18 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     private void showMessage(Player player, StorageFountainEntity generator) {
         long output = generator.output;
         long tickCount = generator.tickCount;
-        List<Item> itemList = generator.itemList;
+        List<ItemStack> stackList = generator.itemList;
         List<Long> blockList = generator.blockList;
         BigDecimal outputPerTick = new BigDecimal(output).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
         player.sendSystemMessage(Component.translatable("screen.alltheimbaium.fountain.description", outputPerTick, 100D * tickCount / 20 / 20));
-        for (int i = 0; i < Math.min(itemList.size(), blockList.size()); i++) {
-            Item item = itemList.get(i);
+        for (int i = 0; i < Math.min(stackList.size(), blockList.size()); i++) {
+            ItemStack item = stackList.get(i);
             Long block = blockList.get(i);
-            String name = item.getName(new ItemStack(item)).getString();
+            String name = item.getItem().getName(item).getString();
             BigDecimal save = new BigDecimal(block).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
         }
-        if (itemList.isEmpty()) {
+        if (stackList.isEmpty()) {
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.fountain.empty"));
         }
     }

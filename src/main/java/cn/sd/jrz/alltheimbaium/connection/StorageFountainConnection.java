@@ -3,7 +3,6 @@ package cn.sd.jrz.alltheimbaium.connection;
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
 
@@ -26,12 +25,14 @@ public class StorageFountainConnection implements IItemHandler {
         if (slot < 0 || slot >= owner.itemList.size()) {
             return ItemStack.EMPTY;
         }
-        Item item = owner.itemList.get(slot);
+        ItemStack stack = owner.itemList.get(slot);
         Long count = owner.blockList.get(slot);
         if (count <= 0) {
             return ItemStack.EMPTY;
         }
-        return new ItemStack(item, Tool.suitInt(count / StorageFountainBlock.CARRY));
+        stack = stack.copy();
+        stack.setCount(Tool.suitInt(count / StorageFountainBlock.CARRY));
+        return stack;
     }
 
     @Override
@@ -44,7 +45,7 @@ public class StorageFountainConnection implements IItemHandler {
         if (slot < 0 || slot >= owner.itemList.size()) {
             return ItemStack.EMPTY;
         }
-        Item item = owner.itemList.get(slot);
+        ItemStack stack = owner.itemList.get(slot);
         Long block = owner.blockList.get(slot);
         int maxAmount = Tool.suitInt(block / StorageFountainBlock.CARRY);
         if (maxAmount <= 0) {
@@ -55,7 +56,9 @@ public class StorageFountainConnection implements IItemHandler {
             owner.blockList.set(slot, block - ret * StorageFountainBlock.CARRY);
             owner.setChanged();
         }
-        return new ItemStack(item, ret);
+        stack = stack.copy();
+        stack.setCount(ret);
+        return stack;
     }
 
     @Override
