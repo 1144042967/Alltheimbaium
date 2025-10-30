@@ -59,7 +59,7 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
             List<Item> tempItemList = Tool.toItemList(array);
             List<Long> tempBlockList = Tool.toBlockList(array);
             nextItem:
-            for (int i = 0; i < Math.min(tempItemList.size(), tempBlockList.size()); i++) {
+            for (int i = 0; i < Math.min(tempItemList.size(), tempBlockList.size()) && i < 9; i++) {
                 Item item = tempItemList.get(i);
                 Long block = tempBlockList.get(i);
                 if (item == null || block == null) {
