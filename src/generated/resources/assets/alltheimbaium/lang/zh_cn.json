@@ -5,7 +5,7 @@
   "screen.alltheimbaium.fountain.description": "产量: %s/tick, 增长: %s%%",
   "screen.alltheimbaium.fountain.output": "产量: %s/tick",
   "screen.alltheimbaium.fountain.current": "%s, 已存储: %s",
-  "screen.alltheimbaium.fountain.empty": "使用含有 forge:ores 或 forge:storage_blocks 标签的方块右击此机器",
+  "screen.alltheimbaium.fountain.empty": "使用含有 ores 或 storage_blocks 标签的方块右击此机器",
   "screen.alltheimbaium.liquid.fountain.empty": "请输入一些流体",
   "screen.alltheimbaium.liquid.fountain.current": "%s, 已存储: %s/%s",
   "screen.alltheimbaium.liquid.fountain.max": "%s, 已存储: 无限",

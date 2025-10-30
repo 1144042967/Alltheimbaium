@@ -5,7 +5,7 @@
   "screen.alltheimbaium.fountain.description": "Output: %s/tick, Growth: %s%%",
   "screen.alltheimbaium.fountain.output": "Output: %s/tick",
   "screen.alltheimbaium.fountain.current": "%s, Current: %s",
-  "screen.alltheimbaium.fountain.empty": "Right-click this machine with a block containing the 'forge:ores' or 'forge:storage_blocks' tag",
+  "screen.alltheimbaium.fountain.empty": "Right-click this machine with a block containing the 'ores' or 'storage_blocks' tag",
   "screen.alltheimbaium.liquid.fountain.empty": "Please input some liquid",
   "screen.alltheimbaium.liquid.fountain.current": "%s, Current: %s/%s",
   "screen.alltheimbaium.liquid.fountain.max": "%s, Current: Infinity",
