@@ -241,6 +241,8 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         if (generator.itemList.size() >= 9) {
             return;
         }
+        stackInHand = stackInHand.copy();
+        stackInHand.setCount(1);
         generator.itemList.add(stackInHand);
         generator.blockList.add(0L);
         Tool.sort(generator.itemList, generator.blockList);

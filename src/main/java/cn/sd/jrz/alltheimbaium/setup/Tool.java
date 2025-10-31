@@ -55,10 +55,12 @@ public class Tool {
         for (Tag value : array) {
             CompoundTag tag = (CompoundTag) value;
             ItemStack stack = ItemStack.of(tag);
-            if (stack != ItemStack.EMPTY) {
-                stack.setCount(1);
-                itemList.add(stack);
+            if (stack.isEmpty()) {
+                continue;
             }
+            stack = stack.copy();
+            stack.setCount(1);
+            itemList.add(stack);
         }
         return itemList;
     }
@@ -68,9 +70,10 @@ public class Tool {
         for (Tag value : array) {
             CompoundTag tag = (CompoundTag) value;
             ItemStack stack = ItemStack.of(tag);
-            if (stack != ItemStack.EMPTY) {
-                blockList.add(tag.getLong("Long_Count"));
+            if (stack.isEmpty()) {
+                continue;
             }
+            blockList.add(tag.getLong("Long_Count"));
         }
         return blockList;
     }
