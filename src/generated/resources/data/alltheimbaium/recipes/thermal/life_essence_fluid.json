@@ -1,6 +1,6 @@
 {
   "type": "thermal:refinery",
-  "energy": 100,
+  "energy": 4000,
   "ingredients": [
     {
       "amount": 1000,
@@ -10,7 +10,7 @@
   "result": [
     {
       "amount": 1000,
-      "fluid": "evilcraft:block_blood"
+      "fluid": "evilcraft:blood"
     }
   ]
 }
