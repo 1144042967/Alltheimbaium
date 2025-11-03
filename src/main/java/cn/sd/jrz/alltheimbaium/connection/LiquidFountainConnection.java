@@ -25,7 +25,7 @@ public class LiquidFountainConnection implements IFluidHandler {
 
     @Override
     public int getTankCapacity(int i) {
-        return isInfinity() ? Integer.MAX_VALUE : LiquidFountainBlock.MAX;
+        return Integer.MAX_VALUE;
     }
 
     @Override
