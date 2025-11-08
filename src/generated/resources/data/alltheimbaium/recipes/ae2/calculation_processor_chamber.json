@@ -1,35 +1,52 @@
 {
-  "type": "advanced_ae:reaction",
-  "energy": 320000,
-  "fluid": {
-    "fluidStack": {
-      "Amount": 1600,
-      "FluidName": "minecraft:lava"
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "advanced_ae"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "ae2"
+        }
+      ],
+      "recipe": {
+        "type": "advanced_ae:reaction",
+        "energy": 320000,
+        "fluid": {
+          "fluidStack": {
+            "Amount": 1600,
+            "FluidName": "minecraft:lava"
+          }
+        },
+        "input_items": [
+          {
+            "amount": 64,
+            "ingredient": {
+              "item": "ae2:printed_calculation_processor"
+            }
+          },
+          {
+            "amount": 64,
+            "ingredient": {
+              "item": "ae2:printed_silicon"
+            }
+          },
+          {
+            "amount": 64,
+            "ingredient": {
+              "tag": "forge:dusts/redstone"
+            }
+          }
+        ],
+        "output": {
+          "#": 64,
+          "#c": "ae2:i",
+          "id": "ae2:calculation_processor"
+        }
+      }
     }
-  },
-  "input_items": [
-    {
-      "amount": 64,
-      "ingredient": {
-        "item": "ae2:printed_calculation_processor"
-      }
-    },
-    {
-      "amount": 64,
-      "ingredient": {
-        "item": "ae2:printed_silicon"
-      }
-    },
-    {
-      "amount": 64,
-      "ingredient": {
-        "tag": "forge:dusts/redstone"
-      }
-    }
-  ],
-  "output": {
-    "#": 64,
-    "#c": "ae2:i",
-    "id": "ae2:calculation_processor"
-  }
+  ]
 }

@@ -1,6 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "group": "template",
+  "group": "spawner",
   "key": {
     "A": {
       "item": "minecraft:nether_start"

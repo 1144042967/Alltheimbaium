@@ -1,16 +1,29 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "group": "ae2_quartz",
-  "key": {
-    "#": {
-      "item": "ae2:quartz_block"
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "ae2"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "group": "ae2_quartz",
+        "key": {
+          "#": {
+            "item": "ae2:quartz_block"
+          }
+        },
+        "pattern": [
+          "##",
+          "##"
+        ],
+        "result": {
+          "item": "ae2:damaged_budding_quartz"
+        }
+      }
     }
-  },
-  "pattern": [
-    "##",
-    "##"
-  ],
-  "result": {
-    "item": "ae2:damaged_budding_quartz"
-  }
+  ]
 }

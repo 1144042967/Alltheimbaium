@@ -1,16 +1,33 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "category": "misc",
-  "group": "dust",
-  "ingredients": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "item": "ae2:certus_quartz_dust"
-    },
-    {
-      "item": "minecraft:lava_bucket"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "ae2"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "enderio"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shapeless",
+        "category": "misc",
+        "group": "dust",
+        "ingredients": [
+          {
+            "item": "ae2:certus_quartz_dust"
+          },
+          {
+            "item": "minecraft:lava_bucket"
+          }
+        ],
+        "result": {
+          "item": "enderio:powdered_quartz"
+        }
+      }
     }
-  ],
-  "result": {
-    "item": "enderio:powdered_quartz"
-  }
+  ]
 }

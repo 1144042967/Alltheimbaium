@@ -1,23 +1,36 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "group": "template",
-  "key": {
-    "A": {
-      "item": "allthemodium:allthemodium_ingot"
-    },
-    "B": {
-      "item": "minecraft:sculk"
-    },
-    "#": {
-      "item": "minecraft:netherite_ingot"
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "allthemodium"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "group": "template",
+        "key": {
+          "A": {
+            "item": "allthemodium:allthemodium_ingot"
+          },
+          "B": {
+            "item": "minecraft:sculk"
+          },
+          "#": {
+            "item": "minecraft:netherite_ingot"
+          }
+        },
+        "pattern": [
+          "#A#",
+          "#B#",
+          "###"
+        ],
+        "result": {
+          "item": "allthemodium:allthemodium_upgrade_smithing_template"
+        }
+      }
     }
-  },
-  "pattern": [
-    "#A#",
-    "#B#",
-    "###"
-  ],
-  "result": {
-    "item": "allthemodium:allthemodium_upgrade_smithing_template"
-  }
+  ]
 }

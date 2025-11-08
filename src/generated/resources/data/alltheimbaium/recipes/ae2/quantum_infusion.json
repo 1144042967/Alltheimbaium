@@ -1,23 +1,36 @@
 {
-  "type": "advanced_ae:reaction",
-  "energy": 320000,
-  "fluid": {
-    "fluidStack": {
-      "Amount": 16000,
-      "FluidName": "minecraft:lava"
-    }
-  },
-  "input_items": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "amount": 16,
-      "ingredient": {
-        "item": "advanced_ae:quantum_infused_dust"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "advanced_ae"
+        }
+      ],
+      "recipe": {
+        "type": "advanced_ae:reaction",
+        "energy": 320000,
+        "fluid": {
+          "fluidStack": {
+            "Amount": 16000,
+            "FluidName": "minecraft:lava"
+          }
+        },
+        "input_items": [
+          {
+            "amount": 16,
+            "ingredient": {
+              "item": "advanced_ae:quantum_infused_dust"
+            }
+          }
+        ],
+        "output": {
+          "#": 16000,
+          "#c": "ae2:f",
+          "id": "advanced_ae:quantum_infusion_source"
+        }
       }
     }
-  ],
-  "output": {
-    "#": 16000,
-    "#c": "ae2:f",
-    "id": "advanced_ae:quantum_infusion_source"
-  }
+  ]
 }

@@ -1,35 +1,52 @@
 {
-  "type": "advanced_ae:reaction",
-  "energy": 6400000,
-  "fluid": {
-    "fluidStack": {
-      "Amount": 3200,
-      "FluidName": "minecraft:water"
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "advanced_ae"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "ae2"
+        }
+      ],
+      "recipe": {
+        "type": "advanced_ae:reaction",
+        "energy": 6400000,
+        "fluid": {
+          "fluidStack": {
+            "Amount": 3200,
+            "FluidName": "minecraft:water"
+          }
+        },
+        "input_items": [
+          {
+            "amount": 32,
+            "ingredient": {
+              "item": "ae2:singularity"
+            }
+          },
+          {
+            "amount": 64,
+            "ingredient": {
+              "tag": "forge:dusts/ender_pearl"
+            }
+          },
+          {
+            "amount": 64,
+            "ingredient": {
+              "item": "ae2:sky_dust"
+            }
+          }
+        ],
+        "output": {
+          "#": 64,
+          "#c": "ae2:i",
+          "id": "advanced_ae:shattered_singularity"
+        }
+      }
     }
-  },
-  "input_items": [
-    {
-      "amount": 32,
-      "ingredient": {
-        "item": "ae2:singularity"
-      }
-    },
-    {
-      "amount": 64,
-      "ingredient": {
-        "tag": "forge:dusts/ender_pearl"
-      }
-    },
-    {
-      "amount": 64,
-      "ingredient": {
-        "item": "ae2:sky_dust"
-      }
-    }
-  ],
-  "output": {
-    "#": 64,
-    "#c": "ae2:i",
-    "id": "advanced_ae:shattered_singularity"
-  }
+  ]
 }

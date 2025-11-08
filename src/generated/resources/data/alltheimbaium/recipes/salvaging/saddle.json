@@ -1,12 +1,25 @@
 {
-  "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "minecraft:saddle"
-  },
-  "results": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "count": 2,
-      "item": "minecraft:leather"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "silentgear"
+        }
+      ],
+      "recipe": {
+        "type": "silentgear:salvaging",
+        "ingredient": {
+          "item": "minecraft:saddle"
+        },
+        "results": [
+          {
+            "count": 2,
+            "item": "minecraft:leather"
+          }
+        ]
+      }
     }
   ]
 }

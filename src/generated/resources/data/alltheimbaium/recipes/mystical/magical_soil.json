@@ -1,23 +1,40 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "group": "mystical_agriculture_crux",
-  "key": {
-    "S": {
-      "item": "mysticalagradditions:insanium_farmland"
-    },
-    "A": {
-      "item": "mysticalagradditions:dragon_scale"
-    },
-    "#": {
-      "item": "mysticalagradditions:insanium_block"
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mysticalagradditions"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "kubejs"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "group": "mystical_agriculture_crux",
+        "key": {
+          "S": {
+            "item": "mysticalagradditions:insanium_farmland"
+          },
+          "A": {
+            "item": "mysticalagradditions:dragon_scale"
+          },
+          "#": {
+            "item": "mysticalagradditions:insanium_block"
+          }
+        },
+        "pattern": [
+          "#A#",
+          "ASA",
+          "#A#"
+        ],
+        "result": {
+          "item": "kubejs:magical_soil"
+        }
+      }
     }
-  },
-  "pattern": [
-    "#A#",
-    "ASA",
-    "#A#"
-  ],
-  "result": {
-    "item": "kubejs:magical_soil"
-  }
+  ]
 }
