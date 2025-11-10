@@ -214,7 +214,7 @@ public abstract class DataConfig {
     };
     public static final DataConfig FARM_PILLAGER = new DataConfig(
             product(Items.ARROW, 500)
-            , product(Items.CROSSBOW, 10)
+            , product(Items.EXPERIENCE_BOTTLE, 10)
             , product(Items.PILLAGER_SPAWN_EGG, 1)
     ) {
         @Override
