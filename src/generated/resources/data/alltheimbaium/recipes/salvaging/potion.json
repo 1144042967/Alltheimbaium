@@ -1,16 +1,33 @@
 {
-  "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "minecraft:potion"
-  },
-  "results": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "count": 1,
-      "item": "minecraft:glass_bottle"
-    },
-    {
-      "count": 1,
-      "item": "mysticalagriculture:water_essence"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "silentgear"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mysticalagriculture"
+        }
+      ],
+      "recipe": {
+        "type": "silentgear:salvaging",
+        "ingredient": {
+          "item": "minecraft:potion"
+        },
+        "results": [
+          {
+            "count": 1,
+            "item": "minecraft:glass_bottle"
+          },
+          {
+            "count": 1,
+            "item": "mysticalagriculture:water_essence"
+          }
+        ]
+      }
     }
   ]
 }

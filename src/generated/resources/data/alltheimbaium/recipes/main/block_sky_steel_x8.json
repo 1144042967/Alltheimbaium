@@ -1,21 +1,34 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "group": "package_material",
-  "key": {
-    "A": {
-      "item": "megacells:sky_steel_block"
-    },
-    "B": {
-      "item": "alltheimbaium:package_material_x1"
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "megacells"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "group": "package_material",
+        "key": {
+          "A": {
+            "item": "megacells:sky_steel_block"
+          },
+          "B": {
+            "item": "alltheimbaium:package_material_x1"
+          }
+        },
+        "pattern": [
+          "AAA",
+          "ABA",
+          "AAA"
+        ],
+        "result": {
+          "item": "alltheimbaium:block_sky_steel_x8",
+          "count": 1
+        }
+      }
     }
-  },
-  "pattern": [
-    "AAA",
-    "ABA",
-    "AAA"
-  ],
-  "result": {
-    "item": "alltheimbaium:block_sky_steel_x8",
-    "count": 1
-  }
+  ]
 }

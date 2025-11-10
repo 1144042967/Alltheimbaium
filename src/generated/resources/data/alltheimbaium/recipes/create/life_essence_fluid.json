@@ -1,19 +1,40 @@
 {
-  "type": "create:mixing",
-  "ingredients": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "amount": 250,
-      "fluid": "industrialforegoing:meat"
-    },
-    {
-      "amount": 250,
-      "fluid": "minecraft:water"
-    }
-  ],
-  "results": [
-    {
-      "amount": 500,
-      "fluid": "bloodmagic:life_essence_fluid"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "create"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "industrialforegoing"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "bloodmagic"
+        }
+      ],
+      "recipe": {
+        "type": "create:mixing",
+        "ingredients": [
+          {
+            "amount": 250,
+            "fluid": "industrialforegoing:meat"
+          },
+          {
+            "amount": 250,
+            "fluid": "minecraft:water"
+          }
+        ],
+        "results": [
+          {
+            "amount": 500,
+            "fluid": "bloodmagic:life_essence_fluid"
+          }
+        ]
+      }
     }
   ]
 }

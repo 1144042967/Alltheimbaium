@@ -1,53 +1,70 @@
 {
-  "type": "mysticalagriculture:infusion",
-  "input": {
-    "type": "mysticalagriculture:crop_component",
-    "component": "seed",
-    "crop": "mysticalagradditions:gaia_spirit"
-  },
-  "ingredients": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "type": "mysticalagriculture:crop_component",
-      "component": "material",
-      "crop": "mysticalagradditions:gaia_spirit"
-    },
-    {
-      "type": "mysticalagriculture:crop_component",
-      "component": "essence",
-      "crop": "mysticalagradditions:gaia_spirit"
-    },
-    {
-      "type": "mysticalagriculture:crop_component",
-      "component": "material",
-      "crop": "mysticalagradditions:gaia_spirit"
-    },
-    {
-      "type": "mysticalagriculture:crop_component",
-      "component": "essence",
-      "crop": "mysticalagradditions:gaia_spirit"
-    },
-    {
-      "type": "mysticalagriculture:crop_component",
-      "component": "material",
-      "crop": "mysticalagradditions:gaia_spirit"
-    },
-    {
-      "type": "mysticalagriculture:crop_component",
-      "component": "essence",
-      "crop": "mysticalagradditions:gaia_spirit"
-    },
-    {
-      "type": "mysticalagriculture:crop_component",
-      "component": "material",
-      "crop": "mysticalagradditions:gaia_spirit"
-    },
-    {
-      "type": "mysticalagriculture:crop_component",
-      "component": "essence",
-      "crop": "mysticalagradditions:gaia_spirit"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mysticalagriculture"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mysticalagradditions"
+        }
+      ],
+      "recipe": {
+        "type": "mysticalagriculture:infusion",
+        "input": {
+          "type": "mysticalagriculture:crop_component",
+          "component": "seed",
+          "crop": "mysticalagradditions:gaia_spirit"
+        },
+        "ingredients": [
+          {
+            "type": "mysticalagriculture:crop_component",
+            "component": "material",
+            "crop": "mysticalagradditions:gaia_spirit"
+          },
+          {
+            "type": "mysticalagriculture:crop_component",
+            "component": "essence",
+            "crop": "mysticalagradditions:gaia_spirit"
+          },
+          {
+            "type": "mysticalagriculture:crop_component",
+            "component": "material",
+            "crop": "mysticalagradditions:gaia_spirit"
+          },
+          {
+            "type": "mysticalagriculture:crop_component",
+            "component": "essence",
+            "crop": "mysticalagradditions:gaia_spirit"
+          },
+          {
+            "type": "mysticalagriculture:crop_component",
+            "component": "material",
+            "crop": "mysticalagradditions:gaia_spirit"
+          },
+          {
+            "type": "mysticalagriculture:crop_component",
+            "component": "essence",
+            "crop": "mysticalagradditions:gaia_spirit"
+          },
+          {
+            "type": "mysticalagriculture:crop_component",
+            "component": "material",
+            "crop": "mysticalagradditions:gaia_spirit"
+          },
+          {
+            "type": "mysticalagriculture:crop_component",
+            "component": "essence",
+            "crop": "mysticalagradditions:gaia_spirit"
+          }
+        ],
+        "result": {
+          "item": "mysticalagriculture:gaia_spirit_seeds"
+        }
+      }
     }
-  ],
-  "result": {
-    "item": "mysticalagriculture:gaia_spirit_seeds"
-  }
+  ]
 }

@@ -1,23 +1,36 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "group": "template",
-  "key": {
-    "A": {
-      "item": "allthemodium:unobtainium_ingot"
-    },
-    "B": {
-      "item": "allthemodium:piglich_heart"
-    },
-    "#": {
-      "item": "allthemodium:vibranium_ingot"
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "allthemodium"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "group": "template",
+        "key": {
+          "A": {
+            "item": "allthemodium:unobtainium_ingot"
+          },
+          "B": {
+            "item": "allthemodium:piglich_heart"
+          },
+          "#": {
+            "item": "allthemodium:vibranium_ingot"
+          }
+        },
+        "pattern": [
+          "#A#",
+          "#B#",
+          "###"
+        ],
+        "result": {
+          "item": "allthemodium:unobtainium_upgrade_smithing_template"
+        }
+      }
     }
-  },
-  "pattern": [
-    "#A#",
-    "#B#",
-    "###"
-  ],
-  "result": {
-    "item": "allthemodium:unobtainium_upgrade_smithing_template"
-  }
+  ]
 }

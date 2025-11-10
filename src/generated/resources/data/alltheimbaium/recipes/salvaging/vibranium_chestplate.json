@@ -1,12 +1,29 @@
 {
-  "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "allthemodium:vibranium_chestplate"
-  },
-  "results": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "count": 2,
-      "item": "allthemodium:vibranium_ingot"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "silentgear"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "allthemodium"
+        }
+      ],
+      "recipe": {
+        "type": "silentgear:salvaging",
+        "ingredient": {
+          "item": "allthemodium:vibranium_chestplate"
+        },
+        "results": [
+          {
+            "count": 2,
+            "item": "allthemodium:vibranium_ingot"
+          }
+        ]
+      }
     }
   ]
 }

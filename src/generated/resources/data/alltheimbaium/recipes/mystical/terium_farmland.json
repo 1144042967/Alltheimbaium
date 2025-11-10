@@ -1,14 +1,27 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "group": "mystical_agriculture_farmland",
-  "category": "misc",
-  "ingredients": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "item": "mysticalagriculture:tertium_farmland"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mysticalagriculture"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shapeless",
+        "group": "mystical_agriculture_farmland",
+        "category": "misc",
+        "ingredients": [
+          {
+            "item": "mysticalagriculture:tertium_farmland"
+          }
+        ],
+        "result": {
+          "count": 1,
+          "item": "mysticalagriculture:tertium_essence"
+        }
+      }
     }
-  ],
-  "result": {
-    "count": 1,
-    "item": "mysticalagriculture:tertium_essence"
-  }
+  ]
 }

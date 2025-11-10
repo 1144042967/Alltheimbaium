@@ -1,16 +1,37 @@
 {
-  "type": "thermal:refinery",
-  "energy": 4000,
-  "ingredients": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "amount": 1000,
-      "fluid": "evilcraft:blood"
-    }
-  ],
-  "result": [
-    {
-      "amount": 1000,
-      "fluid": "bloodmagic:life_essence_fluid"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "thermal"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "evilcraft"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "bloodmagic"
+        }
+      ],
+      "recipe": {
+        "type": "thermal:refinery",
+        "energy": 4000,
+        "ingredients": [
+          {
+            "amount": 1000,
+            "fluid": "evilcraft:blood"
+          }
+        ],
+        "result": [
+          {
+            "amount": 1000,
+            "fluid": "bloodmagic:life_essence_fluid"
+          }
+        ]
+      }
     }
   ]
 }

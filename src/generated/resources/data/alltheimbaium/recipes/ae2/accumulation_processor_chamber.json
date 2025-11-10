@@ -5,7 +5,15 @@
       "conditions": [
         {
           "type": "forge:mod_loaded",
+          "modid": "advanced_ae"
+        },
+        {
+          "type": "forge:mod_loaded",
           "modid": "megacells"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "ae2"
         }
       ],
       "recipe": {

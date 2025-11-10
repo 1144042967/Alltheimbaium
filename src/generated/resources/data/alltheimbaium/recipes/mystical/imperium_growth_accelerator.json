@@ -1,20 +1,33 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "group": "mystical_agriculture_growth_accelerator",
-  "key": {
-    "#": {
-      "item": "mysticalagriculture:tertium_essence"
-    },
-    "S": {
-      "item": "mysticalagriculture:tertium_growth_accelerator"
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mysticalagriculture"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "group": "mystical_agriculture_growth_accelerator",
+        "key": {
+          "#": {
+            "item": "mysticalagriculture:tertium_essence"
+          },
+          "S": {
+            "item": "mysticalagriculture:tertium_growth_accelerator"
+          }
+        },
+        "pattern": [
+          "# #",
+          "#S#",
+          "# #"
+        ],
+        "result": {
+          "item": "mysticalagriculture:imperium_growth_accelerator"
+        }
+      }
     }
-  },
-  "pattern": [
-    "# #",
-    "#S#",
-    "# #"
-  ],
-  "result": {
-    "item": "mysticalagriculture:imperium_growth_accelerator"
-  }
+  ]
 }

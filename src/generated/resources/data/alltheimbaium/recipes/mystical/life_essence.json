@@ -1,20 +1,37 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "group": "botania_life_essence",
-  "category": "misc",
-  "ingredients": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "item": "mysticalagriculture:gaia_spirit_essence"
-    },
-    {
-      "item": "mysticalagriculture:gaia_spirit_essence"
-    },
-    {
-      "item": "mysticalagriculture:gaia_spirit_essence"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mysticalagriculture"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "botania"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shapeless",
+        "group": "botania_life_essence",
+        "category": "misc",
+        "ingredients": [
+          {
+            "item": "mysticalagriculture:gaia_spirit_essence"
+          },
+          {
+            "item": "mysticalagriculture:gaia_spirit_essence"
+          },
+          {
+            "item": "mysticalagriculture:gaia_spirit_essence"
+          }
+        ],
+        "result": {
+          "count": 1,
+          "item": "botania:life_essence"
+        }
+      }
     }
-  ],
-  "result": {
-    "count": 1,
-    "item": "botania:life_essence"
-  }
+  ]
 }

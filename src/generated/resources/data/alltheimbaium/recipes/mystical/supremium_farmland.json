@@ -1,14 +1,27 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "group": "mystical_agriculture_farmland",
-  "category": "misc",
-  "ingredients": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "item": "mysticalagriculture:supremium_farmland"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mysticalagriculture"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shapeless",
+        "group": "mystical_agriculture_farmland",
+        "category": "misc",
+        "ingredients": [
+          {
+            "item": "mysticalagriculture:supremium_farmland"
+          }
+        ],
+        "result": {
+          "count": 1,
+          "item": "mysticalagriculture:supremium_essence"
+        }
+      }
     }
-  ],
-  "result": {
-    "count": 1,
-    "item": "mysticalagriculture:supremium_essence"
-  }
+  ]
 }

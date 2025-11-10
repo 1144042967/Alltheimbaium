@@ -1,16 +1,29 @@
 {
-  "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "minecraft:fishing_rod"
-  },
-  "results": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "count": 2,
-      "item": "minecraft:string"
-    },
-    {
-      "count": 3,
-      "item": "minecraft:stick"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "silentgear"
+        }
+      ],
+      "recipe": {
+        "type": "silentgear:salvaging",
+        "ingredient": {
+          "item": "minecraft:fishing_rod"
+        },
+        "results": [
+          {
+            "count": 2,
+            "item": "minecraft:string"
+          },
+          {
+            "count": 3,
+            "item": "minecraft:stick"
+          }
+        ]
+      }
     }
   ]
 }

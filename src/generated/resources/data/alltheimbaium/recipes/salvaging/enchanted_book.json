@@ -1,16 +1,29 @@
 {
-  "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "minecraft:enchanted_book"
-  },
-  "results": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "count": 1,
-      "item": "minecraft:book"
-    },
-    {
-      "count": 1,
-      "item": "minecraft:experience_bottle"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "silentgear"
+        }
+      ],
+      "recipe": {
+        "type": "silentgear:salvaging",
+        "ingredient": {
+          "item": "minecraft:enchanted_book"
+        },
+        "results": [
+          {
+            "count": 1,
+            "item": "minecraft:book"
+          },
+          {
+            "count": 1,
+            "item": "minecraft:experience_bottle"
+          }
+        ]
+      }
     }
   ]
 }

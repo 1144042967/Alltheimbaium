@@ -1,14 +1,27 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "group": "mystical_agriculture_farmland",
-  "category": "misc",
-  "ingredients": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "item": "mysticalagradditions:insanium_farmland"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mysticalagradditions"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shapeless",
+        "group": "mystical_agriculture_farmland",
+        "category": "misc",
+        "ingredients": [
+          {
+            "item": "mysticalagradditions:insanium_farmland"
+          }
+        ],
+        "result": {
+          "count": 1,
+          "item": "mysticalagradditions:insanium_essence"
+        }
+      }
     }
-  ],
-  "result": {
-    "count": 1,
-    "item": "mysticalagradditions:insanium_essence"
-  }
+  ]
 }
