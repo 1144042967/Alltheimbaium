@@ -1,25 +1,32 @@
 {
-  "type": "mekanism:metallurgic_infusing",
-  "itemInput": {
-    "ingredient": {
-      "item": "alltheores:iron_dust"
-    }
-  },
-  "chemicalInput": {
-    "amount": 20,
-    "tag": "mekanism:carbon"
-  },
-  "output": {
-    "item": "alltheores:steel_ingot"
-  },
-  "conditions": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "type": "forge:mod_loaded",
-      "modid": "mekanism"
-    },
-    {
-      "type": "forge:mod_loaded",
-      "modid": "alltheores"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mekanism"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "alltheores"
+        }
+      ],
+      "recipe": {
+        "type": "mekanism:metallurgic_infusing",
+        "itemInput": {
+          "ingredient": {
+            "item": "alltheores:iron_dust"
+          }
+        },
+        "chemicalInput": {
+          "amount": 20,
+          "tag": "mekanism:carbon"
+        },
+        "output": {
+          "item": "alltheores:steel_ingot"
+        }
+      }
     }
   ]
 }
