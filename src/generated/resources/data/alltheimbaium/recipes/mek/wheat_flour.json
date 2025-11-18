@@ -1,22 +1,29 @@
 {
-  "type": "mekanism:enriching",
-  "input": {
-    "ingredient": {
-      "item": "minecraft:wheat"
-    }
-  },
-  "output": {
-    "count": 2,
-    "item": "create:wheat_flour"
-  },
-  "conditions": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "type": "forge:mod_loaded",
-      "modid": "mekanism"
-    },
-    {
-      "type": "forge:mod_loaded",
-      "modid": "create"
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mekanism"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "create"
+        }
+      ],
+      "recipe": {
+        "type": "mekanism:enriching",
+        "input": {
+          "ingredient": {
+            "item": "minecraft:wheat"
+          }
+        },
+        "output": {
+          "count": 2,
+          "item": "create:wheat_flour"
+        }
+      }
     }
   ]
 }

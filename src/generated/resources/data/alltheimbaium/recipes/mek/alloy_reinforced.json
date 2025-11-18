@@ -6,25 +6,22 @@
         {
           "type": "forge:mod_loaded",
           "modid": "mekanism"
-        },
-        {
-          "type": "forge:mod_loaded",
-          "modid": "ae2"
         }
       ],
       "recipe": {
         "type": "mekanism:metallurgic_infusing",
+        "chemicalInput": {
+          "amount": 180,
+          "tag": "mekanism:diamond"
+        },
         "itemInput": {
           "ingredient": {
-            "item": "ae2:certus_quartz_dust"
+            "tag": "forge:storage_blocks/redstone"
           }
         },
-        "chemicalInput": {
-          "amount": 5,
-          "tag": "mekanism:carbon"
-        },
         "output": {
-          "item": "ae2:sky_dust"
+          "count": 9,
+          "item": "mekanism:alloy_reinforced"
         }
       }
     }
