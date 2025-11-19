@@ -1,0 +1,33 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mekanism"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "create"
+        }
+      ],
+      "recipe": {
+        "type": "mekanism:metallurgic_infusing",
+        "chemicalInput": {
+          "amount": 320,
+          "tag": "mekanism:redstone"
+        },
+        "itemInput": {
+          "ingredient": {
+            "tag": "forge:storage_blocks/quartz"
+          }
+        },
+        "output": {
+          "count": 4,
+          "item": "create:rose_quartz"
+        }
+      }
+    }
+  ]
+}

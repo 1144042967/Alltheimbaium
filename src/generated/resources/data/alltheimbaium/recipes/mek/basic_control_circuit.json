@@ -1,0 +1,29 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mekanism"
+        }
+      ],
+      "recipe": {
+        "type": "mekanism:metallurgic_infusing",
+        "chemicalInput": {
+          "amount": 180,
+          "tag": "mekanism:redstone"
+        },
+        "itemInput": {
+          "ingredient": {
+            "tag": "forge:storage_blocks/osmium"
+          }
+        },
+        "output": {
+          "count": 9,
+          "item": "mekanism:basic_control_circuit"
+        }
+      }
+    }
+  ]
+}
