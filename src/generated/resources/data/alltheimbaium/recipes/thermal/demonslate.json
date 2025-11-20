@@ -1,0 +1,36 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "thermal"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "bloodmagic"
+        }
+      ],
+      "recipe": {
+        "type": "thermal:bottler",
+        "ingredients": [
+          {
+            "item": "bloodmagic:infusedslate"
+          },
+          {
+            "fluid": "bloodmagic:life_essence_fluid",
+            "amount": 15000
+          }
+        ],
+        "result": [
+          {
+            "item": "bloodmagic:demonslate"
+          }
+        ],
+        "energy": 2000,
+        "experience": 0.1
+      }
+    }
+  ]
+}

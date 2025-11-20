@@ -1,0 +1,36 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "thermal"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "bloodmagic"
+        }
+      ],
+      "recipe": {
+        "type": "thermal:bottler",
+        "ingredients": [
+          {
+            "item": "bloodmagic:dungeon_metal"
+          },
+          {
+            "fluid": "bloodmagic:life_essence_fluid",
+            "amount": 80000
+          }
+        ],
+        "result": [
+          {
+            "item": "bloodmagic:archmagebloodorb"
+          }
+        ],
+        "energy": 2000,
+        "experience": 0.1
+      }
+    }
+  ]
+}

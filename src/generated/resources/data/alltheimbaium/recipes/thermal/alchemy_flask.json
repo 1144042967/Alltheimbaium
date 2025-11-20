@@ -1,0 +1,36 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "thermal"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "bloodmagic"
+        }
+      ],
+      "recipe": {
+        "type": "thermal:bottler",
+        "ingredients": [
+          {
+            "item": "minecraft:glass_bottle"
+          },
+          {
+            "fluid": "bloodmagic:life_essence_fluid",
+            "amount": 4000
+          }
+        ],
+        "result": [
+          {
+            "item": "bloodmagic:alchemy_flask"
+          }
+        ],
+        "energy": 2000,
+        "experience": 0.1
+      }
+    }
+  ]
+}

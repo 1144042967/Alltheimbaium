@@ -1,0 +1,36 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "thermal"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "bloodmagic"
+        }
+      ],
+      "recipe": {
+        "type": "thermal:bottler",
+        "ingredients": [
+          {
+            "item": "bloodmagic:lavacrystal"
+          },
+          {
+            "fluid": "bloodmagic:life_essence_fluid",
+            "amount": 10000
+          }
+        ],
+        "result": [
+          {
+            "item": "bloodmagic:activationcrystalweak"
+          }
+        ],
+        "energy": 2000,
+        "experience": 0.1
+      }
+    }
+  ]
+}
