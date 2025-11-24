@@ -159,9 +159,9 @@ public class StorageFountainBlock extends Block implements EntityBlock {
             showMessage(player, generator);
             return InteractionResult.SUCCESS;
         }
-        if (stack.is(Tags.Items.STORAGE_BLOCKS) || stack.is(Tags.Items.ORES) || stack.getTags().anyMatch(tag -> {
+        if (stack.is(Tags.Items.STORAGE_BLOCKS) || stack.is(Tags.Items.ORES) || stack.is(Tags.Items.INGOTS) || stack.getTags().anyMatch(tag -> {
             String path = tag.location().getPath();
-            return path.contains("storage_blocks/") || path.contains("ores/");
+            return path.contains("storage_blocks/") || path.contains("ores/") || path.contains("ingots/");
         })) {
             addOutputByBlock(generator, stack);
             showMessage(player, generator);

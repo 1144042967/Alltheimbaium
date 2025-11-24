@@ -1,0 +1,29 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "bloodmagic"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "key": {
+          "#": {
+            "item": "bloodmagic:ingot_hellforged"
+          }
+        },
+        "pattern": [
+          " # ",
+          "# #",
+          " # "
+        ],
+        "result": {
+          "item": "bloodmagic:hellforgedparts"
+        }
+      }
+    }
+  ]
+}

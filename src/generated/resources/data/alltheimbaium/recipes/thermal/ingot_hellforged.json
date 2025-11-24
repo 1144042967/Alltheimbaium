@@ -1,0 +1,36 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "thermal"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "bloodmagic"
+        }
+      ],
+      "recipe": {
+        "type": "thermal:bottler",
+        "ingredients": [
+          {
+            "tag": "forge:ingots/netherite"
+          },
+          {
+            "fluid": "bloodmagic:life_essence_fluid",
+            "amount": 8000
+          }
+        ],
+        "result": [
+          {
+            "item": "bloodmagic:ingot_hellforged"
+          }
+        ],
+        "energy": 2000,
+        "experience": 0.1
+      }
+    }
+  ]
+}
