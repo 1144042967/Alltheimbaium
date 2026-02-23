@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "farm",
+  "key": {
+    "A": {
+      "item": "alltheimbaium:package_material_x2"
+    },
+    "B": {
+      "item": "minecraft:iron_ingot"
+    }
+  },
+  "pattern": [
+    "AAA",
+    "ABA",
+    "AAA"
+  ],
+  "result": {
+    "id": "alltheimbaium:farm_iron_golem"
+  }
+}

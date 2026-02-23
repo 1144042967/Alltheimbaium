@@ -1,28 +1,21 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
-import cn.sd.jrz.alltheimbaium.connection.StorageFountainConnection;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.util.LazyOptional;
+import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class StorageFountainEntity extends BlockEntity implements ICapabilityProvider {
-    private final LazyOptional<StorageFountainConnection> fecOptional = LazyOptional.of(() -> new StorageFountainConnection(this));
+public class StorageFountainEntity extends BlockEntity {
     public int findIndex = 0;
     public long output = 5;
     public List<ItemStack> itemList = new ArrayList<>();
@@ -34,31 +27,44 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
     }
 
     @Override
-    @Nonnull
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        return capability == ForgeCapabilities.ITEM_HANDLER ? fecOptional.cast() : super.getCapability(capability, direction);
+    protected void applyImplicitComponents(@NotNull DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        String blockData = input.getOrDefault(Registration.BLOCK_DATA.get(), "");
+        if (blockData.isEmpty()) {
+            return;
+        }
+        String[] dataArray = blockData.split("#,#");
+        this.output = Tool.suit(dataArray[0]);
+        this.itemList = Tool.fromItemString(dataArray[1]);
+        this.blockList = Tool.fromBlockString(dataArray[2]);
     }
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    protected void collectImplicitComponents(DataComponentMap.@NotNull Builder builder) {
+        super.collectImplicitComponents(builder);
+        String sb = output + "#,#" + Tool.toItemString(itemList) + "#,#" + Tool.toBlockString(blockList);
+        builder.set(Registration.BLOCK_DATA.get(), sb);
+    }
+
+    @Override
+    public void saveAdditional(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
+        super.saveAdditional(nbt, provider);
         nbt.putLong("output", output);
-        nbt.put("save_stick", Tool.toJsonArray(itemList, blockList));
+        nbt.putString("item_list", Tool.toItemString(itemList));
+        nbt.putString("block_list", Tool.toBlockString(blockList));
     }
 
     @Override
-    public void load(@Nonnull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
+        super.loadAdditional(nbt, provider);
         if (nbt.contains("output", Tag.TAG_LONG)) {
             this.output = Tool.suit(nbt.getLong("output"));
         }
-        if (nbt.contains("save_stick")) {
-            ListTag list = (ListTag) nbt.get("save_stick");
-            if (list != null) {
-                this.itemList = Tool.toItemList(list);
-                this.blockList = Tool.toBlockList(list);
-                Tool.sort(itemList, blockList);
-            }
+        if (nbt.contains("item_list", Tag.TAG_STRING)) {
+            this.itemList = Tool.fromItemString(nbt.getString("item_list"));
+        }
+        if (nbt.contains("block_list", Tag.TAG_STRING)) {
+            this.blockList = Tool.fromBlockString(nbt.getString("block_list"));
         }
     }
 }

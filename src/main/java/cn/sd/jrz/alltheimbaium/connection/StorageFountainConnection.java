@@ -4,11 +4,10 @@ import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandler;
 
 import javax.annotation.Nonnull;
 
-public class StorageFountainConnection implements IItemHandler {
+public class StorageFountainConnection implements net.neoforged.neoforge.items.IItemHandler {
     private final StorageFountainEntity owner;
 
     public StorageFountainConnection(StorageFountainEntity owner) {

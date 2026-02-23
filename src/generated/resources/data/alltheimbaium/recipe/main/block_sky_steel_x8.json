@@ -1,0 +1,27 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "megacells"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "group": "package_material",
+  "key": {
+    "A": {
+      "item": "megacells:sky_steel_block"
+    },
+    "B": {
+      "item": "alltheimbaium:package_material_x1"
+    }
+  },
+  "pattern": [
+    "AAA",
+    "ABA",
+    "AAA"
+  ],
+  "result": {
+    "id": "alltheimbaium:block_sky_steel_x8",
+    "count": 1
+  }
+}

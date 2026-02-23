@@ -6,7 +6,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -16,9 +18,9 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -58,11 +60,12 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
         BlockPos blockPos = generator.getBlockPos();
         //传输
         for (Direction direction : Direction.values()) {
+            BlockPos pos = blockPos.relative(direction);
             BlockEntity entity = level.getBlockEntity(blockPos.relative(direction));
             if (entity == null) {
                 continue;
             }
-            IFluidHandler handler = entity.getCapability(ForgeCapabilities.FLUID_HANDLER, direction.getOpposite()).resolve().orElse(null);
+            IFluidHandler handler = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, direction.getOpposite());
             if (handler == null) {
                 continue;
             }
@@ -73,9 +76,24 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
         generator.setChanged();
     }
 
-    @SuppressWarnings("deprecation")
     @Override
-    public @Nonnull InteractionResult use(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+    public @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
+        if (level.isClientSide) {
+            return InteractionResult.SUCCESS;
+        }
+        return use(level, pos, player);
+    }
+
+    @Override
+    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack itemStack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+        if (level.isClientSide) {
+            return ItemInteractionResult.SUCCESS;
+        }
+        InteractionResult result = use(level, pos, player);
+        return result == InteractionResult.SUCCESS ? ItemInteractionResult.SUCCESS : ItemInteractionResult.FAIL;
+    }
+
+    private @Nonnull InteractionResult use(Level level, @Nonnull BlockPos pos, @Nonnull Player player) {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
@@ -89,10 +107,10 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
         if (stack.getAmount() < LiquidFountainBlock.MAX) {
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.current", stack.getDisplayName(), stack.getAmount(), LiquidFountainBlock.MAX));
+            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.current", stack.getHoverName(), stack.getAmount(), LiquidFountainBlock.MAX));
             return InteractionResult.SUCCESS;
         }
-        player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.max", stack.getDisplayName()));
+        player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.max", stack.getHoverName()));
         return InteractionResult.SUCCESS;
     }
 }

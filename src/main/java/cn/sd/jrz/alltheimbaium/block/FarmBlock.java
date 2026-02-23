@@ -2,19 +2,28 @@ package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
 import cn.sd.jrz.alltheimbaium.setup.DataConfig;
+import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -23,17 +32,15 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class FarmBlock extends Block implements EntityBlock {
     public static final long CARRY = 10000;
@@ -90,7 +97,7 @@ public class FarmBlock extends Block implements EntityBlock {
             if (entity == null) {
                 continue;
             }
-            IItemHandler handler = entity.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite()).resolve().orElse(null);
+            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, direction.getOpposite());
             if (handler == null) {
                 continue;
             }
@@ -117,7 +124,7 @@ public class FarmBlock extends Block implements EntityBlock {
 
     private void transport(FarmEntity generator, List<Integer> indexList, IItemHandler handler) {
         if (indexList.size() == 1) {
-            transport(generator, indexList.get(0), handler);
+            transport(generator, indexList.getFirst(), handler);
             return;
         }
         Collections.shuffle(indexList);
@@ -141,9 +148,24 @@ public class FarmBlock extends Block implements EntityBlock {
         generator.saveArray[index] = Tool.suit(generator.saveArray[index] - (maxSave - count));
     }
 
-    @SuppressWarnings("deprecation")
     @Override
-    public @Nonnull InteractionResult use(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+    public @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
+        if (level.isClientSide) {
+            return InteractionResult.SUCCESS;
+        }
+        return use(level, pos, player);
+    }
+
+    @Override
+    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack itemStack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+        if (level.isClientSide) {
+            return ItemInteractionResult.SUCCESS;
+        }
+        InteractionResult result = use(level, pos, player);
+        return result == InteractionResult.SUCCESS ? ItemInteractionResult.SUCCESS : ItemInteractionResult.FAIL;
+    }
+
+    private @Nonnull InteractionResult use(Level level, @Nonnull BlockPos pos, @Nonnull Player player) {
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
@@ -186,7 +208,7 @@ public class FarmBlock extends Block implements EntityBlock {
         if (indexList.isEmpty()) {
             return null;
         } else if (indexList.size() == 1) {
-            return indexList.get(0);
+            return indexList.getFirst();
         } else {
             return indexList.get((int) (Math.random() * indexList.size()));
         }
@@ -195,13 +217,10 @@ public class FarmBlock extends Block implements EntityBlock {
     private void addLevel(Player player, FarmEntity generator, ItemStack stackInHand) {
         long count = stackInHand.getCount();
         long level = 1;
-        if (stackInHand.hasTag()) {
-            CompoundTag tag = stackInHand.getTagElement("BlockEntityTag");
-            if (tag != null) {
-                if (tag.contains("level", Tag.TAG_LONG)) {
-                    level = Tool.suit(tag.getLong("level"));
-                }
-            }
+        String blockData = stackInHand.getOrDefault(Registration.BLOCK_DATA.get(), "");
+        if (!blockData.isEmpty()) {
+            String[] dataArray = blockData.split(",");
+            level = Tool.suit(dataArray[0]);
         }
         generator.level = Tool.suit(generator.level + Tool.suit(count * level));
         player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);

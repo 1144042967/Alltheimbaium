@@ -1,14 +1,15 @@
 package cn.sd.jrz.alltheimbaium;
 
 import cn.sd.jrz.alltheimbaium.setup.Registration;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
 
 @Mod(Alltheimbaium.MODID)
 public class Alltheimbaium {
     public static final String MODID = "alltheimbaium";
 
-    public Alltheimbaium(FMLJavaModLoadingContext context) {
-        Registration.init(context);
+    public Alltheimbaium(IEventBus bus, ModContainer container) {
+        Registration.init(bus);
     }
 }

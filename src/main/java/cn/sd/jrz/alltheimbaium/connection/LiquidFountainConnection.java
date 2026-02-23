@@ -2,8 +2,8 @@ package cn.sd.jrz.alltheimbaium.connection;
 
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.NotNull;
 
 public class LiquidFountainConnection implements IFluidHandler {
@@ -30,18 +30,18 @@ public class LiquidFountainConnection implements IFluidHandler {
 
     @Override
     public boolean isFluidValid(int i, @NotNull FluidStack fluidStack) {
-        return !isInfinity() && (owner.stack == FluidStack.EMPTY || fluidStack.isFluidEqual(owner.stack));
+        return !isInfinity() && (owner.stack == FluidStack.EMPTY || FluidStack.isSameFluidSameComponents(fluidStack, owner.stack));
     }
 
     @Override
-    public int fill(FluidStack fluidStack, FluidAction fluidAction) {
+    public int fill(@NotNull FluidStack fluidStack, @NotNull FluidAction fluidAction) {
         if (isInfinity()) {
             return 0;
         }
         if (fluidStack.getAmount() <= 0) {
             return 0;
         }
-        if (owner.stack != FluidStack.EMPTY && !owner.stack.isFluidEqual(fluidStack)) {
+        if (owner.stack != FluidStack.EMPTY && !FluidStack.isSameFluidSameComponents(owner.stack, fluidStack)) {
             return 0;
         }
         int maxInput = Math.min(fluidStack.getAmount(), LiquidFountainBlock.MAX - owner.stack.getAmount());
@@ -57,15 +57,15 @@ public class LiquidFountainConnection implements IFluidHandler {
     }
 
     @Override
-    public @NotNull FluidStack drain(FluidStack fluidStack, FluidAction fluidAction) {
-        if (!owner.stack.isFluidEqual(fluidStack)) {
+    public @NotNull FluidStack drain(@NotNull FluidStack fluidStack, @NotNull FluidAction fluidAction) {
+        if (!FluidStack.isSameFluidSameComponents(owner.stack, fluidStack)) {
             return FluidStack.EMPTY;
         }
         return drain(fluidStack.getAmount(), fluidAction);
     }
 
     @Override
-    public @NotNull FluidStack drain(int amount, FluidAction fluidAction) {
+    public @NotNull FluidStack drain(int amount, @NotNull FluidAction fluidAction) {
         if (isInfinity()) {
             FluidStack copy = owner.stack.copy();
             copy.setAmount(amount);

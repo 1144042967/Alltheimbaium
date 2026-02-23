@@ -1,0 +1,22 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "silentgear"
+    }
+  ],
+  "type": "silentgear:salvaging",
+  "ingredient": {
+    "item": "minecraft:enchanted_book"
+  },
+  "results": [
+    {
+      "count": 1,
+      "id": "minecraft:book"
+    },
+    {
+      "count": 1,
+      "id": "minecraft:experience_bottle"
+    }
+  ]
+}

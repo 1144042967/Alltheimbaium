@@ -1,9 +1,7 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -20,6 +18,14 @@ public class Tool {
         return value < 0 ? Long.MAX_VALUE : value;
     }
 
+    public static long suit(String value) {
+        try {
+            return suit(Long.parseLong(value));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     public static int suitInt(long value) {
         return value < 0 || value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
     }
@@ -34,51 +40,48 @@ public class Tool {
         }
     }
 
-    public static ListTag toJsonArray(List<ItemStack> itemList, List<Long> blockList) {
-        ListTag list = new ListTag();
+    public static String toItemString(List<ItemStack> itemList) {
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < itemList.size(); i++) {
-            ItemStack item = itemList.get(i);
-            Long count = blockList.get(i);
-            if (item == null || count == null) {
-                continue;
+            if (i != 0) {
+                sb.append(",");
             }
-            CompoundTag tag = new CompoundTag();
-            item.save(tag);
-            tag.putLong("Long_Count", count);
-            list.add(tag);
+            ItemStack stack = itemList.get(i);
+            sb.append(BuiltInRegistries.ITEM.getKey(stack.getItem())).append("-").append(stack.getCount());
+        }
+        return sb.toString();
+    }
+
+    public static List<ItemStack> fromItemString(String itemString) {
+        List<ItemStack> list = new ArrayList<>();
+        String[] split = itemString.split(",");
+        for (String s : split) {
+            String[] sub = s.split("-");
+            list.add(new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(sub[0])), (int) Tool.suit(sub[1])));
         }
         return list;
     }
 
-    public static List<ItemStack> toItemList(ListTag array) {
-        List<ItemStack> itemList = new ArrayList<>();
-        for (Tag value : array) {
-            CompoundTag tag = (CompoundTag) value;
-            ItemStack stack = ItemStack.of(tag);
-            if (stack.isEmpty()) {
-                continue;
+    public static String toBlockString(List<Long> blockList) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < blockList.size(); i++) {
+            if (i != 0) {
+                sb.append(",");
             }
-            stack = stack.copy();
-            stack.setCount(1);
-            itemList.add(stack);
+            sb.append(blockList.get(i));
         }
-        return itemList;
+        return sb.toString();
     }
 
-    public static List<Long> toBlockList(ListTag array) {
-        List<Long> blockList = new ArrayList<>();
-        for (Tag value : array) {
-            CompoundTag tag = (CompoundTag) value;
-            ItemStack stack = ItemStack.of(tag);
-            if (stack.isEmpty()) {
-                continue;
-            }
-            blockList.add(tag.getLong("Long_Count"));
+    public static List<Long> fromBlockString(String blockString) {
+        List<Long> list = new ArrayList<>();
+        String[] split = blockString.split(",");
+        for (String s : split) {
+            list.add(Tool.suit(s));
         }
-        return blockList;
+        return list;
     }
 
-    @SuppressWarnings("deprecation")
     public static void sort(List<ItemStack> itemList, List<Long> blockList) {
         for (int i = 0; i < Math.min(itemList.size(), blockList.size()); i++) {
             for (int j = i + 1; j < Math.min(itemList.size(), blockList.size()); j++) {

@@ -3,7 +3,6 @@ package cn.sd.jrz.alltheimbaium.block;
 import cn.sd.jrz.alltheimbaium.entity.CommonEntity;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -17,9 +16,6 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
-import net.minecraftforge.common.ForgeHooks;
-import net.minecraftforge.common.IPlantable;
-import net.minecraftforge.common.PlantType;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
@@ -29,7 +25,7 @@ import java.util.List;
 
 public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.FarmBlock implements EntityBlock {
     public AlltheimbaiumFarmlandBlock() {
-        super(Properties.copy(Blocks.FARMLAND));
+        super(Properties.ofFullCopy(Blocks.FARMLAND));
     }
 
     @Override
@@ -71,7 +67,6 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
             if (age < maxAge) {
                 state = state.setValue(CropBlock.AGE, maxAge);
                 level.setBlock(pos, state, 2);
-                ForgeHooks.onCropsGrowPost(level, pos, state);
             }
         }
     }
@@ -93,18 +88,10 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
     }
 
     @Override
-    public boolean canSustainPlant(@Nonnull BlockState state, @Nonnull BlockGetter level, BlockPos pos, @Nonnull Direction facing, IPlantable plantable) {
-        BlockState plant = plantable.getPlant(level, pos.relative(facing));
-        var type = plantable.getPlantType(level, pos.relative(facing));
-        return type == PlantType.CROP || plant.getBlock() instanceof StemBlock;
-    }
-
-    @Override
-    public boolean isFertile(BlockState state, BlockGetter level, BlockPos pos) {
+    public boolean isFertile(BlockState state, @NotNull BlockGetter level, @NotNull BlockPos pos) {
         return state.getValue(MOISTURE) > 0;
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public @Nonnull List<ItemStack> getDrops(@Nonnull BlockState state, @Nonnull LootParams.Builder builder) {
         List<ItemStack> drops = new ArrayList<>();
