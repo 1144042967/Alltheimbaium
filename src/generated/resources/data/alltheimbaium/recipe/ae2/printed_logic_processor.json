@@ -1,0 +1,22 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "extendedae"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ae2"
+    }
+  ],
+  "type": "extendedae:circuit_cutter",
+  "input": {
+    "ingredient": {
+      "item": "alltheimbaium:block_gold_x8"
+    }
+  },
+  "output": {
+    "count": 64,
+    "id": "ae2:printed_logic_processor"
+  }
+}

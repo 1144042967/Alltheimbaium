@@ -1,0 +1,43 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "extendedae"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ae2"
+    }
+  ],
+  "type": "extendedae:crystal_assembler",
+  "input_fluid": {
+    "amount": 100,
+    "ingredient": {
+      "fluid": "minecraft:lava"
+    }
+  },
+  "input_items": [
+    {
+      "amount": 32,
+      "ingredient": {
+        "item": "ae2:singularity"
+      }
+    },
+    {
+      "amount": 64,
+      "ingredient": {
+        "item": "ae2:ender_dust"
+      }
+    },
+    {
+      "amount": 64,
+      "ingredient": {
+        "item": "ae2:sky_dust"
+      }
+    }
+  ],
+  "output": {
+    "count": 64,
+    "id": "advanced_ae:shattered_singularity"
+  }
+}

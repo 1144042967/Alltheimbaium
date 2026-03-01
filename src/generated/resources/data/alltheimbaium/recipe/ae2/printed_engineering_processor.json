@@ -1,0 +1,22 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "extendedae"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "advanced_ae"
+    }
+  ],
+  "type": "extendedae:circuit_cutter",
+  "input": {
+    "ingredient": {
+      "item": "alltheimbaium:block_diamond_x8"
+    }
+  },
+  "output": {
+    "count": 64,
+    "id": "ae2:printed_engineering_processor"
+  }
+}

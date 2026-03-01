@@ -1,0 +1,22 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "extendedae"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "megacells"
+    }
+  ],
+  "type": "extendedae:circuit_cutter",
+  "input": {
+    "ingredient": {
+      "item": "alltheimbaium:block_sky_steel_x8"
+    }
+  },
+  "output": {
+    "count": 64,
+    "id": "megacells:printed_accumulation_processor"
+  }
+}

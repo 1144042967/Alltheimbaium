@@ -1,0 +1,22 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ae2"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "group": "budding_quartz",
+  "key": {
+    "#": {
+      "item": "ae2:chipped_budding_quartz"
+    }
+  },
+  "pattern": [
+    "##",
+    "##"
+  ],
+  "result": {
+    "id": "ae2:flawed_budding_quartz"
+  }
+}
