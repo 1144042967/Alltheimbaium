@@ -31,6 +31,9 @@ public class LiquidFountainEntity extends BlockEntity {
             return;
         }
         String[] dataArray = blockData.split(",");
+        if (dataArray.length < 2) {
+            return;
+        }
         this.stack = new FluidStack(BuiltInRegistries.FLUID.get(ResourceLocation.tryParse(dataArray[0])), (int) Tool.suit(dataArray[1]));
     }
 

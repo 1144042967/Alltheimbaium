@@ -12,8 +12,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
-
 public class FarmEntity extends BlockEntity {
     public int findIndex = 0;
     public int tickCount = 0;
@@ -38,6 +36,9 @@ public class FarmEntity extends BlockEntity {
             return;
         }
         String[] dataArray = blockData.split("#,#");
+        if (dataArray.length < 3) {
+            return;
+        }
         this.level = Tool.suit(dataArray[0]);
         String[] tempArray = dataArray[1].split(",");
         for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {

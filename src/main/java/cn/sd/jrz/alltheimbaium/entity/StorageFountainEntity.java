@@ -34,6 +34,9 @@ public class StorageFountainEntity extends BlockEntity {
             return;
         }
         String[] dataArray = blockData.split("#,#");
+        if (dataArray.length < 3) {
+            return;
+        }
         this.output = Tool.suit(dataArray[0]);
         this.itemList = Tool.fromItemString(dataArray[1]);
         this.blockList = Tool.fromBlockString(dataArray[2]);

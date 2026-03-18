@@ -32,7 +32,9 @@ public class LiquidFountainItem extends BlockItem {
         String blockData = stack.getOrDefault(Registration.BLOCK_DATA.get(), "");
         if (!blockData.isEmpty()) {
             String[] dataArray = blockData.split(",");
-            fluidStack = new FluidStack(BuiltInRegistries.FLUID.get(ResourceLocation.tryParse(dataArray[0])), (int) Tool.suit(dataArray[1]));
+            if (dataArray.length >= 2) {
+                fluidStack = new FluidStack(BuiltInRegistries.FLUID.get(ResourceLocation.tryParse(dataArray[0])), (int) Tool.suit(dataArray[1]));
+            }
 
         }
         if (fluidStack == FluidStack.EMPTY) {

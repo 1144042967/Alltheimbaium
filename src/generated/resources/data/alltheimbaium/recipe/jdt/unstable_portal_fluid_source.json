@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "advanced_ae"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "justdirethings"
+    }
+  ],
+  "type": "advanced_ae:reaction",
+  "input_energy": 1000,
+  "input_fluid": {
+    "amount": 1000,
+    "ingredient": {
+      "fluid": "justdirethings:polymorphic_fluid_source"
+    }
+  },
+  "input_items": [
+    {
+      "amount": 1,
+      "ingredient": {
+        "item": "justdirethings:portal_fluid_catalyst"
+      }
+    }
+  ],
+  "output": {
+    "#": 1000,
+    "#t": "ae2:f",
+    "id": "justdirethings:unstable_portal_fluid_source"
+  }
+}

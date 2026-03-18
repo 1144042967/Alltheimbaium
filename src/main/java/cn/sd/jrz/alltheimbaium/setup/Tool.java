@@ -1,5 +1,9 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -10,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Tool {
     private static final Logger log = LoggerFactory.getLogger(Tool.class);
@@ -40,19 +45,53 @@ public class Tool {
         }
     }
 
-    public static String toItemString(List<ItemStack> itemList) {
+    public static String toTagString(List<ItemStack> itemList) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < itemList.size(); i++) {
             if (i != 0) {
-                sb.append(",");
+                sb.append("#t#");
             }
             ItemStack stack = itemList.get(i);
-            sb.append(BuiltInRegistries.ITEM.getKey(stack.getItem())).append("-").append(stack.getCount());
+            DataResult<JsonElement> result = ItemStack.CODEC.encodeStart(JsonOps.INSTANCE, stack);
+            result.result().ifPresentOrElse(sb::append, () -> sb.append("null"));
         }
         return sb.toString();
     }
 
+    public static List<ItemStack> fromTagString(String itemString) {
+        List<ItemStack> list = new ArrayList<>();
+        String[] split = itemString.split("#t#");
+        for (String s : split) {
+            if (Objects.equals(s, "null")) {
+                list.add(ItemStack.EMPTY);
+            } else {
+                JsonElement element = JsonParser.parseString(s);
+                DataResult<ItemStack> result = ItemStack.CODEC.parse(JsonOps.INSTANCE, element);
+                result.result().ifPresentOrElse(list::add, () -> list.add(ItemStack.EMPTY));
+            }
+        }
+        return list;
+    }
+
+    public static String toItemString(List<ItemStack> itemList) {
+        return toTagString(itemList);
+    }
+
     public static List<ItemStack> fromItemString(String itemString) {
+        //优先按保存tag的数据进行处理
+        if (itemString.contains("#t#")) {
+            return fromTagString(itemString);
+        } else {
+            try {
+                JsonElement element = JsonParser.parseString(itemString);
+                DataResult<ItemStack> result = ItemStack.CODEC.parse(JsonOps.INSTANCE, element);
+                if (result.result().isPresent()) {
+                    return fromTagString(itemString);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        //兼容旧版数据处理
         List<ItemStack> list = new ArrayList<>();
         String[] split = itemString.split(",");
         for (String s : split) {

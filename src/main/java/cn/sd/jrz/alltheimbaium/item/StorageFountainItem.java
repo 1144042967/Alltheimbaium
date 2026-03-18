@@ -34,9 +34,11 @@ public class StorageFountainItem extends BlockItem {
         String blockData = stack.getOrDefault(Registration.BLOCK_DATA.get(), "");
         if (!blockData.isEmpty()) {
             String[] dataArray = blockData.split("#,#");
-            output = Tool.suit(dataArray[0]);
-            itemList = Tool.fromItemString(dataArray[1]);
-            blockList = Tool.fromBlockString(dataArray[2]);
+            if (dataArray.length >= 3) {
+                output = Tool.suit(dataArray[0]);
+                itemList = Tool.fromItemString(dataArray[1]);
+                blockList = Tool.fromBlockString(dataArray[2]);
+            }
         }
         BigDecimal outputPerTick = new BigDecimal(output).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
         tooltip.add(Component.translatable("screen.alltheimbaium.fountain.output", outputPerTick));

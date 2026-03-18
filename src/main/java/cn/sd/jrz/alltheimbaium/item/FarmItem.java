@@ -35,10 +35,12 @@ public class FarmItem extends BlockItem {
         String blockData = stack.getOrDefault(Registration.BLOCK_DATA.get(), "");
         if (!blockData.isEmpty()) {
             String[] dataArray = blockData.split("#,#");
-            level = Tool.suit(dataArray[0]);
-            String[] tempArray = dataArray[2].split(",");
-            for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
-                saveArray[i] = Tool.suit(tempArray[i]);
+            if (dataArray.length >= 3) {
+                level = Tool.suit(dataArray[0]);
+                String[] tempArray = dataArray[2].split(",");
+                for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
+                    saveArray[i] = Tool.suit(tempArray[i]);
+                }
             }
         }
         tooltip.add(Component.translatable("screen.alltheimbaium.farm.description", level));
