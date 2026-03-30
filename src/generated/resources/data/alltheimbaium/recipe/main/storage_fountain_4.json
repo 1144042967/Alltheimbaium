@@ -1,12 +1,12 @@
 {
   "type": "minecraft:crafting_shaped",
-  "group": "farm",
+  "group": "storage_fountain",
   "key": {
     "A": {
       "item": "alltheimbaium:package_material_x3"
     },
     "B": {
-      "tag": "c:storage_blocks"
+      "tag": "c:gems"
     }
   },
   "pattern": [

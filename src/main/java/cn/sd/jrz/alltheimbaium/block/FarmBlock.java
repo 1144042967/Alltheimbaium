@@ -2,28 +2,16 @@ package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
 import cn.sd.jrz.alltheimbaium.setup.DataConfig;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponentMap;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.Enchantments;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -35,14 +23,20 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class FarmBlock extends Block implements EntityBlock {
+    private static final Logger log = LoggerFactory.getLogger(FarmBlock.class);
     public static final long CARRY = 10000;
     public static final int SCALE = String.valueOf(CARRY).length() - 1;
     private final DataConfig config;
@@ -61,7 +55,13 @@ public class FarmBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
-        return (l, p, s, tile) -> tick(l, tile);
+        return (l, p, s, tile) -> {
+            try {
+                tick(l, tile);
+            } catch (Throwable e) {
+                log.error("FarmBlock.getTicker error", e);
+            }
+        };
     }
 
     private <T extends BlockEntity> void tick(Level level, T tile) {
@@ -149,20 +149,30 @@ public class FarmBlock extends Block implements EntityBlock {
     }
 
     @Override
-    public @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
-        if (level.isClientSide) {
-            return InteractionResult.SUCCESS;
+    public @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, @NotNull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
+        try {
+            if (level.isClientSide) {
+                return InteractionResult.SUCCESS;
+            }
+            return use(level, pos, player);
+        } catch (Throwable e) {
+            log.error("FarmBlock.useWithoutItem error", e);
         }
-        return use(level, pos, player);
+        return super.useWithoutItem(state, level, pos, player, hit);
     }
 
     @Override
     protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack itemStack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
-        if (level.isClientSide) {
-            return ItemInteractionResult.SUCCESS;
+        try {
+            if (level.isClientSide) {
+                return ItemInteractionResult.SUCCESS;
+            }
+            InteractionResult result = use(level, pos, player);
+            return result == InteractionResult.SUCCESS ? ItemInteractionResult.SUCCESS : ItemInteractionResult.FAIL;
+        } catch (Throwable e) {
+            log.error("FarmBlock.useItemOn error", e);
         }
-        InteractionResult result = use(level, pos, player);
-        return result == InteractionResult.SUCCESS ? ItemInteractionResult.SUCCESS : ItemInteractionResult.FAIL;
+        return super.useItemOn(itemStack, state, level, pos, player, handIn, hit);
     }
 
     private @Nonnull InteractionResult use(Level level, @Nonnull BlockPos pos, @Nonnull Player player) {
@@ -174,56 +184,11 @@ public class FarmBlock extends Block implements EntityBlock {
             return InteractionResult.FAIL;
         }
         ItemStack stack = player.getMainHandItem();
-        if (stack == ItemStack.EMPTY || stack.getItem() == Items.AIR) {
-            if (takeItem(player, generator)) {
-                return InteractionResult.SUCCESS;
-            }
-            showMessage(player, generator);
-            return InteractionResult.SUCCESS;
-        }
-        if (stack.is(this.asItem())) {
-            addLevel(player, generator, stack);
-            showMessage(player, generator);
-            return InteractionResult.SUCCESS;
-        }
         if (takeItem(player, generator, stack)) {
             return InteractionResult.SUCCESS;
         }
         showMessage(player, generator);
         return InteractionResult.SUCCESS;
-    }
-
-    private boolean takeItem(Player player, FarmEntity generator) {
-        Integer canOutputIndex = getCanOutputIndex(generator);
-        if (canOutputIndex == null) {
-            return false;
-        }
-        Tool.takeItem(player, new ItemStack(config.getProductList().get(canOutputIndex).item));
-        generator.saveArray[canOutputIndex] = Tool.suitInt(generator.saveArray[canOutputIndex] - 1);
-        return true;
-    }
-
-    private Integer getCanOutputIndex(FarmEntity generator) {
-        List<Integer> indexList = canTransport(generator);
-        if (indexList.isEmpty()) {
-            return null;
-        } else if (indexList.size() == 1) {
-            return indexList.getFirst();
-        } else {
-            return indexList.get((int) (Math.random() * indexList.size()));
-        }
-    }
-
-    private void addLevel(Player player, FarmEntity generator, ItemStack stackInHand) {
-        long count = stackInHand.getCount();
-        long level = 1;
-        String blockData = stackInHand.getOrDefault(Registration.BLOCK_DATA.get(), "");
-        if (!blockData.isEmpty()) {
-            String[] dataArray = blockData.split(",");
-            level = Tool.suit(dataArray[0]);
-        }
-        generator.level = Tool.suit(generator.level + Tool.suit(count * level));
-        player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
     }
 
     private boolean takeItem(Player player, FarmEntity generator, ItemStack stackInHand) {

@@ -1,15 +1,14 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -23,6 +22,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -33,6 +34,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class StorageFountainBlock extends Block implements EntityBlock {
+    private static final Logger log = LoggerFactory.getLogger(StorageFountainBlock.class);
     public static final long CARRY = 1000;
     public final Direction[] directions = Direction.values();
 
@@ -48,7 +50,13 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
-        return (l, p, s, tile) -> tick(l, tile);
+        return (l, p, s, tile) -> {
+            try {
+                tick(l, tile);
+            } catch (Throwable e) {
+                log.error("StorageFountainBlock.getTicker error", e);
+            }
+        };
     }
 
     private <T extends BlockEntity> void tick(Level level, T tile) {
@@ -104,7 +112,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
 
     private void transport(StorageFountainEntity generator, List<Integer> indexList, IItemHandler handler) {
         if (indexList.size() == 1) {
-            transport(generator, indexList.get(0), handler);
+            transport(generator, indexList.getFirst(), handler);
             return;
         }
         Collections.shuffle(indexList);
@@ -131,19 +139,29 @@ public class StorageFountainBlock extends Block implements EntityBlock {
 
     @Override
     public @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
-        if (level.isClientSide) {
-            return InteractionResult.SUCCESS;
+        try {
+            if (level.isClientSide) {
+                return InteractionResult.SUCCESS;
+            }
+            return use(level, pos, player);
+        } catch (Throwable e) {
+            log.error("StorageFountainBlock.useWithoutItem error", e);
         }
-        return use(level, pos, player);
+        return super.useWithoutItem(state, level, pos, player, hit);
     }
 
     @Override
     protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack itemStack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
-        if (level.isClientSide) {
-            return ItemInteractionResult.SUCCESS;
+        try {
+            if (level.isClientSide) {
+                return ItemInteractionResult.SUCCESS;
+            }
+            InteractionResult result = use(level, pos, player);
+            return result == InteractionResult.SUCCESS ? ItemInteractionResult.SUCCESS : ItemInteractionResult.FAIL;
+        } catch (Throwable e) {
+            log.error("StorageFountainBlock.useItemOn error", e);
         }
-        InteractionResult result = use(level, pos, player);
-        return result == InteractionResult.SUCCESS ? ItemInteractionResult.SUCCESS : ItemInteractionResult.FAIL;
+        return super.useItemOn(itemStack, state, level, pos, player, handIn, hit);
     }
 
     private @Nonnull InteractionResult use(Level level, @Nonnull BlockPos pos, @Nonnull Player player) {
@@ -156,15 +174,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         }
         ItemStack stack = player.getMainHandItem();
         if (stack.isEmpty()) {
-            if (takeItem(player, generator)) {
-                showMessage(player, generator);
-                return InteractionResult.SUCCESS;
-            }
-            showMessage(player, generator);
-            return InteractionResult.SUCCESS;
-        }
-        if (stack.is(this.asItem())) {
-            addOutputByThis(player, generator, stack);
+            takeItem(player, generator);
             showMessage(player, generator);
             return InteractionResult.SUCCESS;
         }
@@ -172,14 +182,10 @@ public class StorageFountainBlock extends Block implements EntityBlock {
             showMessage(player, generator);
             return InteractionResult.SUCCESS;
         }
-        if (stack.getTags().anyMatch(tag -> {
+        String namespace = BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
+        if (namespace.contains("modern_industrialization") || namespace.contains("extended_industrialization") || stack.getTags().anyMatch(tag -> {
             String path = tag.location().getPath();
-            return path.contains("storage_blocks")
-                    || path.contains("ores")
-                    || path.contains("ingots")
-                    || path.contains("dusts")
-                    || path.contains("gems")
-                    ;
+            return path.contains("storage_blocks") || path.contains("ores") || path.contains("ingots") || path.contains("dusts") || path.contains("gems");
         })) {
             addOutputByBlock(generator, stack);
             showMessage(player, generator);
@@ -189,11 +195,11 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         return InteractionResult.SUCCESS;
     }
 
-    private boolean takeItem(Player player, StorageFountainEntity generator) {
+    private void takeItem(Player player, StorageFountainEntity generator) {
         List<Integer> indexList = canTransport(generator);
         int index;
         if (indexList.isEmpty()) {
-            return false;
+            return;
         } else if (indexList.size() == 1) {
             index = indexList.getFirst();
         } else {
@@ -204,47 +210,12 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         stack.setCount(1);
         Tool.takeItem(player, stack);
         generator.blockList.set(index, count - StorageFountainBlock.CARRY);
-        return true;
-    }
-
-    private void addOutputByThis(Player player, StorageFountainEntity generator, ItemStack stackInHand) {
-        long count = stackInHand.getCount();
-        long output = 0;
-        String blockData = stackInHand.getOrDefault(Registration.BLOCK_DATA.get(), "");
-        if (!blockData.isEmpty()) {
-            String[] dataArray = blockData.split(",");
-            output = Tool.suit(dataArray[0]);
-            List<ItemStack> tempItemList = Tool.fromItemString(dataArray[1]);
-            List<Long> tempBlockList = Tool.fromBlockString(dataArray[2]);
-            nextItem:
-            for (int i = 0; i < Math.min(tempItemList.size(), tempBlockList.size()); i++) {
-                ItemStack stack = tempItemList.get(i);
-                Long block = tempBlockList.get(i);
-                if (stack == null || block == null) {
-                    continue;
-                }
-                stack.setCount(1);
-                for (int index = 0; index < Math.min(generator.itemList.size(), generator.blockList.size()); i++) {
-                    if (generator.itemList.get(index).getItem() == stack.getItem()) {
-                        generator.blockList.set(index, generator.blockList.get(index) + block * count);
-                        continue nextItem;
-                    }
-                }
-                if (generator.itemList.size() < 9) {
-                    generator.itemList.add(stack);
-                    generator.blockList.add(block * count);
-                }
-            }
-            Tool.sort(generator.itemList, generator.blockList);
-        }
-        generator.output = Tool.suit(generator.output + output * count);
-        player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
     }
 
     private void addOutputByBlock(StorageFountainEntity generator, ItemStack stackInHand) {
         List<ItemStack> itemList = generator.itemList;
         for (ItemStack stack : itemList) {
-            if (stackInHand.getItem() == stack.getItem()) {
+            if (ItemStack.isSameItemSameComponents(stackInHand, stack)) {
                 return;
             }
         }
