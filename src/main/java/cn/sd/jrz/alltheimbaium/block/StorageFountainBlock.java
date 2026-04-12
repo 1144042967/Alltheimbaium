@@ -4,6 +4,7 @@ import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -21,7 +22,6 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.Tags;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
@@ -159,20 +159,22 @@ public class StorageFountainBlock extends Block implements EntityBlock {
             showMessage(player, generator);
             return InteractionResult.SUCCESS;
         }
-        if (stack.is(Tags.Items.STORAGE_BLOCKS)
-                || stack.is(Tags.Items.ORES)
-                || stack.is(Tags.Items.INGOTS)
-                || stack.is(Tags.Items.DUSTS)
-                || stack.is(Tags.Items.GEMS)
-                || stack.getTags().anyMatch(tag -> {
+        String namespace = BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
+        boolean modContains = namespace.contains("modern_industrialization") || namespace.contains("extended_industrialization");
+        boolean tagContains = stack.getTags().anyMatch(tag -> {
             String path = tag.location().getPath();
-            return path.contains("storage_blocks/")
-                    || path.contains("ores/")
-                    || path.contains("ingots/")
-                    || path.contains("dusts/")
-                    || path.contains("gems/")
-                    ;
-        })) {
+            return path.contains("storage_blocks")
+                    || path.contains("ores")
+                    || path.contains("ingots")
+                    || path.contains("dusts")
+                    || path.contains("gems")
+                    || path.contains("alloys")
+                    || path.contains("plates")
+                    || path.contains("enriched")
+                    || path.contains("circuits")
+                    || path.contains("pellets");
+        });
+        if (modContains || tagContains) {
             addOutputByBlock(generator, stack);
             showMessage(player, generator);
             return InteractionResult.SUCCESS;

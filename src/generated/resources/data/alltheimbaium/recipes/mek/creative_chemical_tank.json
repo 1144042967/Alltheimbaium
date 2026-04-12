@@ -1,0 +1,29 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "mekanism"
+        }
+      ],
+      "recipe": {
+        "type": "mekanism:mek_data",
+        "key": {
+          "P": {
+            "item": "mekanism:ultimate_chemical_tank"
+          }
+        },
+        "pattern": [
+          "PPP",
+          "PPP",
+          "PPP"
+        ],
+        "result": {
+          "item": "mekanism:creative_chemical_tank"
+        }
+      }
+    }
+  ]
+}

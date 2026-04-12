@@ -5,7 +5,7 @@
   "screen.alltheimbaium.fountain.description": "Output: %s/tick, Growth: %s%%",
   "screen.alltheimbaium.fountain.output": "Output: %s/tick",
   "screen.alltheimbaium.fountain.current": "%s, Current: %s",
-  "screen.alltheimbaium.fountain.empty": "Right-click this machine with items containing the 'ores', 'storage_blocks', 'ingots', 'dusts' or 'gems' tag",
+  "screen.alltheimbaium.fountain.empty": "Accept MODs：modern_industrialization、extended_industrialization\nAccept Tags：storage_blocks、ores、ingots、dusts、gems、alloys、plates、enriched、circuits、pellets",
   "screen.alltheimbaium.liquid.fountain.empty": "Please input some liquid",
   "screen.alltheimbaium.liquid.fountain.current": "%s, Current: %s/%s",
   "screen.alltheimbaium.liquid.fountain.max": "%s, Current: Infinity",
