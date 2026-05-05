@@ -183,10 +183,21 @@ public class StorageFountainBlock extends Block implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
         String namespace = BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
-        if (namespace.contains("modern_industrialization") || namespace.contains("extended_industrialization") || stack.getTags().anyMatch(tag -> {
+        boolean modContains = namespace.contains("modern_industrialization") || namespace.contains("extended_industrialization");
+        boolean tagContains = stack.getTags().anyMatch(tag -> {
             String path = tag.location().getPath();
-            return path.contains("storage_blocks") || path.contains("ores") || path.contains("ingots") || path.contains("dusts") || path.contains("gems");
-        })) {
+            return path.contains("storage_blocks")
+                    || path.contains("ores")
+                    || path.contains("ingots")
+                    || path.contains("dusts")
+                    || path.contains("gems")
+                    || path.contains("alloys")
+                    || path.contains("plates")
+                    || path.contains("enriched")
+                    || path.contains("circuits")
+                    || path.contains("pellets");
+        });
+        if (modContains || tagContains) {
             addOutputByBlock(generator, stack);
             showMessage(player, generator);
             return InteractionResult.SUCCESS;
