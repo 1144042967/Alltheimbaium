@@ -5,10 +5,13 @@ import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 
 public class StorageFountainConnection implements IItemHandler {
+    private static final Logger log = LoggerFactory.getLogger(StorageFountainConnection.class);
     private final StorageFountainEntity owner;
 
     public StorageFountainConnection(StorageFountainEntity owner) {
@@ -17,22 +20,32 @@ public class StorageFountainConnection implements IItemHandler {
 
     @Override
     public int getSlots() {
-        return owner.itemList.size();
+        try {
+            return owner.itemList.size();
+        } catch (Throwable e) {
+            log.error("StorageFountainConnection.getSlots error", e);
+        }
+        return 0;
     }
 
     @Override
     public @Nonnull ItemStack getStackInSlot(int slot) {
-        if (slot < 0 || slot >= owner.itemList.size()) {
-            return ItemStack.EMPTY;
+        try {
+            if (slot < 0 || slot >= owner.itemList.size()) {
+                return ItemStack.EMPTY;
+            }
+            ItemStack stack = owner.itemList.get(slot);
+            Long count = owner.blockList.get(slot);
+            if (count <= 0) {
+                return ItemStack.EMPTY;
+            }
+            stack = stack.copy();
+            stack.setCount(Tool.suitInt(count / StorageFountainBlock.CARRY));
+            return stack;
+        } catch (Throwable e) {
+            log.error("StorageFountainConnection.getStackInSlot error", e);
         }
-        ItemStack stack = owner.itemList.get(slot);
-        Long count = owner.blockList.get(slot);
-        if (count <= 0) {
-            return ItemStack.EMPTY;
-        }
-        stack = stack.copy();
-        stack.setCount(Tool.suitInt(count / StorageFountainBlock.CARRY));
-        return stack;
+        return ItemStack.EMPTY;
     }
 
     @Override
@@ -42,23 +55,28 @@ public class StorageFountainConnection implements IItemHandler {
 
     @Override
     public @Nonnull ItemStack extractItem(int slot, int amount, boolean simulate) {
-        if (slot < 0 || slot >= owner.itemList.size()) {
-            return ItemStack.EMPTY;
+        try {
+            if (slot < 0 || slot >= owner.itemList.size()) {
+                return ItemStack.EMPTY;
+            }
+            ItemStack stack = owner.itemList.get(slot);
+            Long block = owner.blockList.get(slot);
+            int maxAmount = Tool.suitInt(block / StorageFountainBlock.CARRY);
+            if (maxAmount <= 0) {
+                return ItemStack.EMPTY;
+            }
+            int ret = Math.min(maxAmount, amount);
+            if (!simulate) {
+                owner.blockList.set(slot, block - ret * StorageFountainBlock.CARRY);
+                owner.setChanged();
+            }
+            stack = stack.copy();
+            stack.setCount(ret);
+            return stack;
+        } catch (Throwable e) {
+            log.error("StorageFountainConnection.extractItem error", e);
         }
-        ItemStack stack = owner.itemList.get(slot);
-        Long block = owner.blockList.get(slot);
-        int maxAmount = Tool.suitInt(block / StorageFountainBlock.CARRY);
-        if (maxAmount <= 0) {
-            return ItemStack.EMPTY;
-        }
-        int ret = Math.min(maxAmount, amount);
-        if (!simulate) {
-            owner.blockList.set(slot, block - ret * StorageFountainBlock.CARRY);
-            owner.setChanged();
-        }
-        stack = stack.copy();
-        stack.setCount(ret);
-        return stack;
+        return ItemStack.EMPTY;
     }
 
     @Override

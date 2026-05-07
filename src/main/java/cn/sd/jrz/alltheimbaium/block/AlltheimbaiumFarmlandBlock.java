@@ -21,6 +21,8 @@ import net.minecraftforge.common.ForgeHooks;
 import net.minecraftforge.common.IPlantable;
 import net.minecraftforge.common.PlantType;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -28,6 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.FarmBlock implements EntityBlock {
+    private static final Logger log = LoggerFactory.getLogger(AlltheimbaiumFarmlandBlock.class);
+
     public AlltheimbaiumFarmlandBlock() {
         super(Properties.copy(Blocks.FARMLAND));
     }
@@ -45,7 +49,13 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> type) {
-        return (l, p, s, tile) -> tick(l, tile);
+        return (l, p, s, tile) -> {
+            try {
+                tick(l, tile);
+            } catch (Throwable e) {
+                log.error("AlltheimbaiumFarmlandBlock.getTicker error", e);
+            }
+        };
     }
 
     private <T extends BlockEntity> void tick(Level level, T tile) {
@@ -81,34 +91,57 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
     }
 
     @Override
-    public void randomTick(BlockState state, @Nonnull ServerLevel level, @Nonnull BlockPos pos, @Nonnull RandomSource random) {
-        if (state.getValue(MOISTURE) < 7) {
-            level.setBlock(pos, state.setValue(MOISTURE, 7), 2);
+    public void randomTick(@Nonnull BlockState state, @Nonnull ServerLevel level, @Nonnull BlockPos pos, @Nonnull RandomSource random) {
+        try {
+            if (state.getValue(MOISTURE) < 7) {
+                level.setBlock(pos, state.setValue(MOISTURE, 7), 2);
+            }
+        } catch (Throwable e) {
+            log.error("AlltheimbaiumFarmlandBlock.randomTick error", e);
         }
     }
 
     @Override
-    public void fallOn(Level level, @Nonnull BlockState state, @Nonnull BlockPos pos, Entity entity, float fallDistance) {
-        entity.causeFallDamage(fallDistance, 1.0F, level.damageSources().fall());
+    public void fallOn(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockPos pos, @Nonnull Entity entity, float fallDistance) {
+        try {
+            entity.causeFallDamage(fallDistance, 1.0F, level.damageSources().fall());
+        } catch (Throwable e) {
+            log.error("AlltheimbaiumFarmlandBlock.fallOn error", e);
+        }
     }
 
     @Override
-    public boolean canSustainPlant(@Nonnull BlockState state, @Nonnull BlockGetter level, BlockPos pos, @Nonnull Direction facing, IPlantable plantable) {
-        BlockState plant = plantable.getPlant(level, pos.relative(facing));
-        var type = plantable.getPlantType(level, pos.relative(facing));
-        return type == PlantType.CROP || plant.getBlock() instanceof StemBlock;
+    public boolean canSustainPlant(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull Direction facing, @Nonnull IPlantable plantable) {
+        try {
+            BlockState plant = plantable.getPlant(level, pos.relative(facing));
+            var type = plantable.getPlantType(level, pos.relative(facing));
+            return type == PlantType.CROP || plant.getBlock() instanceof StemBlock;
+        } catch (Throwable e) {
+            log.error("AlltheimbaiumFarmlandBlock.canSustainPlant error", e);
+        }
+        return super.canSustainPlant(state, level, pos, facing, plantable);
     }
 
     @Override
     public boolean isFertile(BlockState state, BlockGetter level, BlockPos pos) {
-        return state.getValue(MOISTURE) > 0;
+        try {
+            return state.getValue(MOISTURE) > 0;
+        } catch (Throwable e) {
+            log.error("AlltheimbaiumFarmlandBlock.isFertile error", e);
+        }
+        return super.isFertile(state, level, pos);
     }
 
     @SuppressWarnings("deprecation")
     @Override
     public @Nonnull List<ItemStack> getDrops(@Nonnull BlockState state, @Nonnull LootParams.Builder builder) {
-        List<ItemStack> drops = new ArrayList<>();
-        drops.add(new ItemStack(this));
-        return drops;
+        try {
+            List<ItemStack> drops = new ArrayList<>();
+            drops.add(new ItemStack(this));
+            return drops;
+        } catch (Throwable e) {
+            log.error("AlltheimbaiumFarmlandBlock.getDrops error", e);
+        }
+        return super.getDrops(state, builder);
     }
 }

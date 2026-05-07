@@ -13,11 +13,14 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.LazyOptional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class FarmEntity extends BlockEntity implements ICapabilityProvider {
+    private static final Logger log = LoggerFactory.getLogger(FarmEntity.class);
     private final LazyOptional<FarmConnection> fecOptional = LazyOptional.of(() -> new FarmConnection(this));
     public int findIndex = 0;
     public int tickCount = 0;
@@ -37,34 +40,47 @@ public class FarmEntity extends BlockEntity implements ICapabilityProvider {
     @Override
     @Nonnull
     public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        return capability == ForgeCapabilities.ITEM_HANDLER ? fecOptional.cast() : super.getCapability(capability, direction);
+        try {
+            return capability == ForgeCapabilities.ITEM_HANDLER ? fecOptional.cast() : super.getCapability(capability, direction);
+        } catch (Throwable e) {
+            log.error("FarmEntity.getCapability error", e);
+        }
+        return super.getCapability(capability, direction);
     }
 
     @Override
     public void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
-        nbt.putLong("level", level);
-        nbt.putLongArray("output_array", outputArray);
-        nbt.putLongArray("save_array", saveArray);
+        try {
+            nbt.putLong("level", level);
+            nbt.putLongArray("output_array", outputArray);
+            nbt.putLongArray("save_array", saveArray);
+        } catch (Throwable e) {
+            log.error("FarmEntity.saveAdditional error", e);
+        }
     }
 
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
-        if (nbt.contains("level", Tag.TAG_LONG)) {
-            this.level = Tool.suit(nbt.getLong("level"));
-        }
-        if (nbt.contains("output_array", Tag.TAG_LONG_ARRAY)) {
-            long[] tempArray = nbt.getLongArray("output_array");
-            for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
-                this.outputArray[i] = Tool.suit(tempArray[i]);
+        try {
+            if (nbt.contains("level", Tag.TAG_LONG)) {
+                this.level = Tool.suit(nbt.getLong("level"));
             }
-        }
-        if (nbt.contains("save_array", Tag.TAG_LONG_ARRAY)) {
-            long[] tempArray = nbt.getLongArray("save_array");
-            for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
-                this.saveArray[i] = Tool.suit(tempArray[i]);
+            if (nbt.contains("output_array", Tag.TAG_LONG_ARRAY)) {
+                long[] tempArray = nbt.getLongArray("output_array");
+                for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
+                    this.outputArray[i] = Tool.suit(tempArray[i]);
+                }
             }
+            if (nbt.contains("save_array", Tag.TAG_LONG_ARRAY)) {
+                long[] tempArray = nbt.getLongArray("save_array");
+                for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
+                    this.saveArray[i] = Tool.suit(tempArray[i]);
+                }
+            }
+        } catch (Throwable e) {
+            log.error("FarmEntity.load error", e);
         }
     }
 }

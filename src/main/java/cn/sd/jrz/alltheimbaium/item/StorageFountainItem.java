@@ -13,6 +13,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class StorageFountainItem extends BlockItem {
+    private static final Logger log = LoggerFactory.getLogger(StorageFountainItem.class);
 
     public StorageFountainItem(Block block) {
         super(block, new Properties().fireResistant());
@@ -31,35 +34,39 @@ public class StorageFountainItem extends BlockItem {
     @OnlyIn(Dist.CLIENT)
     public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
         super.appendHoverText(stack, worldIn, tooltip, flagIn);
-        long output = 5;
-        List<ItemStack> stackList = new ArrayList<>();
-        List<Long> blockList = new ArrayList<>();
-        if (stack.hasTag()) {
-            CompoundTag tag = stack.getTagElement("BlockEntityTag");
-            if (tag != null) {
-                if (tag.contains("output", Tag.TAG_LONG)) {
-                    output = Tool.suit(tag.getLong("output"));
-                }
-                if (tag.contains("save_stick")) {
-                    ListTag array = (ListTag) tag.get("save_stick");
-                    if (array != null) {
-                        stackList = Tool.toItemList(array);
-                        blockList = Tool.toBlockList(array);
+        try {
+            long output = 5;
+            List<ItemStack> stackList = new ArrayList<>();
+            List<Long> blockList = new ArrayList<>();
+            if (stack.hasTag()) {
+                CompoundTag tag = stack.getTagElement("BlockEntityTag");
+                if (tag != null) {
+                    if (tag.contains("output", Tag.TAG_LONG)) {
+                        output = Tool.suit(tag.getLong("output"));
+                    }
+                    if (tag.contains("save_stick")) {
+                        ListTag array = (ListTag) tag.get("save_stick");
+                        if (array != null) {
+                            stackList = Tool.toItemList(array);
+                            blockList = Tool.toBlockList(array);
+                        }
                     }
                 }
             }
-        }
-        BigDecimal outputPerTick = new BigDecimal(output).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
-        tooltip.add(Component.translatable("screen.alltheimbaium.fountain.output", outputPerTick));
-        for (int i = 0; i < Math.min(stackList.size(), blockList.size()); i++) {
-            ItemStack itemStack = stackList.get(i);
-            Long block = blockList.get(i);
-            String name = itemStack.getItem().getName(itemStack).getString();
-            BigDecimal save = new BigDecimal(block).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
-            tooltip.add(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
-        }
-        if (stackList.isEmpty()) {
-            tooltip.add(Component.translatable("screen.alltheimbaium.fountain.empty"));
+            BigDecimal outputPerTick = new BigDecimal(output).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
+            tooltip.add(Component.translatable("screen.alltheimbaium.fountain.output", outputPerTick));
+            for (int i = 0; i < Math.min(stackList.size(), blockList.size()); i++) {
+                ItemStack itemStack = stackList.get(i);
+                Long block = blockList.get(i);
+                String name = itemStack.getItem().getName(itemStack).getString();
+                BigDecimal save = new BigDecimal(block).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
+                tooltip.add(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
+            }
+            if (stackList.isEmpty()) {
+                tooltip.add(Component.translatable("screen.alltheimbaium.fountain.empty"));
+            }
+        } catch (Throwable e) {
+            log.error("StorageFountainItem.appendHoverText error", e);
         }
     }
 }

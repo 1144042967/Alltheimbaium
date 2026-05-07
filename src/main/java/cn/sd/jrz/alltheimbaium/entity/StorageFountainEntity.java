@@ -15,6 +15,8 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.LazyOptional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class StorageFountainEntity extends BlockEntity implements ICapabilityProvider {
+    private static final Logger log = LoggerFactory.getLogger(StorageFountainEntity.class);
     private final LazyOptional<StorageFountainConnection> fecOptional = LazyOptional.of(() -> new StorageFountainConnection(this));
     public int findIndex = 0;
     public long output = 5;
@@ -36,29 +39,42 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
     @Override
     @Nonnull
     public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        return capability == ForgeCapabilities.ITEM_HANDLER ? fecOptional.cast() : super.getCapability(capability, direction);
+        try {
+            return capability == ForgeCapabilities.ITEM_HANDLER ? fecOptional.cast() : super.getCapability(capability, direction);
+        } catch (Throwable e) {
+            log.error("StorageFountainEntity.getCapability error", e);
+        }
+        return super.getCapability(capability, direction);
     }
 
     @Override
     public void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
-        nbt.putLong("output", output);
-        nbt.put("save_stick", Tool.toJsonArray(itemList, blockList));
+        try {
+            nbt.putLong("output", output);
+            nbt.put("save_stick", Tool.toJsonArray(itemList, blockList));
+        } catch (Throwable e) {
+            log.error("StorageFountainEntity.saveAdditional error", e);
+        }
     }
 
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
-        if (nbt.contains("output", Tag.TAG_LONG)) {
-            this.output = Tool.suit(nbt.getLong("output"));
-        }
-        if (nbt.contains("save_stick")) {
-            ListTag list = (ListTag) nbt.get("save_stick");
-            if (list != null) {
-                this.itemList = Tool.toItemList(list);
-                this.blockList = Tool.toBlockList(list);
-                Tool.sort(itemList, blockList);
+        try {
+            if (nbt.contains("output", Tag.TAG_LONG)) {
+                this.output = Tool.suit(nbt.getLong("output"));
             }
+            if (nbt.contains("save_stick")) {
+                ListTag list = (ListTag) nbt.get("save_stick");
+                if (list != null) {
+                    this.itemList = Tool.toItemList(list);
+                    this.blockList = Tool.toBlockList(list);
+                    Tool.sort(itemList, blockList);
+                }
+            }
+        } catch (Throwable e) {
+            log.error("StorageFountainEntity.load error", e);
         }
     }
 }

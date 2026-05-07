@@ -19,11 +19,14 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class LiquidFountainBlock extends Block implements EntityBlock {
+    private static final Logger log = LoggerFactory.getLogger(LiquidFountainBlock.class);
     public static final Integer MAX = 10000 * 1000;
 
     public LiquidFountainBlock(BlockBehaviour.Properties properties) {
@@ -38,7 +41,13 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
-        return (l, p, s, tile) -> tick(l, tile);
+        return (l, p, s, tile) -> {
+            try {
+                tick(l, tile);
+            } catch (Throwable e) {
+                log.error("LiquidFountainBlock.getTicker error", e);
+            }
+        };
     }
 
     private <T extends BlockEntity> void tick(Level level, T tile) {
@@ -75,24 +84,29 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
 
     @SuppressWarnings("deprecation")
     @Override
-    public @Nonnull InteractionResult use(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
-        if (level.isClientSide) {
+    public @Nonnull InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+        try {
+            if (level.isClientSide) {
+                return InteractionResult.SUCCESS;
+            }
+            LiquidFountainEntity generator = (LiquidFountainEntity) level.getBlockEntity(pos);
+            if (generator == null) {
+                return InteractionResult.FAIL;
+            }
+            FluidStack stack = generator.stack;
+            if (stack == FluidStack.EMPTY) {
+                player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.empty"));
+                return InteractionResult.SUCCESS;
+            }
+            if (stack.getAmount() < LiquidFountainBlock.MAX) {
+                player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.current", stack.getDisplayName(), stack.getAmount(), LiquidFountainBlock.MAX));
+                return InteractionResult.SUCCESS;
+            }
+            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.max", stack.getDisplayName()));
             return InteractionResult.SUCCESS;
+        } catch (Throwable e) {
+            log.error("LiquidFountainBlock.use error", e);
         }
-        LiquidFountainEntity generator = (LiquidFountainEntity) level.getBlockEntity(pos);
-        if (generator == null) {
-            return InteractionResult.FAIL;
-        }
-        FluidStack stack = generator.stack;
-        if (stack == FluidStack.EMPTY) {
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.empty"));
-            return InteractionResult.SUCCESS;
-        }
-        if (stack.getAmount() < LiquidFountainBlock.MAX) {
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.current", stack.getDisplayName(), stack.getAmount(), LiquidFountainBlock.MAX));
-            return InteractionResult.SUCCESS;
-        }
-        player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.max", stack.getDisplayName()));
-        return InteractionResult.SUCCESS;
+        return super.use(state, level, pos, player, handIn, hit);
     }
 }

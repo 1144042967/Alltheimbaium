@@ -26,6 +26,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -36,6 +38,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class FarmBlock extends Block implements EntityBlock {
+    private static final Logger log = LoggerFactory.getLogger(FarmBlock.class);
     public static final long CARRY = 10000;
     public static final int SCALE = String.valueOf(CARRY).length() - 1;
     private final DataConfig config;
@@ -54,7 +57,13 @@ public class FarmBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
-        return (l, p, s, tile) -> tick(l, tile);
+        return (l, p, s, tile) -> {
+            try {
+                tick(l, tile);
+            } catch (Throwable e) {
+                log.error("FarmBlock.getTicker error", e);
+            }
+        };
     }
 
     private <T extends BlockEntity> void tick(Level level, T tile) {
@@ -143,32 +152,37 @@ public class FarmBlock extends Block implements EntityBlock {
 
     @SuppressWarnings("deprecation")
     @Override
-    public @Nonnull InteractionResult use(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
-        if (level.isClientSide) {
-            return InteractionResult.SUCCESS;
-        }
-        FarmEntity generator = (FarmEntity) level.getBlockEntity(pos);
-        if (generator == null) {
-            return InteractionResult.FAIL;
-        }
-        ItemStack stack = player.getMainHandItem();
-        if (stack == ItemStack.EMPTY || stack.getItem() == Items.AIR) {
-            if (takeItem(player, generator)) {
+    public @Nonnull InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+        try {
+            if (level.isClientSide) {
+                return InteractionResult.SUCCESS;
+            }
+            FarmEntity generator = (FarmEntity) level.getBlockEntity(pos);
+            if (generator == null) {
+                return InteractionResult.FAIL;
+            }
+            ItemStack stack = player.getMainHandItem();
+            if (stack == ItemStack.EMPTY || stack.getItem() == Items.AIR) {
+                if (takeItem(player, generator)) {
+                    return InteractionResult.SUCCESS;
+                }
+                showMessage(player, generator);
+                return InteractionResult.SUCCESS;
+            }
+            if (stack.is(this.asItem())) {
+                addLevel(player, generator, stack);
+                showMessage(player, generator);
+                return InteractionResult.SUCCESS;
+            }
+            if (takeItem(player, generator, stack)) {
                 return InteractionResult.SUCCESS;
             }
             showMessage(player, generator);
             return InteractionResult.SUCCESS;
+        } catch (Throwable e) {
+            log.error("FarmBlock.use error", e);
         }
-        if (stack.is(this.asItem())) {
-            addLevel(player, generator, stack);
-            showMessage(player, generator);
-            return InteractionResult.SUCCESS;
-        }
-        if (takeItem(player, generator, stack)) {
-            return InteractionResult.SUCCESS;
-        }
-        showMessage(player, generator);
-        return InteractionResult.SUCCESS;
+        return super.use(state, level, pos, player, handIn, hit);
     }
 
     private boolean takeItem(Player player, FarmEntity generator) {

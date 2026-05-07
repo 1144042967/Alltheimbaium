@@ -47,6 +47,7 @@ public abstract class DataConfig {
     public static final DataConfig FARM_CHICKEN = new DataConfig(
             product(Items.CHICKEN, 50)
             , product(Items.FEATHER, 500)
+            , product(Items.EGG, 500)
             , product(Items.CHICKEN_SPAWN_EGG, 1)
     ) {
         @Override

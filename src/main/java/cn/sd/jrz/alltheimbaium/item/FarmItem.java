@@ -14,6 +14,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -22,6 +24,7 @@ import java.math.RoundingMode;
 import java.util.List;
 
 public class FarmItem extends BlockItem {
+    private static final Logger log = LoggerFactory.getLogger(FarmItem.class);
     private final DataConfig config;
 
     public FarmItem(Block block, DataConfig config) {
@@ -33,30 +36,34 @@ public class FarmItem extends BlockItem {
     @OnlyIn(Dist.CLIENT)
     public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
         super.appendHoverText(stack, worldIn, tooltip, flagIn);
-        long level = 1;
-        long[] saveArray = new long[config.getProductList().size()];
-        if (stack.hasTag()) {
-            CompoundTag tag = stack.getTagElement("BlockEntityTag");
-            if (tag != null) {
-                if (tag.contains("level", Tag.TAG_LONG)) {
-                    level = Tool.suit(tag.getLong("level"));
-                }
-                if (tag.contains("save_array", Tag.TAG_LONG_ARRAY)) {
-                    long[] tempArray = tag.getLongArray("save_array");
-                    for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
-                        saveArray[i] = Tool.suit(tempArray[i]);
+        try {
+            long level = 1;
+            long[] saveArray = new long[config.getProductList().size()];
+            if (stack.hasTag()) {
+                CompoundTag tag = stack.getTagElement("BlockEntityTag");
+                if (tag != null) {
+                    if (tag.contains("level", Tag.TAG_LONG)) {
+                        level = Tool.suit(tag.getLong("level"));
+                    }
+                    if (tag.contains("save_array", Tag.TAG_LONG_ARRAY)) {
+                        long[] tempArray = tag.getLongArray("save_array");
+                        for (int i = 0; i < tempArray.length && i < config.getProductList().size(); i++) {
+                            saveArray[i] = Tool.suit(tempArray[i]);
+                        }
                     }
                 }
             }
-        }
-        tooltip.add(Component.translatable("screen.alltheimbaium.farm.description", level));
-        for (int i = 0; i < config.getProductList().size(); i++) {
-            DataConfig.ItemProduct product = config.getProductList().get(i);
-            Item item = product.item;
-            String name = item.getName(new ItemStack(item)).getString();
-            long current = saveArray[i];
-            BigDecimal output = new BigDecimal(level * product.count).divide(new BigDecimal(FarmBlock.CARRY), FarmBlock.SCALE, RoundingMode.HALF_UP);
-            tooltip.add(Component.translatable("screen.alltheimbaium.farm.product", name, current, output));
+            tooltip.add(Component.translatable("screen.alltheimbaium.farm.description", level));
+            for (int i = 0; i < config.getProductList().size(); i++) {
+                DataConfig.ItemProduct product = config.getProductList().get(i);
+                Item item = product.item;
+                String name = item.getName(new ItemStack(item)).getString();
+                long current = saveArray[i];
+                BigDecimal output = new BigDecimal(level * product.count).divide(new BigDecimal(FarmBlock.CARRY), FarmBlock.SCALE, RoundingMode.HALF_UP);
+                tooltip.add(Component.translatable("screen.alltheimbaium.farm.product", name, current, output));
+            }
+        } catch (Throwable e) {
+            log.error("FarmItem.appendHoverText error", e);
         }
     }
 }
