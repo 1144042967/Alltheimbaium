@@ -38,13 +38,13 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
     }
 
     @Override
-    public BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
+    public BlockEntity newBlockEntity(@Nonnull BlockPos pos, @Nonnull BlockState state) {
         return new CommonEntity(pos, state, Registration.FARMLAND_ENTITY::get);
     }
 
     @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> type) {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
         return (l, p, s, tile) -> {
             try {
                 tick(l, tile);
@@ -86,7 +86,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
     }
 
     @Override
-    public void randomTick(@NotNull BlockState state, @Nonnull ServerLevel level, @Nonnull BlockPos pos, @Nonnull RandomSource random) {
+    public void randomTick(@Nonnull BlockState state, @Nonnull ServerLevel level, @Nonnull BlockPos pos, @Nonnull RandomSource random) {
         try {
             if (state.getValue(MOISTURE) < 7) {
                 level.setBlock(pos, state.setValue(MOISTURE, 7), 2);
@@ -97,7 +97,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
     }
 
     @Override
-    public void fallOn(@NotNull Level level, @Nonnull BlockState state, @Nonnull BlockPos pos, @NotNull Entity entity, float fallDistance) {
+    public void fallOn(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockPos pos, @Nonnull Entity entity, float fallDistance) {
         try {
             entity.causeFallDamage(fallDistance, 1.0F, level.damageSources().fall());
         } catch (Throwable e) {
@@ -106,7 +106,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
     }
 
     @Override
-    public boolean isFertile(@NotNull BlockState state, @NotNull BlockGetter level, @NotNull BlockPos pos) {
+    public boolean isFertile(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos) {
         try {
             return state.getValue(MOISTURE) > 0;
         } catch (Throwable e) {
