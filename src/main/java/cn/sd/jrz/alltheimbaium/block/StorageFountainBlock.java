@@ -183,7 +183,8 @@ public class StorageFountainBlock extends Block implements EntityBlock {
                         || path.contains("enriched")
                         || path.contains("circuits")
                         || path.contains("pellets")
-                        || path.contains("matter");
+                        || path.contains("matter")
+                        || path.contains("klein_star");
             });
             if (modContains || tagContains) {
                 addOutputByBlock(generator, stack);
