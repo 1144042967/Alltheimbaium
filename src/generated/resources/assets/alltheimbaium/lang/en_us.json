@@ -59,8 +59,8 @@
   "block.alltheimbaium.farm_wither_skeleton": "ATI Wither Skeleton Farm",
   "block.alltheimbaium.farm_zombie": "ATI Zombie Farm",
   "block.alltheimbaium.farm_zombified_piglin": "ATI Zombified Piglin Farm",
-  "block.alltheimbaium.clock": "Acceleration Clock",
-  "block.alltheimbaium.platform": "Generation Platform",
+  "block.alltheimbaium.clock": "ATI Acceleration Clock",
+  "block.alltheimbaium.platform": "ATI Generation Platform",
   "screen.alltheimbaium.clock.enabled": "Clock enabled",
   "screen.alltheimbaium.clock.disabled": "Clock disabled",
   "screen.alltheimbaium.platform.generated": "Platform generated"

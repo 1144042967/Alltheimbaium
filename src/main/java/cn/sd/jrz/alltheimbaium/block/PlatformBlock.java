@@ -48,8 +48,8 @@ public class PlatformBlock extends Block {
     }
 
     private void generatePlatform(Level level, BlockPos centerPos) {
-        int chunkX = centerPos.getX() & ~(CHUNK_SIZE - 1);
-        int chunkZ = centerPos.getZ() & ~(CHUNK_SIZE - 1);
+        int chunkX = centerPos.getX() & -CHUNK_SIZE;
+        int chunkZ = centerPos.getZ() & -CHUNK_SIZE;
 
         for (int chunkOffsetX = -PLATFORM_CHUNK_RADIUS; chunkOffsetX <= PLATFORM_CHUNK_RADIUS; chunkOffsetX++) {
             for (int chunkOffsetZ = -PLATFORM_CHUNK_RADIUS; chunkOffsetZ <= PLATFORM_CHUNK_RADIUS; chunkOffsetZ++) {
@@ -58,7 +58,7 @@ public class PlatformBlock extends Block {
 
                 for (int x = 0; x < CHUNK_SIZE; x++) {
                     for (int z = 0; z < CHUNK_SIZE; z++) {
-                        BlockPos targetPos = new BlockPos(chunkStartX + x, centerPos.getY() + 1, chunkStartZ + z);
+                        BlockPos targetPos = new BlockPos(chunkStartX + x, centerPos.getY(), chunkStartZ + z);
                         if (!level.getBlockState(targetPos).isAir()) {
                             continue;
                         }

@@ -1,16 +1,19 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
-import java.lang.reflect.Method;
 import java.util.function.Supplier;
 
 public class ClockEntity extends BlockEntity {
-    private boolean active = true;
+    private boolean active = false;
     private static final int SPEED_MULTIPLIER = 256;
 
     public ClockEntity(BlockPos pos, BlockState state, Supplier<BlockEntityType<?>> supplier) {
@@ -26,48 +29,43 @@ public class ClockEntity extends BlockEntity {
     }
 
     public void tick(Level level) {
-        if (!active) {
-            return;
-        }
-        BlockPos abovePos = getBlockPos().above();
-        BlockEntity aboveEntity = level.getBlockEntity(abovePos);
-        if (aboveEntity == null) {
+        if (!active || level.isClientSide) {
             return;
         }
 
-        for (int i = 0; i < SPEED_MULTIPLIER; i++) {
-            try {
-                tickEntity(level, aboveEntity);
-            } catch (Throwable e) {
-                break;
-            }
+        BlockPos abovePos = getBlockPos().above();
+        tickBlock(abovePos);
+
+        BlockEntity aboveEntity = level.getBlockEntity(abovePos);
+        if (aboveEntity != null) {
+            aboveEntity.setChanged();
         }
-        aboveEntity.setChanged();
     }
 
-    private void tickEntity(Level level, BlockEntity entity) {
-        BlockEntityType<?> type = entity.getType();
-        BlockState state = entity.getBlockState();
-        BlockPos pos = entity.getBlockPos();
-
-        try {
-            Method tickerMethod = level.getClass().getMethod("getBlockEntityTicker", BlockEntityType.class, BlockState.class, BlockEntityType.class);
-            Object ticker = tickerMethod.invoke(level, type, state, type);
-
-            if (ticker != null) {
-                Method tickMethod = ticker.getClass().getMethod("tick", Level.class, BlockPos.class, BlockState.class, BlockEntity.class);
-                tickMethod.invoke(ticker, level, pos, state, entity);
+    private void tickBlock(BlockPos pos) {
+        if (level == null) {
+            return;
+        }
+        BlockState blockState = level.getBlockState(pos);
+        Block block = blockState.getBlock();
+        if (level instanceof ServerLevel && block.isRandomlyTicking(blockState)) {
+            blockState.randomTick((ServerLevel) level, pos, level.getRandom());
+        }
+        if (!(block instanceof EntityBlock entityBlock)) {
+            return;
+        }
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (blockEntity != null) {
+            //noinspection unchecked
+            BlockEntityTicker<BlockEntity> ticker = (BlockEntityTicker<BlockEntity>) entityBlock.getTicker(level, blockState, blockEntity.getType());
+            if (blockEntity.isRemoved() || ticker == null) {
+                return;
             }
-        } catch (Exception e) {
-            try {
-                Method getTickerMethod = state.getBlock().getClass().getMethod("getTicker", Level.class, BlockState.class, BlockEntityType.class);
-                Object ticker = getTickerMethod.invoke(state.getBlock(), level, state, type);
-
-                if (ticker != null) {
-                    Method tickMethod = ticker.getClass().getMethod("tick", Level.class, BlockPos.class, BlockState.class, BlockEntity.class);
-                    tickMethod.invoke(ticker, level, pos, state, entity);
+            for (int i = 1; i < SPEED_MULTIPLIER; i++) {
+                if (blockEntity.isRemoved()) {
+                    break;
                 }
-            } catch (Exception ex) {
+                ticker.tick(level, pos, blockState, blockEntity);
             }
         }
     }
