@@ -3,9 +3,7 @@ package cn.sd.jrz.alltheimbaium.setup;
 import cn.sd.jrz.alltheimbaium.Alltheimbaium;
 import cn.sd.jrz.alltheimbaium.block.*;
 import cn.sd.jrz.alltheimbaium.entity.*;
-import cn.sd.jrz.alltheimbaium.item.FarmItem;
-import cn.sd.jrz.alltheimbaium.item.LiquidFountainItem;
-import cn.sd.jrz.alltheimbaium.item.StorageFountainItem;
+import cn.sd.jrz.alltheimbaium.item.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
@@ -151,8 +149,8 @@ public class Registration {
 
     //ITEM
     public static final RegistryObject<BlockItem> FARMLAND_ITEM = ITEMS.register("farmland", () -> new BlockItem(FARMLAND_BLOCK.get(), new Item.Properties()));
-    public static final RegistryObject<BlockItem> CLOCK_ITEM = ITEMS.register("clock", () -> new BlockItem(CLOCK_BLOCK.get(), new Item.Properties()));
-    public static final RegistryObject<BlockItem> PLATFORM_ITEM = ITEMS.register("platform", () -> new BlockItem(PLATFORM_BLOCK.get(), new Item.Properties()));
+    public static final RegistryObject<ClockItem> CLOCK_ITEM = ITEMS.register("clock", () -> new ClockItem(CLOCK_BLOCK.get()));
+    public static final RegistryObject<PlatformItem> PLATFORM_ITEM = ITEMS.register("platform", () -> new PlatformItem(PLATFORM_BLOCK.get()));
     public static final RegistryObject<BlockItem> LIQUID_FOUNTAIN_ITEM = ITEMS.register("liquid_fountain", () -> new LiquidFountainItem(LIQUID_FOUNTAIN_BLOCK.get()));
     public static final RegistryObject<BlockItem> STORAGE_FOUNTAIN_ITEM = ITEMS.register("storage_fountain", () -> new StorageFountainItem(STORAGE_FOUNTAIN_BLOCK.get()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", () -> new Item(new Item.Properties()));

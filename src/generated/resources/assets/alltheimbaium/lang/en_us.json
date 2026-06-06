@@ -60,8 +60,10 @@
   "block.alltheimbaium.farm_zombie": "ATI Zombie Farm",
   "block.alltheimbaium.farm_zombified_piglin": "ATI Zombified Piglin Farm",
   "block.alltheimbaium.clock": "ATI Acceleration Clock",
+  "block.alltheimbaium.clock.description": "Accelerates machines above by 256x. Right-click to toggle on/off.",
   "block.alltheimbaium.platform": "ATI Generation Platform",
-  "screen.alltheimbaium.clock.enabled": "Clock enabled",
+  "block.alltheimbaium.platform.description": "Right-click with empty hand to generate a 3x3 chunk platform (48x48 blocks). Edges are stone bricks, center is smooth stone.",
+  "screen.alltheimbaium.clock.enabled": "Clock enabled - Accelerating at 256x speed",
   "screen.alltheimbaium.clock.disabled": "Clock disabled",
-  "screen.alltheimbaium.platform.generated": "Platform generated"
+  "screen.alltheimbaium.platform.generated": "Platform generated (3x3 chunks, 48x48 blocks)"
 }
