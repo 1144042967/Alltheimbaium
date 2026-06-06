@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "alltheimbaium",
+  "key": {
+    "A": {
+      "item": "alltheimbaium:package_material_x2"
+    },
+    "B": {
+      "item": "minecraft:smooth_stone"
+    }
+  },
+  "pattern": [
+    "AAA",
+    "ABA",
+    "AAA"
+  ],
+  "result": {
+    "item": "alltheimbaium:platform"
+  }
+}
