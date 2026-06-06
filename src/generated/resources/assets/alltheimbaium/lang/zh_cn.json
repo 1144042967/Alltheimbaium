@@ -58,5 +58,10 @@
   "block.alltheimbaium.farm_wither": "ATI 凋零农场",
   "block.alltheimbaium.farm_wither_skeleton": "ATI 凋零骷髅农场",
   "block.alltheimbaium.farm_zombie": "ATI 僵尸农场",
-  "block.alltheimbaium.farm_zombified_piglin": "ATI 僵尸猪灵农场"
+  "block.alltheimbaium.farm_zombified_piglin": "ATI 僵尸猪灵农场",
+  "block.alltheimbaium.clock": "加速时钟",
+  "block.alltheimbaium.platform": "生成平台",
+  "screen.alltheimbaium.clock.enabled": "时钟已启用",
+  "screen.alltheimbaium.clock.disabled": "时钟已禁用",
+  "screen.alltheimbaium.platform.generated": "平台已生成"
 }
