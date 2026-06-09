@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.function.Supplier;
 
 public class ClockEntity extends BlockEntity {
-    private boolean active = false;
+    private static boolean active = false;
     private static final int SPEED_MULTIPLIER = 256;
 
     public ClockEntity(BlockPos pos, BlockState state, Supplier<BlockEntityType<?>> supplier) {
@@ -25,7 +25,7 @@ public class ClockEntity extends BlockEntity {
     }
 
     public void setActive(boolean active) {
-        this.active = active;
+        ClockEntity.active = active;
     }
 
     public void tick(Level level) {
