@@ -106,6 +106,7 @@ public abstract class DataConfig {
     public static final DataConfig FARM_ENDER_DRAGON = new DataConfig(
             product(Items.DRAGON_EGG, 500)
             , product(Items.DRAGON_BREATH, 400)
+            , product(Items.ENDER_DRAGON_SPAWN_EGG, 1)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -236,6 +237,7 @@ public abstract class DataConfig {
     };
     public static final DataConfig FARM_RAVAGER = new DataConfig(
             product(Items.SADDLE, 500)
+            , product(Items.RAVAGER_SPAWN_EGG, 1)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -337,7 +339,8 @@ public abstract class DataConfig {
             product(Items.SCULK_SHRIEKER, 100),
             product(Items.SCULK_SENSOR, 100),
             product(Items.SCULK_VEIN, 100),
-            product(Items.ECHO_SHARD, 100)
+            product(Items.ECHO_SHARD, 100),
+            product(Items.WARDEN_SPAWN_EGG, 1)
     ) {
         @Override
         public BlockEntityType<?> getType() {
@@ -360,7 +363,8 @@ public abstract class DataConfig {
         }
     };
     public static final DataConfig FARM_WITHER = new DataConfig(
-            product(Items.NETHER_STAR, 500)
+            product(Items.NETHER_STAR, 500),
+            product(Items.WITHER_SPAWN_EGG, 500)
     ) {
         @Override
         public BlockEntityType<?> getType() {
