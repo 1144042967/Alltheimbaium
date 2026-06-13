@@ -60,10 +60,16 @@
   "block.alltheimbaium.farm_zombie": "ATI 僵尸农场",
   "block.alltheimbaium.farm_zombified_piglin": "ATI 僵尸猪灵农场",
   "block.alltheimbaium.clock": "ATI 加速时钟",
-  "block.alltheimbaium.clock.description": "将上方的机器加速256倍。右击切换开关状态。",
+  "block.alltheimbaium.clock.description": "将上方的机器加速2倍。右击切换开关状态。",
+  "block.alltheimbaium.clock_x4": "ATI 加速时钟 X4",
+  "block.alltheimbaium.clock_x4.description": "将上方的机器加速4倍。右击切换开关状态。",
+  "block.alltheimbaium.clock_x16": "ATI 加速时钟 X16",
+  "block.alltheimbaium.clock_x16.description": "将上方的机器加速16倍。右击切换开关状态。",
+  "block.alltheimbaium.clock_x256": "ATI 加速时钟 X256",
+  "block.alltheimbaium.clock_x256.description": "将上方的机器加速256倍。右击切换开关状态。",
   "block.alltheimbaium.platform": "ATI 生成平台",
   "block.alltheimbaium.platform.description": "空手右击生成3x3区块的平台（48x48方块）。边缘为石砖，中心为平滑石头。",
-  "screen.alltheimbaium.clock.enabled": "时钟已启用 - 以256倍速度加速",
+  "screen.alltheimbaium.clock.enabled": "时钟已启用 - 以%d倍速度加速",
   "screen.alltheimbaium.clock.disabled": "时钟已禁用",
   "screen.alltheimbaium.platform.generated": "平台已生成（3x3区块，48x48方块）"
 }

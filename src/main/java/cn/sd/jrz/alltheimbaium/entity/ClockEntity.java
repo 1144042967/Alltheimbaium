@@ -17,10 +17,11 @@ import java.util.function.Supplier;
 
 public class ClockEntity extends BlockEntity {
     private static boolean active = false;
-    private static final int SPEED_MULTIPLIER = 256;
+    private final int speedMultiplier;
 
-    public ClockEntity(BlockPos pos, BlockState state, Supplier<BlockEntityType<?>> supplier) {
+    public ClockEntity(BlockPos pos, BlockState state, Supplier<BlockEntityType<?>> supplier, int speedMultiplier) {
         super(supplier.get(), pos, state);
+        this.speedMultiplier = speedMultiplier;
     }
 
     public boolean isActive() {
@@ -29,6 +30,10 @@ public class ClockEntity extends BlockEntity {
 
     public void setActive(boolean active) {
         ClockEntity.active = active;
+    }
+
+    public int getSpeedMultiplier() {
+        return speedMultiplier;
     }
 
     public void tick(Level level) {
@@ -55,7 +60,7 @@ public class ClockEntity extends BlockEntity {
                 if (blockEntity.isRemoved() || ticker == null) {
                     continue;
                 }
-                for (int i = 1; i < SPEED_MULTIPLIER; i++) {
+                for (int i = 1; i < speedMultiplier; i++) {
                     if (blockEntity.isRemoved()) {
                         break;
                     }

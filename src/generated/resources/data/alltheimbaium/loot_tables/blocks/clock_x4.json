@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "alltheimbaium:clock_x4"
+        }
+      ],
+      "name": "clock_x4",
+      "rolls": 1.0
+    }
+  ]
+}

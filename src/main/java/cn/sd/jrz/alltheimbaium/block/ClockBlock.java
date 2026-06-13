@@ -20,17 +20,22 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.function.Supplier;
 
 public class ClockBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(ClockBlock.class);
+    private final Supplier<BlockEntityType<?>> entityTypeSupplier;
+    private final int speedMultiplier;
 
-    public ClockBlock(Properties properties) {
+    public ClockBlock(Properties properties, Supplier<BlockEntityType<?>> entityTypeSupplier, int speedMultiplier) {
         super(properties);
+        this.entityTypeSupplier = entityTypeSupplier;
+        this.speedMultiplier = speedMultiplier;
     }
 
     @Override
     public BlockEntity newBlockEntity(@Nonnull BlockPos pos, @Nonnull BlockState state) {
-        return new ClockEntity(pos, state, Registration.CLOCK_ENTITY::get);
+        return new ClockEntity(pos, state, entityTypeSupplier, speedMultiplier);
     }
 
     @Nullable
@@ -68,7 +73,7 @@ public class ClockBlock extends Block implements EntityBlock {
             }
             boolean isActive = clock.isActive();
             clock.setActive(!isActive);
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.clock." + (isActive ? "disabled" : "enabled")));
+            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.clock." + (isActive ? "disabled" : "enabled"), clock.getSpeedMultiplier()));
             return InteractionResult.SUCCESS;
         } catch (Throwable e) {
             log.error("ClockBlock.use error", e);

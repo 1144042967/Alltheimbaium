@@ -15,15 +15,17 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 public class ClockItem extends BlockItem {
+    private final String descriptionKey;
 
-    public ClockItem(Block block) {
+    public ClockItem(Block block, String descriptionKey) {
         super(block, new Item.Properties());
+        this.descriptionKey = descriptionKey;
     }
 
     @Override
     @OnlyIn(Dist.CLIENT)
     public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        tooltip.add(Component.translatable("block.alltheimbaium.clock.description"));
+        tooltip.add(Component.translatable(descriptionKey));
         super.appendHoverText(stack, worldIn, tooltip, flagIn);
     }
 }
