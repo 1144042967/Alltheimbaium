@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -32,40 +33,33 @@ public class ClockEntity extends BlockEntity {
         if (!active || level.isClientSide) {
             return;
         }
-
-        BlockPos abovePos = getBlockPos().above();
-        tickBlock(abovePos);
-
-        BlockEntity aboveEntity = level.getBlockEntity(abovePos);
-        if (aboveEntity != null) {
-            aboveEntity.setChanged();
-        }
-    }
-
-    private void tickBlock(BlockPos pos) {
-        if (level == null) {
-            return;
-        }
-        BlockState blockState = level.getBlockState(pos);
-        Block block = blockState.getBlock();
-        if (level instanceof ServerLevel && block.isRandomlyTicking(blockState)) {
-            blockState.randomTick((ServerLevel) level, pos, level.getRandom());
-        }
-        if (!(block instanceof EntityBlock entityBlock)) {
-            return;
-        }
-        BlockEntity blockEntity = level.getBlockEntity(pos);
-        if (blockEntity != null) {
-            //noinspection unchecked
-            BlockEntityTicker<BlockEntity> ticker = (BlockEntityTicker<BlockEntity>) entityBlock.getTicker(level, blockState, blockEntity.getType());
-            if (blockEntity.isRemoved() || ticker == null) {
-                return;
+        for (Direction direction : Direction.values()) {
+            BlockPos pos = getBlockPos().relative(direction);
+            BlockState blockState = level.getBlockState(pos);
+            Block block = blockState.getBlock();
+            if (level instanceof ServerLevel && block.isRandomlyTicking(blockState)) {
+                blockState.randomTick((ServerLevel) level, pos, level.getRandom());
             }
-            for (int i = 1; i < SPEED_MULTIPLIER; i++) {
-                if (blockEntity.isRemoved()) {
-                    break;
+            if (!(block instanceof EntityBlock entityBlock)) {
+                continue;
+            }
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (blockEntity != null) {
+                //noinspection unchecked
+                BlockEntityTicker<BlockEntity> ticker = (BlockEntityTicker<BlockEntity>) entityBlock.getTicker(level, blockState, blockEntity.getType());
+                if (blockEntity.isRemoved() || ticker == null) {
+                    continue;
                 }
-                ticker.tick(level, pos, blockState, blockEntity);
+                for (int i = 1; i < SPEED_MULTIPLIER; i++) {
+                    if (blockEntity.isRemoved()) {
+                        break;
+                    }
+                    ticker.tick(level, pos, blockState, blockEntity);
+                }
+            }
+            BlockEntity aboveEntity = level.getBlockEntity(pos);
+            if (aboveEntity != null) {
+                aboveEntity.setChanged();
             }
         }
     }
