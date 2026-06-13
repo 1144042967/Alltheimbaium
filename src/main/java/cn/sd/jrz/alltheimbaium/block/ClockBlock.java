@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -24,6 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 public class ClockBlock extends Block implements EntityBlock {
@@ -101,7 +104,7 @@ public class ClockBlock extends Block implements EntityBlock {
                 return InteractionResult.SUCCESS;
             }
             ClockBlock.active = !ClockBlock.active;
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.clock." + (ClockBlock.active ? "disabled" : "enabled"), speedMultiplier));
+            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.clock." + (ClockBlock.active ? "enabled" : "disabled"), speedMultiplier));
             return InteractionResult.SUCCESS;
         } catch (Throwable e) {
             log.error("ClockBlock.useWithoutItem error", e);
@@ -116,11 +119,23 @@ public class ClockBlock extends Block implements EntityBlock {
                 return ItemInteractionResult.SUCCESS;
             }
             ClockBlock.active = !ClockBlock.active;
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.clock." + (ClockBlock.active ? "disabled" : "enabled"), speedMultiplier));
+            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.clock." + (ClockBlock.active ? "enabled" : "disabled"), speedMultiplier));
             return ItemInteractionResult.SUCCESS;
         } catch (Throwable e) {
             log.error("ClockBlock.useItemOn error", e);
         }
         return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
+    }
+
+    @Override
+    public @Nonnull List<ItemStack> getDrops(@Nonnull BlockState state, @Nonnull LootParams.Builder builder) {
+        try {
+            List<ItemStack> drops = new ArrayList<>();
+            drops.add(new ItemStack(this));
+            return drops;
+        } catch (Throwable e) {
+            log.error("ClockBlock.getDrops error", e);
+        }
+        return super.getDrops(state, builder);
     }
 }

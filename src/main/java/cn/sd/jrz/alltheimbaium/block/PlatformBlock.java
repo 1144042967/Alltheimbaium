@@ -10,11 +10,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PlatformBlock extends Block {
     private static final Logger log = LoggerFactory.getLogger(PlatformBlock.class);
@@ -41,17 +44,7 @@ public class PlatformBlock extends Block {
     }
 
     @Override
-    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand hand, BlockHitResult hitResult) {
-        try {
-            if (level.isClientSide) {
-                return ItemInteractionResult.SUCCESS;
-            }
-            generatePlatform(level, pos);
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.platform.generated"));
-            return ItemInteractionResult.SUCCESS;
-        } catch (Throwable e) {
-            log.error("PlatformBlock.useItemOn error", e);
-        }
+    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand hand, @Nonnull BlockHitResult hitResult) {
         return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
     }
 
@@ -81,5 +74,17 @@ public class PlatformBlock extends Block {
                 }
             }
         }
+    }
+
+    @Override
+    public @Nonnull List<ItemStack> getDrops(@Nonnull BlockState state, @Nonnull LootParams.Builder builder) {
+        try {
+            List<ItemStack> drops = new ArrayList<>();
+            drops.add(new ItemStack(this));
+            return drops;
+        } catch (Throwable e) {
+            log.error("PlatformBlock.getDrops error", e);
+        }
+        return super.getDrops(state, builder);
     }
 }

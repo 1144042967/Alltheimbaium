@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "clock",
+  "key": {
+    "A": {
+      "item": "alltheimbaium:package_material_x3"
+    },
+    "B": {
+      "item": "alltheimbaium:clock_x4"
+    }
+  },
+  "pattern": [
+    "AAA",
+    "ABA",
+    "AAA"
+  ],
+  "result": {
+    "id": "alltheimbaium:clock_x16"
+  }
+}
