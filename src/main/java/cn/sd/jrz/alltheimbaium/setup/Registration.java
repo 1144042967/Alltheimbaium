@@ -1,10 +1,7 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
 import cn.sd.jrz.alltheimbaium.Alltheimbaium;
-import cn.sd.jrz.alltheimbaium.block.AlltheimbaiumFarmlandBlock;
-import cn.sd.jrz.alltheimbaium.block.FarmBlock;
-import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
-import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
+import cn.sd.jrz.alltheimbaium.block.*;
 import cn.sd.jrz.alltheimbaium.connection.FarmConnection;
 import cn.sd.jrz.alltheimbaium.connection.LiquidFountainConnection;
 import cn.sd.jrz.alltheimbaium.connection.StorageFountainConnection;
@@ -12,9 +9,7 @@ import cn.sd.jrz.alltheimbaium.entity.CommonEntity;
 import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
 import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
-import cn.sd.jrz.alltheimbaium.item.FarmItem;
-import cn.sd.jrz.alltheimbaium.item.LiquidFountainItem;
-import cn.sd.jrz.alltheimbaium.item.StorageFountainItem;
+import cn.sd.jrz.alltheimbaium.item.*;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
@@ -52,6 +47,11 @@ public class Registration {
                     output.accept(Registration.FARMLAND_ITEM.get());
                     output.accept(Registration.STORAGE_FOUNTAIN_ITEM.get());
                     output.accept(Registration.LIQUID_FOUNTAIN_ITEM.get());
+                    output.accept(Registration.CLOCK_ITEM.get());
+                    output.accept(Registration.CLOCK_X4_ITEM.get());
+                    output.accept(Registration.CLOCK_X16_ITEM.get());
+                    output.accept(Registration.CLOCK_X256_ITEM.get());
+                    output.accept(Registration.PLATFORM_ITEM.get());
 
                     output.accept(Registration.FARM_COBBLESTONE_ITEM.get());//圆石 1
                     output.accept(Registration.FARM_WOOD_ITEM.get());//树 1
@@ -168,6 +168,11 @@ public class Registration {
     //BLOCK
 
     public static final DeferredHolder<Block, AlltheimbaiumFarmlandBlock> FARMLAND_BLOCK = BLOCKS.register("farmland", AlltheimbaiumFarmlandBlock::new);
+    public static final DeferredHolder<Block, ClockBlock> CLOCK_BLOCK = BLOCKS.register("clock", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_ENTITY::get, 2));
+    public static final DeferredHolder<Block, ClockBlock> CLOCK_X4_BLOCK = BLOCKS.register("clock_x4", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_X4_ENTITY::get, 4));
+    public static final DeferredHolder<Block, ClockBlock> CLOCK_X16_BLOCK = BLOCKS.register("clock_x16", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_X16_ENTITY::get, 16));
+    public static final DeferredHolder<Block, ClockBlock> CLOCK_X256_BLOCK = BLOCKS.register("clock_x256", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_X256_ENTITY::get, 256));
+    public static final DeferredHolder<Block, PlatformBlock> PLATFORM_BLOCK = BLOCKS.register("platform", () -> new PlatformBlock(BLOCK_PROPERTIES));
     public static final DeferredHolder<Block, LiquidFountainBlock> LIQUID_FOUNTAIN_BLOCK = BLOCKS.register("liquid_fountain", () -> new LiquidFountainBlock(BLOCK_PROPERTIES));
     public static final DeferredHolder<Block, StorageFountainBlock> STORAGE_FOUNTAIN_BLOCK = BLOCKS.register("storage_fountain", () -> new StorageFountainBlock(BLOCK_PROPERTIES));
     public static final DeferredHolder<Block, FarmBlock> FARM_BAMBOO_BLOCK = BLOCKS.register("farm_bamboo", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_BAMBOO));
@@ -212,6 +217,11 @@ public class Registration {
 
     //ITEM
     public static final DeferredHolder<Item, BlockItem> FARMLAND_ITEM = ITEMS.register("farmland", () -> new BlockItem(FARMLAND_BLOCK.get(), new Item.Properties()));
+    public static final DeferredHolder<Item, ClockItem> CLOCK_ITEM = ITEMS.register("clock", () -> new ClockItem(CLOCK_BLOCK.get(), "block.alltheimbaium.clock.description"));
+    public static final DeferredHolder<Item, ClockItem> CLOCK_X4_ITEM = ITEMS.register("clock_x4", () -> new ClockItem(CLOCK_X4_BLOCK.get(), "block.alltheimbaium.clock_x4.description"));
+    public static final DeferredHolder<Item, ClockItem> CLOCK_X16_ITEM = ITEMS.register("clock_x16", () -> new ClockItem(CLOCK_X16_BLOCK.get(), "block.alltheimbaium.clock_x16.description"));
+    public static final DeferredHolder<Item, ClockItem> CLOCK_X256_ITEM = ITEMS.register("clock_x256", () -> new ClockItem(CLOCK_X256_BLOCK.get(), "block.alltheimbaium.clock_x256.description"));
+    public static final DeferredHolder<Item, PlatformItem> PLATFORM_ITEM = ITEMS.register("platform", () -> new PlatformItem(PLATFORM_BLOCK.get()));
     public static final DeferredHolder<Item, BlockItem> LIQUID_FOUNTAIN_ITEM = ITEMS.register("liquid_fountain", () -> new LiquidFountainItem(LIQUID_FOUNTAIN_BLOCK.get()));
     public static final DeferredHolder<Item, BlockItem> STORAGE_FOUNTAIN_ITEM = ITEMS.register("storage_fountain", () -> new StorageFountainItem(STORAGE_FOUNTAIN_BLOCK.get()));
     public static final DeferredHolder<Item, Item> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", () -> new Item(new Item.Properties()));
@@ -264,6 +274,10 @@ public class Registration {
 
     //Entities
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CommonEntity>> FARMLAND_ENTITY = ENTITIES.register("farmland", () -> BlockEntityType.Builder.of((pos, state) -> new CommonEntity(pos, state, Registration.FARMLAND_ENTITY::get), FARMLAND_BLOCK.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CommonEntity>> CLOCK_ENTITY = ENTITIES.register("clock", () -> BlockEntityType.Builder.of((pos, state) -> new CommonEntity(pos, state, Registration.CLOCK_ENTITY::get), CLOCK_BLOCK.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CommonEntity>> CLOCK_X4_ENTITY = ENTITIES.register("clock_x4", () -> BlockEntityType.Builder.of((pos, state) -> new CommonEntity(pos, state, Registration.CLOCK_X4_ENTITY::get), CLOCK_X4_BLOCK.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CommonEntity>> CLOCK_X16_ENTITY = ENTITIES.register("clock_x16", () -> BlockEntityType.Builder.of((pos, state) -> new CommonEntity(pos, state, Registration.CLOCK_X16_ENTITY::get), CLOCK_X16_BLOCK.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CommonEntity>> CLOCK_X256_ENTITY = ENTITIES.register("clock_x256", () -> BlockEntityType.Builder.of((pos, state) -> new CommonEntity(pos, state, Registration.CLOCK_X256_ENTITY::get), CLOCK_X256_BLOCK.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LiquidFountainEntity>> LIQUID_FOUNTAIN_ENTITY = ENTITIES.register("liquid_fountain", () -> BlockEntityType.Builder.of(LiquidFountainEntity::new, LIQUID_FOUNTAIN_BLOCK.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StorageFountainEntity>> STORAGE_FOUNTAIN_ENTITY = ENTITIES.register("storage_fountain", () -> BlockEntityType.Builder.of(StorageFountainEntity::new, STORAGE_FOUNTAIN_BLOCK.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<FarmEntity>> FARM_BAMBOO_ENTITY = ENTITIES.register("farm_bamboo", () -> BlockEntityType.Builder.of((pos, state) -> new FarmEntity(pos, state, DataConfig.FARM_BAMBOO), FARM_BAMBOO_BLOCK.get()).build(null));

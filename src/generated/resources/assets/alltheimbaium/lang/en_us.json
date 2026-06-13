@@ -58,5 +58,18 @@
   "block.alltheimbaium.farm_wither": "ATI Wither Farm",
   "block.alltheimbaium.farm_wither_skeleton": "ATI Wither Skeleton Farm",
   "block.alltheimbaium.farm_zombie": "ATI Zombie Farm",
-  "block.alltheimbaium.farm_zombified_piglin": "ATI Zombified Piglin Farm"
+  "block.alltheimbaium.farm_zombified_piglin": "ATI Zombified Piglin Farm",
+  "block.alltheimbaium.clock": "ATI Acceleration Clock X2",
+  "block.alltheimbaium.clock.description": "Accelerates adjacent machines by 1x. Right-click to toggle on/off.",
+  "block.alltheimbaium.clock_x4": "ATI Acceleration Clock X4",
+  "block.alltheimbaium.clock_x4.description": "Accelerates adjacent machines by 3x. Right-click to toggle on/off.",
+  "block.alltheimbaium.clock_x16": "ATI Acceleration Clock X16",
+  "block.alltheimbaium.clock_x16.description": "Accelerates adjacent machines by 15x. Right-click to toggle on/off.",
+  "block.alltheimbaium.clock_x256": "ATI Acceleration Clock X256",
+  "block.alltheimbaium.clock_x256.description": "Accelerates adjacent machines by 255x. Right-click to toggle on/off.",
+  "block.alltheimbaium.platform": "ATI Generation Platform",
+  "block.alltheimbaium.platform.description": "Right-click with empty hand to generate a 3x3 chunk platform (48x48 blocks). Edges are stone bricks, center is smooth stone.",
+  "screen.alltheimbaium.clock.enabled": "Clock enabled - Accelerating at %dx speed",
+  "screen.alltheimbaium.clock.disabled": "Clock disabled",
+  "screen.alltheimbaium.platform.generated": "Platform generated (3x3 chunks, 48x48 blocks)"
 }
