@@ -54,19 +54,29 @@ public class TotemEventHandler {
     }
 
     private static void applyTotemEffects(Player player) {
-        player.setHealth(1.0f);
-
         // Clear all effects first (like vanilla totem)
         player.removeAllEffects();
 
-        // Add absorption effect (2 hearts for 100 ticks)
-        player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 1));
+        // Restore full health
+        player.setHealth(player.getMaxHealth());
 
-        // Add regeneration effect (II for 900 ticks = 45 seconds)
-        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 900, 1));
+        // Add absorption effect (level 4 = 8 extra hearts for 1200 ticks = 60 seconds)
+        player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 1200, 3));
 
-        // Add fire resistance (40 seconds)
-        player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 800, 0));
+        // Add regeneration effect (level 3 for 1200 ticks = 60 seconds)
+        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 1200, 2));
+
+        // Add fire resistance (60 seconds)
+        player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 1200, 0));
+
+        // Add resistance (60 seconds) - reduce damage by 20% per level
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 1200, 1));
+
+        // Add speed (60 seconds)
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 1200, 1));
+
+        // Add strength (60 seconds)
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 1200, 1));
 
         // Send totem animation packet
         player.level().broadcastEntityEvent(player, (byte) 35);

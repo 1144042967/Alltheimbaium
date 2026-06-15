@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ABA",
+    "BCB",
+    "ABA"
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:netherite_block"
+    },
+    "B": {
+      "item": "minecraft:golden_apple"
+    },
+    "C": {
+      "item": "minecraft:totem_of_undying"
+    }
+  },
+  "result": {
+    "item": "alltheimbaium:eternal_totem",
+    "count": 1
+  }
+}
