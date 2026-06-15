@@ -71,5 +71,7 @@
   "block.alltheimbaium.platform.description": "Right-click with empty hand to generate a 3x3 chunk platform (48x48 blocks). Edges are stone bricks, center is smooth stone.",
   "screen.alltheimbaium.clock.enabled": "Clock enabled - Accelerating at %dx speed",
   "screen.alltheimbaium.clock.disabled": "Clock disabled",
-  "screen.alltheimbaium.platform.generated": "Platform generated (3x3 chunks, 48x48 blocks)"
+  "screen.alltheimbaium.platform.generated": "Platform generated (3x3 chunks, 48x48 blocks)",
+  "item.alltheimbaium.eternal_totem": "Eternal Totem",
+  "item.alltheimbaium.eternal_totem.description": "§6[§eEternal version of Totem of Undying§6]\n§7Has the same effect as Totem of Undying, but never breaks\n§7Just hold it or keep it in your inventory"
 }

@@ -71,5 +71,7 @@
   "block.alltheimbaium.platform.description": "空手右击生成3x3区块的平台（48x48方块）。边缘为石砖，中心为平滑石头。",
   "screen.alltheimbaium.clock.enabled": "时钟已启用 - 以%d倍速度加速",
   "screen.alltheimbaium.clock.disabled": "时钟已禁用",
-  "screen.alltheimbaium.platform.generated": "平台已生成（3x3区块，48x48方块）"
+  "screen.alltheimbaium.platform.generated": "平台已生成（3x3区块，48x48方块）",
+  "item.alltheimbaium.eternal_totem": "永恒图腾",
+  "item.alltheimbaium.eternal_totem.description": "§6[§e不死图腾的永恒版本§6]\n§7具有不死图腾的效果，但永远不会损坏\n§7只需持有或放在物品栏中即可生效"
 }
