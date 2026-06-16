@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ADA",
+    "DLD",
+    "ADA"
+  ],
+  "key": {
+    "A": {
+      "item": "alltheimbaium:package_material_x3"
+    },
+    "D": {
+      "item": "minecraft:dragon_head"
+    },
+    "L": {
+      "item": "minecraft:dragon_egg"
+    }
+  },
+  "result": {
+    "item": "draconicevolution:small_chaos_frag",
+    "count": 1
+  },
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "draconicevolution"
+    }
+  ]
+}
