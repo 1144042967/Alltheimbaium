@@ -104,7 +104,7 @@ public class Registration {
             .pushReaction(PushReaction.DESTROY)
             .strength(0.5f, 0.5f);
 
-    //BLOCK
+    // 方块
 
     public static final RegistryObject<AlltheimbaiumFarmlandBlock> FARMLAND_BLOCK = BLOCKS.register("farmland", AlltheimbaiumFarmlandBlock::new);
     public static final RegistryObject<ClockBlock> CLOCK_BLOCK = BLOCKS.register("clock", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_ENTITY::get, 2));
@@ -154,7 +154,7 @@ public class Registration {
     public static final RegistryObject<FarmBlock> FARM_ZOMBIE_BLOCK = BLOCKS.register("farm_zombie", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_ZOMBIE));
     public static final RegistryObject<FarmBlock> FARM_ZOMBIFIED_PIGLIN_BLOCK = BLOCKS.register("farm_zombified_piglin", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_ZOMBIFIED_PIGLIN));
 
-    //ITEM
+    // 物品
     public static final RegistryObject<BlockItem> FARMLAND_ITEM = ITEMS.register("farmland", () -> new BlockItem(FARMLAND_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<ClockItem> CLOCK_ITEM = ITEMS.register("clock", () -> new ClockItem(CLOCK_BLOCK.get(), "block.alltheimbaium.clock.description"));
     public static final RegistryObject<ClockItem> CLOCK_X4_ITEM = ITEMS.register("clock_x4", () -> new ClockItem(CLOCK_X4_BLOCK.get(), "block.alltheimbaium.clock_x4.description"));
@@ -212,7 +212,7 @@ public class Registration {
     public static final RegistryObject<FarmItem> FARM_ZOMBIE_ITEM = ITEMS.register("farm_zombie", () -> new FarmItem(FARM_ZOMBIE_BLOCK.get(), DataConfig.FARM_ZOMBIE));
     public static final RegistryObject<FarmItem> FARM_ZOMBIFIED_PIGLIN_ITEM = ITEMS.register("farm_zombified_piglin", () -> new FarmItem(FARM_ZOMBIFIED_PIGLIN_BLOCK.get(), DataConfig.FARM_ZOMBIFIED_PIGLIN));
 
-    //Entities
+    // 实体
     public static final RegistryObject<BlockEntityType<CommonEntity>> FARMLAND_ENTITY = ENTITIES.register("farmland", () -> BlockEntityType.Builder.of((pos, state) -> new CommonEntity(pos, state, Registration.FARMLAND_ENTITY::get), FARMLAND_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<ClockEntity>> CLOCK_ENTITY = ENTITIES.register("clock", () -> BlockEntityType.Builder.of((pos, state) -> new ClockEntity(pos, state, Registration.CLOCK_ENTITY::get, 2), CLOCK_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<ClockEntity>> CLOCK_X4_ENTITY = ENTITIES.register("clock_x4", () -> BlockEntityType.Builder.of((pos, state) -> new ClockEntity(pos, state, Registration.CLOCK_X4_ENTITY::get, 4), CLOCK_X4_BLOCK.get()).build(null));

@@ -88,5 +88,7 @@
   "block.alltheimbaium.farm_sugar_canes": "§aATI Sugar Canes Farm",
 
   "item.alltheimbaium.eternal_totem": "§6[§b✦ §dEternal Totem §b✦§6]",
-  "item.alltheimbaium.eternal_totem.description": "§7Auto-triggers on death, never breaks\n§eRestores: §cFull HP §c8 Absorption Hearts §cStrong Regeneration\n§eBonus: §cFire Immunity §e80% Damage Reduction §bSpeed Boost §fAttack Boost\n§7Just hold it or keep it in your inventory"
+  "item.alltheimbaium.eternal_totem.description": "§7Auto-triggers on death, never breaks\n§eRestores: §cFull HP §c8 Absorption Hearts §cStrong Regeneration\n§eBonus: §cFire Immunity §e80% Damage Reduction §bSpeed Boost §fAttack Boost\n§7Right-click totem to toggle, disabled by default",
+  "chat.alltheimbaium.eternal_totem.enabled": "§aEternal Totem Enabled",
+  "chat.alltheimbaium.eternal_totem.disabled": "§cEternal Totem Disabled"
 }

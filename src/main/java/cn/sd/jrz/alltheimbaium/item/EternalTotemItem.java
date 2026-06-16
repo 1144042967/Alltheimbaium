@@ -1,6 +1,9 @@
 package cn.sd.jrz.alltheimbaium.item;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
@@ -15,11 +18,24 @@ import java.util.List;
 
 public class EternalTotemItem extends Item {
 
+    public static boolean enabled = false;
+
     public EternalTotemItem() {
         super(new Item.Properties()
                 .stacksTo(1)
                 .rarity(Rarity.EPIC)
                 .fireResistant());
+    }
+
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        if (!level.isClientSide) {
+            enabled = !enabled;
+            player.sendSystemMessage(Component.translatable(
+                    enabled ? "chat.alltheimbaium.eternal_totem.enabled" : "chat.alltheimbaium.eternal_totem.disabled"
+            ));
+        }
+        return InteractionResultHolder.success(player.getItemInHand(hand));
     }
 
     @Override
