@@ -4,7 +4,8 @@
       "Bash(./gradlew compileJava)",
       "Bash(./gradlew.bat compileJava --no-daemon)",
       "Bash(cmd /c \"gradlew.bat compileJava --no-daemon\")",
-      "Bash(dir \"C:\\\\Users\\\\10177\\\\IdeaProjects\\\\Alltheimbaium\\\\src\\\\main\\\\resources\\\\assets\\\\alltheimbaium\")"
+      "Bash(dir \"C:\\\\Users\\\\10177\\\\IdeaProjects\\\\alltheimbaium\\\\src\\\\main\\\\resources\\\\assets\\\\alltheimbaium\")",
+      "Bash(dir \"C:\\\\Users\\\\JRZ\\\\Projects\\\\minecraft\\\\alltheimbaium\\\\src\\\\main\\\\resources\\\\assets\\\\alltheimbaium\")"
     ]
   }
 }
