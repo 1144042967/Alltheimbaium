@@ -65,7 +65,9 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 │   ├── LiquidFountainConnection.java    # 液体制造机 IFluidHandler
 │   └── StorageFountainConnection.java   # 存储制造机 IItemHandler
 ├── recipe/                       # 自定义配方
-│   └── SmeltingCraftRecipe.java         # 熔炼合成配方 (煤炭+可烧炼物品)
+│   ├── SmeltingCraftRecipe.java         # 熔炼合成配方 (煤炭+可烧炼物品)
+│   ├── BrewingCraftRecipe.java          # 酿造合成配方 (药水+酿造材料)
+│   └── PotionCombineRecipe.java         # 药水融合配方 (两药水合成/牛奶净化)
 └── setup/                       # 注册和配置
     ├── Registration.java                # 所有方块/物品/实体的注册
     ├── DataConfig.java                  # 农场产出数据配置
@@ -188,7 +190,59 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - 需要 3×3 合成台（2×2 背包合成格不适用）
 - 使用 `cachedResult` 字段在 `matches()` 和 `assemble()` 之间传递结果
 
-### 9. 额外物品
+### 9. BrewingCraftRecipe (酿造合成配方)
+
+`recipe/BrewingCraftRecipe.java` — 将原版酿造台配方转移到工作台的动态合成配方。
+
+- 继承 `CustomRecipe`，使用 `SimpleCraftingRecipeSerializer`
+- 无序配方：工作台中恰好放入 2 个物品（任意位置）
+  - 1 个药水类物品（`isPotionItem()` 判断）
+  - 1 个酿造材料（通过 `PotionBrewing.isIngredient()` 验证）
+- 输出：1 瓶原版酿造后药水，类型与输入一致（喷溅入→喷溅出）
+- 动态查询 `PotionBrewing` 获取所有酿造配方
+- **与 PotionCombineRecipe 的分工**：原版药水 + 普通酿造材料走此配方；混合药水（有自定义效果）+ 火药/龙息/奶桶走 PotionCombineRecipe 的类型转换
+- **关键 API 细节**：`PotionBrewing.hasMix(药水, 材料)` 和 `PotionBrewing.mix(材料, 药水)` 的参数顺序相反
+- 尝试两种物品朝向（药水+材料 或 材料+药水）
+- 客户端和服务端均可计算（`PotionBrewing` 数据两端一致）
+- 支持 2×2 背包合成格（`canCraftInDimensions` 要求格子数 ≥ 2）
+
+### 10. PotionCombineRecipe (混合药水合成配方)
+
+`recipe/PotionCombineRecipe.java` — 混合药水合成与类型转换的动态配方。
+
+- 继承 `CustomRecipe`，使用 `SimpleCraftingRecipeSerializer`
+- 无序配方：工作台中恰好放入 2 个物品
+
+**核心规则**：
+| 输入 | 输出 | 说明 |
+|------|------|------|
+| 任意两瓶药水 | 混合药水 | 原版+原版、原版+混合、混合+混合 |
+| 混合药水 + 火药 | 喷溅混合药水 | 仅混合药水可用 |
+| 混合药水 + 龙息 | 滞留混合药水 | 仅混合药水可用 |
+| 混合药水 + 奶桶 | 普通混合药水 | 仅混合药水可用 |
+
+**原版与混合的识别**：混合药水有自定义效果（`PotionUtils.getCustomEffects()` 非空），原版药水没有。混合药水 + 火药/龙息/奶桶 → 走本配方类型转换；原版药水 + 酿造材料 → 走 `BrewingCraftRecipe`。
+
+**输出类型优先级**（融合时）：滞留 > 喷溅 > 普通（`getOutputPotionType()`）。
+
+**效果合并规则**（`mergeEffect()`）：
+- 等级：取两者中更高者（`Math.max(ampA, ampB)`）
+- 持续时间：
+  - 等级来自 A（ampA > ampB）→ 取 A 的时间
+  - 等级来自 B（ampB > ampA）→ 取 B 的时间
+  - 等级相同（ampA == ampB）→ (d1 + d2) × 0.75
+
+**效果读取**（`getResolvedEffects()`）：
+- 混合药水（有自定义效果）→ 直接使用自定义效果
+- 原版药水（无自定义效果）→ 从基础类型读取
+- 容器类型（喷溅/滞留/普通）不参与时长计算，所有时长均为实际存储值
+
+**命名**（`buildPotionName()`）：
+- 按持续时间降序取前两种效果名称
+- 根据输出类型添加后缀：混合药水 / 混合喷溅药水 / 混合滞留药水
+- 6 个语言键（1/2 种效果 × 3 种类型）+ 1 个平凡药水键
+
+### 11. 额外物品
 
 - `package_material_x1/x2/x3` — 封装材料 (合成中间物)
 - `block_diamond_x8/gold_x8/silicon_x8/quantum_alloy_x8/sky_steel_x8` — 合成材料

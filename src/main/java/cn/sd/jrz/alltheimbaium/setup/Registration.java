@@ -4,6 +4,8 @@ import cn.sd.jrz.alltheimbaium.Alltheimbaium;
 import cn.sd.jrz.alltheimbaium.block.*;
 import cn.sd.jrz.alltheimbaium.entity.*;
 import cn.sd.jrz.alltheimbaium.item.*;
+import cn.sd.jrz.alltheimbaium.recipe.BrewingCraftRecipe;
+import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
 import cn.sd.jrz.alltheimbaium.recipe.SmeltingCraftRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -179,6 +181,8 @@ public class Registration {
 
     // 配方序列化器
     public static final RegistryObject<RecipeSerializer<SmeltingCraftRecipe>> SMELTING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("smelting_craft", () -> SmeltingCraftRecipe.SERIALIZER);
+    public static final RegistryObject<RecipeSerializer<BrewingCraftRecipe>> BREWING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("brewing_craft", () -> BrewingCraftRecipe.SERIALIZER);
+    public static final RegistryObject<RecipeSerializer<PotionCombineRecipe>> POTION_COMBINE_SERIALIZER = RECIPE_SERIALIZERS.register("potion_combine", () -> PotionCombineRecipe.SERIALIZER);
 
     public static final RegistryObject<FarmItem> FARM_BAMBOO_ITEM = ITEMS.register("farm_bamboo", () -> new FarmItem(FARM_BAMBOO_BLOCK.get(), DataConfig.FARM_BAMBOO));
     public static final RegistryObject<FarmItem> FARM_BEE_ITEM = ITEMS.register("farm_bee", () -> new FarmItem(FARM_BEE_BLOCK.get(), DataConfig.FARM_BEE));

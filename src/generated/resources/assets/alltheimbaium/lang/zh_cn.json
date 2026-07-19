@@ -90,5 +90,13 @@
   "item.alltheimbaium.eternal_totem": "§6[§b✦ §dATI 永恒图腾 §b✦§6]",
   "item.alltheimbaium.eternal_totem.description": "§7死亡时自动触发，永不损坏\n§e效果恢复: §c满生命值 §c8格护盾 §c强力再生\n§e额外增益: §c防火 §e减伤80% §b速度提升 §f攻击增强\n§e化学品储罐: §a右键终极化学品储罐升级为创造化学品储罐\n§7右键图腾可切换开关，默认关闭",
   "chat.alltheimbaium.eternal_totem.enabled": "§a永恒图腾已启用",
-  "chat.alltheimbaium.eternal_totem.disabled": "§c永恒图腾已禁用"
+  "chat.alltheimbaium.eternal_totem.disabled": "§c永恒图腾已禁用",
+
+  "item.alltheimbaium.potion_combine.single": "%s 混合药水",
+  "item.alltheimbaium.potion_combine.double": "%s %s 混合药水",
+  "item.alltheimbaium.potion_combine.single_splash": "%s 混合喷溅药水",
+  "item.alltheimbaium.potion_combine.double_splash": "%s %s 混合喷溅药水",
+  "item.alltheimbaium.potion_combine.single_lingering": "%s 混合滞留药水",
+  "item.alltheimbaium.potion_combine.double_lingering": "%s %s 混合滞留药水",
+  "item.alltheimbaium.potion_combine.mundane": "平凡的药水"
 }
