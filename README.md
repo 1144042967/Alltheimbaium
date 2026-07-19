@@ -1,14 +1,21 @@
-
 # All the imbaium
 
 可以独立使用；存在大量与 ATM 整合包相关的配方内容，更建议一起使用。
 
+本仓库包含 Minecraft 1.20.1 和 1.21.1 两个版本的实现。
+
+---
+
+## 两个版本共同的功能
+
 ### 添加了几类相当破坏平衡的机器
 
 - 瞬间使作物成熟且不会退化的耕地，ATI 耕地
+- 加速相邻方块工作的时钟方块（4 个等级：x2、x4、x16、x256）
 - 能过滤标签复制矿物的机器，ATI 存储方块制造机
 - 能使流体变为无限的机器，ATI 液体无限制造机
-- 自动产生怪物资源的机器，多种 ATI 农场
+- 自动产生怪物资源的机器，多种 ATI 农场（42 种）
+- 一键生成 3×3 区块平台的平台方块
 - 多个对 ATM 整合包有效的简化配方
 
 ### ATI 耕地
@@ -20,30 +27,41 @@
 - 种植带有梗的作物时，多个相邻可能会导致梗掉落
 - 禁止了树苗等作物种植在上面
 
+### ATI 时钟方块
+
+- 4 个等级：x2、x4、x16、x256 加速倍率
+- 加速邻接 6 个方块的机器工作速度
+- 还会额外触发随机刻（如作物生长）
+- 不会加速其他时钟方块和 ATI 耕地
+- 两个版本的开关方式不同，见下方版本差异
+
 ### ATI 存储方块制造机
 
-- 主手持带有 forge:ores 或 forge:storage_blocks 的物品右击时，将记录物品
+- 主手持带有 forge:ores 或 forge:storage_blocks 标签的物品右击时，将记录该物品
 - 会自动产生所记录的物品
 - 会随时间增加物品的产出速度
-- 物品除前面描述的标签外，其子标签同样支持，如 forge:ores/iron
+- 物品的子标签同样支持，如 forge:ores/iron
 - 一个机器可以最多记录9种物品
-- 会自动向六个面传输物品
-- 支持管道抽取，建议用 AE2 的存储面板管理
+- 会自动向六个面传输物品，支持管道抽取
 
 ### ATI 液体无限制造机
 
 - 可以输入任何单一流体
 - 如果输入的液体达到1万桶，将变为无限
 - 一个机器可以支持1种流体
-- 会自动向六个面传输流体
-- 支持管道抽取，建议用 AE2 的存储面板管理
+- 会自动向六个面传输流体，支持管道抽取
 
 ### ATI 农场
 
+- 42 种不同的怪物/资源农场，分 6 个阶级
 - 可以通过物品的描述了解相关产物
 - 会随时间增加物品的产出速度
-- 会自动向六个面传输物品
-- 支持管道抽取，建议用 AE2 的存储面板管理
+- 会自动向六个面传输物品，支持管道抽取
+
+### 平台方块
+
+- 右击生成一个 3×3 区块的平滑石头平台
+- 区块边界用石砖标识
 
 ### 额外配方
 
@@ -55,61 +73,175 @@
 - Silent Gear： 增加了很多回收配方，Mek 钓鱼机产生的不可堆叠物品均可回收
 - Thermal： 添加了 Blood Magic 和 Evil Craft 血液的相互转化
 
+---
+
+## 1.20.1 版本独有内容
+
+**Minecraft 1.20.1 / Forge 47.4.2 / Java 17**
+
+### 永恒图腾
+
+- 类似不死图腾，但可重复使用
+- 死亡时自动触发，无需手持
+- 触发后给予多种强力增益效果（伤害吸收、生命恢复、抗火、抗性、速度、力量）
+- 右击可切换开关状态
+
+### 时钟方块开关
+
+- 每个时钟方块有独立的开关状态
+- 右击某个时钟方块只切换该方块的开关
+
+---
+
+## 1.21.1 版本独有内容
+
+**Minecraft 1.21.1 / NeoForge 21.1.191 / Java 21**
+
+### 与 1.20.1 版本的功能差异
+
+- **无永恒图腾**：该功能未移植到 1.21.1 版本
+- **时钟开关为全局控制**：右击任意时钟方块会同时切换所有时钟方块的开关状态
+- **无 SmeltingCraft 自定义配方**
+
+### 底层技术差异
+
+- 基于 NeoForge 而非 Forge
+- 使用 DataComponent 系统存储数据
+- 使用 Parchment mappings
+
+---
+
+## 构建命令
+
+两个版本使用相同的构建命令：
+
+```bash
+./gradlew runClient   # 运行客户端
+./gradlew runServer   # 运行服务端
+./gradlew build       # 构建 mod 文件
+```
+
 
 
 # All the imbaium
 
 Can be used independently; There are a large number of recipe contents related to ATM integration packages, and it is recommended to use them together.
 
+This repository contains implementations for both Minecraft 1.20.1 and 1.21.1.
+
+---
+
+## Features Common to Both Versions
+
 ### Added several types of machines that are quite disruptive to balance
 
 - Farmland that instantly ripens crops without degradation, ATI Farmland
+- Clock blocks that accelerate adjacent machines (4 tiers: x2, x4, x16, x256)
 - Machine capable of filtering tags and copying minerals, ATI Storage Block Fountain
 - A machine that can turn fluids into infinity, ATI Liquid Infinity Fountain
-- A machine that automatically generates monster resources, ATI Farm
+- A machine that automatically generates monster resources, ATI Farm (42 types)
+- A platform block that generates a 3×3 chunk platform with one click
 - Multiple effective simplified formulas for ATM integration packages
- 
+
 ### ATI Farmland
 
 - Make the planted crops mature immediately
-- The method of setting growth stages has been adopted, so crop growth conditions can be ignored
-- Avoiding the problem of most degradation into arable land
-- There will be water soaked animations, but they will not actually have any effect
-- When planting crops with stems, multiple adjacent ones may cause the stems to fall off
-- Planting seedlings and other crops on it is prohibited
- 
+- Uses growth stage setting, so crop growth conditions can be ignored
+- Avoids most farmland degradation issues
+- Has water-soaked animations but no actual effect
+- Planting stem crops may cause stems to drop when multiple are adjacent
+- Prevents saplings and similar from being planted on it
+
+### ATI Clock Block
+
+- 4 tiers: x2, x4, x16, x256 acceleration multipliers
+- Accelerates machines on all 6 adjacent sides
+- Also triggers additional random ticks (e.g., crop growth)
+- Skips other clock blocks and ATI farmland
+- Toggle behavior differs between versions, see below
+
 ### ATI Storage Block Fountain
 
-- When the owner right-click on an item with 'forge: ores' or' forge: storage-blocks' in their hand, the item will be recorded
-- Automatically generate recorded items
-- The output speed of items will increase over time
-- In addition to the tags described earlier, sub tags of items are also supported, such as forge: ores/iron
-- A machine can record up to 9 types of items
-- Automatically transfer items to six sides
-- Support pipeline extraction, it is recommended to use AE2's storage panel for management
+- Right-click with an item that has forge:ores or forge:storage_blocks tags to record it
+- Automatically generates recorded items
+- Output speed increases over time
+- Sub-tags like forge:ores/iron are also supported
+- Can record up to 9 types of items
+- Automatically outputs to six sides, supports pipe extraction
 
 ### ATI Liquid Infinity Fountain
 
 - Can input any single fluid
-- If the input liquid reaches 10000 barrels, it will become infinite
-- One machine can support one type of fluid
-- It will automatically transfer fluid to six surfaces
-- Support pipeline extraction, it is recommended to use AE2's storage panel for management
+- Becomes infinite once the input reaches 10,000 barrels
+- Supports one type of fluid per machine
+- Automatically outputs to six sides, supports pipe extraction
 
 ### ATI Farm
 
-- You can learn about related products through the description of the item
-- The output speed of items will increase over time
-- Automatically transfer items to six sides
-- Support pipeline extraction, it is recommended to use AE2's storage panel for management
+- 42 different mob/resource farms across 6 tiers
+- Hover over the item to see what it produces
+- Output speed increases over time
+- Automatically outputs to six sides, supports pipe extraction
 
-### Additional formula
+### Platform Block
 
-- ATM： adds synthesis of three templates
-- AE2： has added a simple synthesis method for related crystals and more efficient synthesis formulas for various products
-- Blood Magic： has increased the synthesis of blood fruit and added Mek broth to convert blood formula
-- Mek： has added a synthetic formula for creating related dust out of nothing
-- Mystical： has restored the Gaia Soul related formula, added the farmland recycling formula, and added the growth accelerator upgrade formula
-- Silent Gear： has added many recycling formulas, and non stackable items generated by Mek fishing machines can be recycled
-- Thermal： adds Blood Magic and Evil Craft blood conversion to each other
+- Right-click to generate a 3×3 chunk platform made of smooth stone
+- Chunk borders marked with stone bricks
 
+### Additional Formulas
+
+- ATM: adds synthesis of three templates
+- AE2: adds simple crystal synthesis and more efficient production formulas
+- Blood Magic: adds blood fruit synthesis and Mek broth to blood conversion
+- Mek: adds ex-nihilo dust synthesis formulas
+- Mystical: restores Gaia Spirit formula, adds farmland recycling and growth accelerator upgrades
+- Silent Gear: adds many recycling formulas for non-stackable items
+- Thermal: adds bidirectional Blood Magic and Evil Craft blood conversion
+
+---
+
+## 1.20.1 Version Specifics
+
+**Minecraft 1.20.1 / Forge 47.4.2 / Java 17**
+
+### Eternal Totem
+
+- Similar to Totem of Undying, but reusable
+- Automatically triggers on death without needing to hold it
+- Grants powerful buffs after triggering (Absorption, Regeneration, Fire Resistance, Resistance, Speed, Strength)
+- Right-click to toggle on/off
+
+### Clock Block Toggle
+
+- Each clock block has an independent on/off state
+- Right-clicking a clock block only toggles that specific block
+
+---
+
+## 1.21.1 Version Specifics
+
+**Minecraft 1.21.1 / NeoForge 21.1.191 / Java 21**
+
+### Functional Differences from 1.20.1
+
+- **No Eternal Totem**: This feature was not ported to 1.21.1
+- **Clock toggle is global**: Right-clicking any clock block toggles all clock blocks simultaneously
+- **No SmeltingCraft custom recipe**
+
+### Technical Differences
+
+- Built on NeoForge instead of Forge
+- Uses DataComponent system for data storage
+- Uses Parchment mappings
+
+---
+
+## Build Commands
+
+Both versions use the same build commands:
+
+```bash
+./gradlew runClient   # Run client
+./gradlew runServer   # Run server
+./gradlew build       # Build mod file
+```
