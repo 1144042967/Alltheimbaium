@@ -1,8 +1,0 @@
-{
-  "parent": "alltheimbaium:block/farmland",
-  "textures": {
-    "particle": "alltheimbaium:block/dirt",
-    "dirt": "alltheimbaium:block/dirt",
-    "top": "alltheimbaium:block/farmland_moist"
-  }
-}
