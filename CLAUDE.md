@@ -64,6 +64,8 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 │   ├── FarmConnection.java              # 农场 IItemHandler
 │   ├── LiquidFountainConnection.java    # 液体制造机 IFluidHandler
 │   └── StorageFountainConnection.java   # 存储制造机 IItemHandler
+├── recipe/                       # 自定义配方
+│   └── SmeltingCraftRecipe.java         # 熔炼合成配方 (煤炭+可烧炼物品)
 └── setup/                       # 注册和配置
     ├── Registration.java                # 所有方块/物品/实体的注册
     ├── DataConfig.java                  # 农场产出数据配置
@@ -170,7 +172,23 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - 右击切换开关状态
 - 优先级 `HIGHEST` 确保在其他 mod 前处理
 
-### 8. 额外物品
+### 8. SmeltingCraftRecipe (自定义合成配方)
+
+`recipe/SmeltingCraftRecipe.java` — 一个动态合成配方，可以用煤炭在合成台中批量烧炼物品，无需熔炉。
+
+- 继承 `CustomRecipe`，使用 `SimpleCraftingRecipeSerializer`
+- 配方模式 (3×3 合成台):
+  - 外围 8 格放同一种可被烧炼/爆破/烟熏的物品
+  - 中心 1 格放煤炭或木炭 (`ItemTags.COALS`)
+- 输出: 8 个烧炼产物（不超过该物品的最大堆叠数）
+- 动态查询 `RecipeManager`，支持来自任何 mod 的熔炉配方
+- 按优先级依次查找 `SMELTING` → `BLASTING` → `SMOKING` 配方
+- 服务端计算配方，客户端跳过
+- `isSpecial()` 返回 `true`，不出现在配方书中
+- 需要 3×3 合成台（2×2 背包合成格不适用）
+- 使用 `cachedResult` 字段在 `matches()` 和 `assemble()` 之间传递结果
+
+### 9. 额外物品
 
 - `package_material_x1/x2/x3` — 封装材料 (合成中间物)
 - `block_diamond_x8/gold_x8/silicon_x8/quantum_alloy_x8/sky_steel_x8` — 合成材料
