@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -27,7 +28,7 @@ import javax.annotation.Nullable;
 
 public class LiquidFountainBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(LiquidFountainBlock.class);
-    public static final Integer MAX = 10000 * 1000;
+    public static long getMax() { return Config.LIQUID_FOUNTAIN_INFINITE_THRESHOLD.get(); }
 
     public LiquidFountainBlock(BlockBehaviour.Properties properties) {
         super(properties);
@@ -57,7 +58,7 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
         if (!(tile instanceof LiquidFountainEntity generator)) {
             return;
         }
-        if (generator.stack == FluidStack.EMPTY || generator.stack.getAmount() < LiquidFountainBlock.MAX) {
+        if (generator.stack == FluidStack.EMPTY || generator.stack.getAmount() < LiquidFountainBlock.getMax()) {
             if (generator.stack.getAmount() <= 0) {
                 generator.stack = FluidStack.EMPTY;
             }
@@ -98,8 +99,8 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
                 player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.empty"));
                 return InteractionResult.SUCCESS;
             }
-            if (stack.getAmount() < LiquidFountainBlock.MAX) {
-                player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.current", stack.getDisplayName(), stack.getAmount(), LiquidFountainBlock.MAX));
+            if (stack.getAmount() < LiquidFountainBlock.getMax()) {
+                player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.current", stack.getDisplayName(), stack.getAmount(), LiquidFountainBlock.getMax()));
                 return InteractionResult.SUCCESS;
             }
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.max", stack.getDisplayName()));

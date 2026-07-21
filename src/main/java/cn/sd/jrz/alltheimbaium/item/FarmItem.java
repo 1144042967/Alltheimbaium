@@ -59,7 +59,7 @@ public class FarmItem extends BlockItem {
                 Item item = product.item;
                 String name = item.getName(new ItemStack(item)).getString();
                 long current = saveArray[i];
-                BigDecimal output = new BigDecimal(level * product.count).divide(new BigDecimal(FarmBlock.CARRY), FarmBlock.SCALE, RoundingMode.HALF_UP);
+                BigDecimal output = new BigDecimal(level * product.count).divide(new BigDecimal(FarmBlock.getCarry()), FarmBlock.getScale(), RoundingMode.HALF_UP);
                 tooltip.add(Component.translatable("screen.alltheimbaium.farm.product", name, current, output));
             }
         } catch (Throwable e) {

@@ -53,13 +53,13 @@ public class StorageFountainItem extends BlockItem {
                     }
                 }
             }
-            BigDecimal outputPerTick = new BigDecimal(output).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
+            BigDecimal outputPerTick = new BigDecimal(output).divide(new BigDecimal(StorageFountainBlock.getCarry()), 3, RoundingMode.HALF_UP);
             tooltip.add(Component.translatable("screen.alltheimbaium.fountain.output", outputPerTick));
             for (int i = 0; i < Math.min(stackList.size(), blockList.size()); i++) {
                 ItemStack itemStack = stackList.get(i);
                 Long block = blockList.get(i);
                 String name = itemStack.getItem().getName(itemStack).getString();
-                BigDecimal save = new BigDecimal(block).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
+                BigDecimal save = new BigDecimal(block).divide(new BigDecimal(StorageFountainBlock.getCarry()), 3, RoundingMode.HALF_UP);
                 tooltip.add(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
             }
             if (stackList.isEmpty()) {

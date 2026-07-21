@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.CommonEntity;
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -58,20 +59,34 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
         };
     }
 
+    private int tickCounter;
+
     private <T extends BlockEntity> void tick(Level level, T tile) {
-        //noinspection deprecation
         if (!level.hasChunkAt(tile.getBlockPos())) {
             return;
         }
         if (level.isClientSide) {
             return;
         }
+
+        int interval = Config.FARMLAND_TICK_INTERVAL.get();
+        tickCounter++;
+        if (tickCounter % interval != 0) {
+            return;
+        }
+
         BlockPos pos = tile.getBlockPos().above();
         BlockState state = level.getBlockState(pos);
         Block block = state.getBlock();
-        if (block instanceof BonemealableBlock bonemealable) {
-            bonemealable.performBonemeal((ServerLevel) level, level.random, pos, state);
+
+        // 骨粉效果
+        if (Config.FARMLAND_BONEMEAL_ENABLED.get() && tickCounter % Config.FARMLAND_BONEMEAL_INTERVAL.get() == 0) {
+            if (block instanceof BonemealableBlock bonemealable) {
+                bonemealable.performBonemeal((ServerLevel) level, level.random, pos, state);
+            }
         }
+
+        // 作物生长
         if (!state.hasProperty(CropBlock.AGE)) {
             return;
         }
@@ -79,7 +94,14 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
             int age = crop.getAge(state);
             int maxAge = crop.getMaxAge();
             if (age < maxAge) {
-                state = state.setValue(CropBlock.AGE, maxAge);
+                int growthAmount = Config.FARMLAND_GROWTH_AMOUNT.get();
+                int newAge;
+                if (growthAmount == -1) {
+                    newAge = maxAge;
+                } else {
+                    newAge = Math.min(age + growthAmount, maxAge);
+                }
+                state = state.setValue(CropBlock.AGE, newAge);
                 level.setBlock(pos, state, 2);
                 ForgeHooks.onCropsGrowPost(level, pos, state);
             }

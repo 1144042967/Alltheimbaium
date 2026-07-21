@@ -59,7 +59,7 @@ public class LiquidFountainConnection implements IFluidHandler {
             if (owner.stack != FluidStack.EMPTY && !owner.stack.isFluidEqual(fluidStack)) {
                 return 0;
             }
-            int maxInput = Math.min(fluidStack.getAmount(), LiquidFountainBlock.MAX - owner.stack.getAmount());
+            int maxInput = (int) Math.min(fluidStack.getAmount(), LiquidFountainBlock.getMax() - owner.stack.getAmount());
             if (fluidAction.execute()) {
                 if (owner.stack == FluidStack.EMPTY) {
                     owner.stack = new FluidStack(fluidStack.getFluid(), maxInput);
@@ -118,6 +118,6 @@ public class LiquidFountainConnection implements IFluidHandler {
     }
 
     private boolean isInfinity() {
-        return owner.stack != FluidStack.EMPTY && owner.stack.getAmount() >= LiquidFountainBlock.MAX;
+        return owner.stack != FluidStack.EMPTY && owner.stack.getAmount() >= LiquidFountainBlock.getMax();
     }
 }

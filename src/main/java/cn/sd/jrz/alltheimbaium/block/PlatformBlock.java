@@ -9,6 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.slf4j.Logger;
@@ -59,15 +60,24 @@ public class PlatformBlock extends Block {
                 for (int x = 0; x < CHUNK_SIZE; x++) {
                     for (int z = 0; z < CHUNK_SIZE; z++) {
                         BlockPos targetPos = new BlockPos(chunkStartX + x, centerPos.getY(), chunkStartZ + z);
-                        if (!level.getBlockState(targetPos).isAir()) {
+                        BlockState current = level.getBlockState(targetPos);
+
+                        // 只替换空气、平滑石头、石砖和自身
+                        Block currentBlock = current.getBlock();
+                        if (!current.isAir() && currentBlock != Blocks.SMOOTH_STONE
+                                && currentBlock != Blocks.STONE_BRICKS && currentBlock != this) {
                             continue;
                         }
 
-                        boolean isChunkEdge = x == 0 || x == CHUNK_SIZE - 1 || z == 0 || z == CHUNK_SIZE - 1;
-                        if (isChunkEdge) {
-                            level.setBlock(targetPos, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                        boolean isCorner = (x == 0 || x == CHUNK_SIZE - 1) && (z == 0 || z == CHUNK_SIZE - 1);
+                        boolean isEdge = x == 0 || x == CHUNK_SIZE - 1 || z == 0 || z == CHUNK_SIZE - 1;
+
+                        if (isCorner) {
+                            level.setBlock(targetPos, this.defaultBlockState(), 3);
+                        } else if (isEdge) {
+                            level.setBlock(targetPos, Blocks.STONE_BRICKS.defaultBlockState(), 3);
                         } else {
-                            level.setBlock(targetPos, net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState(), 3);
+                            level.setBlock(targetPos, Blocks.SMOOTH_STONE.defaultBlockState(), 3);
                         }
                     }
                 }

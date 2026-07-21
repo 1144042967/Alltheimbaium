@@ -2,6 +2,7 @@ package cn.sd.jrz.alltheimbaium.entity;
 
 import cn.sd.jrz.alltheimbaium.block.AlltheimbaiumFarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.ClockBlock;
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -16,7 +17,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.function.Supplier;
 
 public class ClockEntity extends BlockEntity {
-    private static boolean active = false;
+    private static boolean active = Config.CLOCK_DEFAULT_ACTIVE.get();
     private final int speedMultiplier;
 
     public ClockEntity(BlockPos pos, BlockState state, Supplier<BlockEntityType<?>> supplier, int speedMultiplier) {

@@ -2,6 +2,7 @@ package cn.sd.jrz.alltheimbaium.entity;
 
 import cn.sd.jrz.alltheimbaium.connection.StorageFountainConnection;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -27,7 +28,7 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
     private static final Logger log = LoggerFactory.getLogger(StorageFountainEntity.class);
     private final LazyOptional<StorageFountainConnection> fecOptional = LazyOptional.of(() -> new StorageFountainConnection(this));
     public int findIndex = 0;
-    public long output = 5;
+    public long output = Config.STORAGE_FOUNTAIN_INITIAL_OUTPUT.get();
     public List<ItemStack> itemList = new ArrayList<>();
     public List<Long> blockList = new ArrayList<>();
     public long tickCount = 0;
