@@ -48,6 +48,13 @@ public class PlatformBlock extends Block {
         return super.use(state, level, pos, player, handIn, hit);
     }
 
+    /**
+     * 判断是否为区块中心 10×10 区域的四个角（放置蛙明灯）。
+     */
+    private static boolean isCenterCorner(int x, int z) {
+        return (x == 3 || x == 12) && (z == 3 || z == 12);
+    }
+
     private void generatePlatform(Level level, BlockPos centerPos) {
         int chunkX = centerPos.getX() & -CHUNK_SIZE;
         int chunkZ = centerPos.getZ() & -CHUNK_SIZE;
@@ -76,6 +83,8 @@ public class PlatformBlock extends Block {
                             level.setBlock(targetPos, this.defaultBlockState(), 3);
                         } else if (isEdge) {
                             level.setBlock(targetPos, Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                        } else if (isCenterCorner(x, z)) {
+                            level.setBlock(targetPos, Blocks.VERDANT_FROGLIGHT.defaultBlockState(), 3);
                         } else {
                             level.setBlock(targetPos, Blocks.SMOOTH_STONE.defaultBlockState(), 3);
                         }

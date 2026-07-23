@@ -35,13 +35,21 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 public class FarmBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(FarmBlock.class);
-    public static long getCarry() { return Config.FARM_CARRY.get(); }
-    public static int getScale() { return String.valueOf(Config.FARM_CARRY.get()).length() - 1; }
+
+    public static long getCarry() {
+        return Config.FARM_CARRY.get();
+    }
+
+    public static int getScale() {
+        return String.valueOf(Config.FARM_CARRY.get()).length() - 1;
+    }
+
     private final DataConfig config;
     public final Direction[] directions = Direction.values();
 
@@ -80,11 +88,18 @@ public class FarmBlock extends Block implements EntityBlock {
             generator.level++;
             generator.tickCount = 0;
         }
-        //计算产量
-        List<DataConfig.ItemProduct> productList = config.getProductList();
+        //计算产量（含战利品表合并和全局增长率）
+        List<DataConfig.ItemProduct> productList = config.getResolvedProductList(level);
+        // 如果战利品表合并增加了产物，动态扩展数组
+        if (productList.size() > generator.outputArray.length) {
+            generator.outputArray = Arrays.copyOf(generator.outputArray, productList.size());
+            generator.saveArray = Arrays.copyOf(generator.saveArray, productList.size());
+        }
+        double growthRate = Config.FARM_GROWTH_RATE.get();
         for (int i = 0; i < productList.size(); i++) {
             DataConfig.ItemProduct product = productList.get(i);
-            generator.outputArray[i] = Tool.suit(generator.outputArray[i] + Tool.suit(product.count * generator.level));
+            long scaledCount = (long) (product.count * growthRate);
+            generator.outputArray[i] = Tool.suit(generator.outputArray[i] + Tool.suit(scaledCount * generator.level));
             long carry = getCarry();
             if (generator.outputArray[i] > carry) {
                 generator.saveArray[i] = Tool.suit(generator.saveArray[i] + generator.outputArray[i] / carry);

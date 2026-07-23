@@ -26,6 +26,46 @@ public class Config {
     public static ForgeConfigSpec.LongValue FARM_CARRY;
     public static ForgeConfigSpec.BooleanValue FARM_USE_LOOT_TABLE;
     public static ForgeConfigSpec.DoubleValue FARM_GROWTH_RATE;
+    // 每个农场的实体类型（用于战利品表查询）和配置产物
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_BAMBOO_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_BEE_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_BLAZE_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_BONE_MEAL_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_CHICKEN_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_COBBLESTONE_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_COW_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_CREEPER_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_DROWNED_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_ENDERMAN_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_ENDER_DRAGON_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_EVOKER_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_FROG_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_GHAST_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_GUARDIAN_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_HOGLIN_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_ICE_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_IRON_GOLEM_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_MAGMA_CUBE_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_PHANTOM_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_PIG_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_PILLAGER_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_RABBIT_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_RAVAGER_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_SHEEP_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_SHULKER_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_SKELETON_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_SLIME_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_SPIDER_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_SQUID_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_SUGAR_CANES_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_VILLAGER_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_WARDEN_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_WITCH_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_WITHER_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_WITHER_SKELETON_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_WOOD_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_ZOMBIE_PRODUCTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_ZOMBIFIED_PIGLIN_PRODUCTS;
 
     // ==================== 液体无限制造机 ====================
     public static ForgeConfigSpec.LongValue LIQUID_FOUNTAIN_INFINITE_THRESHOLD;
@@ -82,6 +122,48 @@ public class Config {
         FARM_GROWTH_RATE = builder
                 .comment("全局增长率，产出 = 原产出 × 增长率")
                 .defineInRange("growth_rate", 1.0, 0.0, Double.MAX_VALUE);
+
+        builder.comment("各农场产物配置，格式 item:count").push("products");
+        FARM_BAMBOO_PRODUCTS = builder.defineList("bamboo", () -> List.of("minecraft:bamboo:500"), o -> o instanceof String);
+        FARM_BEE_PRODUCTS = builder.defineList("bee", () -> List.of("minecraft:honeycomb:500", "minecraft:honey_block:400", "minecraft:bee_spawn_egg:1"), o -> o instanceof String);
+        FARM_BLAZE_PRODUCTS = builder.defineList("blaze", () -> List.of("minecraft:blaze_rod:500", "minecraft:blaze_spawn_egg:1"), o -> o instanceof String);
+        FARM_BONE_MEAL_PRODUCTS = builder.defineList("bone_meal", () -> List.of("minecraft:bone_meal:500"), o -> o instanceof String);
+        FARM_CHICKEN_PRODUCTS = builder.defineList("chicken", () -> List.of("minecraft:chicken:50", "minecraft:feather:500", "minecraft:egg:500", "minecraft:chicken_spawn_egg:1"), o -> o instanceof String);
+        FARM_COBBLESTONE_PRODUCTS = builder.defineList("cobblestone", () -> List.of("minecraft:cobblestone:500"), o -> o instanceof String);
+        FARM_COW_PRODUCTS = builder.defineList("cow", () -> List.of("minecraft:beef:50", "minecraft:leather:500", "minecraft:cow_spawn_egg:1"), o -> o instanceof String);
+        FARM_CREEPER_PRODUCTS = builder.defineList("creeper", () -> List.of("minecraft:gunpowder:500", "minecraft:creeper_spawn_egg:1"), o -> o instanceof String);
+        FARM_DROWNED_PRODUCTS = builder.defineList("drowned", () -> List.of("minecraft:rotten_flesh:500", "minecraft:copper_ingot:400", "minecraft:trident:50", "minecraft:nautilus_shell:50", "minecraft:drowned_spawn_egg:1"), o -> o instanceof String);
+        FARM_ENDERMAN_PRODUCTS = builder.defineList("enderman", () -> List.of("minecraft:ender_pearl:500", "minecraft:enderman_spawn_egg:1"), o -> o instanceof String);
+        FARM_ENDER_DRAGON_PRODUCTS = builder.defineList("ender_dragon", () -> List.of("minecraft:dragon_egg:500", "minecraft:dragon_breath:400", "minecraft:ender_dragon_spawn_egg:1"), o -> o instanceof String);
+        FARM_EVOKER_PRODUCTS = builder.defineList("evoker", () -> List.of("minecraft:totem_of_undying:250", "minecraft:emerald:500", "minecraft:evoker_spawn_egg:1"), o -> o instanceof String);
+        FARM_FROG_PRODUCTS = builder.defineList("frog", () -> List.of("minecraft:ochre_froglight:500", "minecraft:pearlescent_froglight:500", "minecraft:verdant_froglight:500", "minecraft:frog_spawn_egg:1"), o -> o instanceof String);
+        FARM_GHAST_PRODUCTS = builder.defineList("ghast", () -> List.of("minecraft:ghast_tear:250", "minecraft:gunpowder:500", "minecraft:ghast_spawn_egg:1"), o -> o instanceof String);
+        FARM_GUARDIAN_PRODUCTS = builder.defineList("guardian", () -> List.of("minecraft:prismarine_shard:500", "minecraft:prismarine_crystals:250", "minecraft:cod:50", "minecraft:salmon:50", "minecraft:pufferfish:50", "minecraft:tropical_fish:50", "minecraft:sponge:50", "minecraft:guardian_spawn_egg:1"), o -> o instanceof String);
+        FARM_HOGLIN_PRODUCTS = builder.defineList("hoglin", () -> List.of("minecraft:cooked_porkchop:500", "minecraft:leather:100", "minecraft:hoglin_spawn_egg:1"), o -> o instanceof String);
+        FARM_ICE_PRODUCTS = builder.defineList("ice", () -> List.of("minecraft:ice:500"), o -> o instanceof String);
+        FARM_IRON_GOLEM_PRODUCTS = builder.defineList("iron_golem", () -> List.of("minecraft:iron_ingot:500", "minecraft:poppy:50", "minecraft:iron_golem_spawn_egg:1"), o -> o instanceof String);
+        FARM_MAGMA_CUBE_PRODUCTS = builder.defineList("magma_cube", () -> List.of("minecraft:magma_cream:500", "minecraft:magma_cube_spawn_egg:1"), o -> o instanceof String);
+        FARM_PHANTOM_PRODUCTS = builder.defineList("phantom", () -> List.of("minecraft:phantom_membrane:500", "minecraft:phantom_spawn_egg:1"), o -> o instanceof String);
+        FARM_PIG_PRODUCTS = builder.defineList("pig", () -> List.of("minecraft:porkchop:500", "minecraft:pig_spawn_egg:1"), o -> o instanceof String);
+        FARM_PILLAGER_PRODUCTS = builder.defineList("pillager", () -> List.of("minecraft:arrow:500", "minecraft:experience_bottle:10", "minecraft:pillager_spawn_egg:1"), o -> o instanceof String);
+        FARM_RABBIT_PRODUCTS = builder.defineList("rabbit", () -> List.of("minecraft:rabbit_hide:100", "minecraft:rabbit:300", "minecraft:rabbit_foot:100", "minecraft:rabbit_spawn_egg:1"), o -> o instanceof String);
+        FARM_RAVAGER_PRODUCTS = builder.defineList("ravager", () -> List.of("minecraft:saddle:500", "minecraft:ravager_spawn_egg:1"), o -> o instanceof String);
+        FARM_SHEEP_PRODUCTS = builder.defineList("sheep", () -> List.of("minecraft:mutton:50", "minecraft:white_wool:500", "minecraft:light_gray_wool:50", "minecraft:gray_wool:50", "minecraft:black_wool:50", "minecraft:brown_wool:50", "minecraft:red_wool:50", "minecraft:orange_wool:50", "minecraft:yellow_wool:50", "minecraft:lime_wool:50", "minecraft:green_wool:50", "minecraft:cyan_wool:50", "minecraft:light_blue_wool:50", "minecraft:blue_wool:50", "minecraft:purple_wool:50", "minecraft:magenta_wool:50", "minecraft:pink_wool:50", "minecraft:sheep_spawn_egg:1"), o -> o instanceof String);
+        FARM_SHULKER_PRODUCTS = builder.defineList("shulker", () -> List.of("minecraft:shulker_shell:500", "minecraft:shulker_spawn_egg:1"), o -> o instanceof String);
+        FARM_SKELETON_PRODUCTS = builder.defineList("skeleton", () -> List.of("minecraft:bone:500", "minecraft:arrow:100", "minecraft:skeleton_spawn_egg:1"), o -> o instanceof String);
+        FARM_SLIME_PRODUCTS = builder.defineList("slime", () -> List.of("minecraft:slime_ball:500", "minecraft:slime_spawn_egg:1"), o -> o instanceof String);
+        FARM_SPIDER_PRODUCTS = builder.defineList("spider", () -> List.of("minecraft:string:500", "minecraft:spider_eye:50", "minecraft:spider_spawn_egg:1"), o -> o instanceof String);
+        FARM_SQUID_PRODUCTS = builder.defineList("squid", () -> List.of("minecraft:ink_sac:500", "minecraft:glow_ink_sac:200", "minecraft:squid_spawn_egg:1", "minecraft:glow_squid_spawn_egg:1"), o -> o instanceof String);
+        FARM_SUGAR_CANES_PRODUCTS = builder.defineList("sugar_canes", () -> List.of("minecraft:sugar_cane:500"), o -> o instanceof String);
+        FARM_VILLAGER_PRODUCTS = builder.defineList("villager", () -> List.of("minecraft:villager_spawn_egg:500"), o -> o instanceof String);
+        FARM_WARDEN_PRODUCTS = builder.defineList("warden", () -> List.of("minecraft:sculk_catalyst:100", "minecraft:sculk_shrieker:100", "minecraft:sculk_sensor:100", "minecraft:sculk_vein:100", "minecraft:echo_shard:100", "minecraft:warden_spawn_egg:1"), o -> o instanceof String);
+        FARM_WITCH_PRODUCTS = builder.defineList("witch", () -> List.of("minecraft:redstone:500", "minecraft:glass_bottle:50", "minecraft:glowstone_dust:50", "minecraft:gunpowder:50", "minecraft:spider_eye:50", "minecraft:sugar:50", "minecraft:stick:50", "minecraft:witch_spawn_egg:1"), o -> o instanceof String);
+        FARM_WITHER_PRODUCTS = builder.defineList("wither", () -> List.of("minecraft:nether_star:500", "minecraft:wither_spawn_egg:500"), o -> o instanceof String);
+        FARM_WITHER_SKELETON_PRODUCTS = builder.defineList("wither_skeleton", () -> List.of("minecraft:coal:500", "minecraft:bone:100", "minecraft:wither_skeleton_skull:50", "minecraft:wither_skeleton_spawn_egg:1"), o -> o instanceof String);
+        FARM_WOOD_PRODUCTS = builder.defineList("wood", () -> List.of("minecraft:oak_log:500", "minecraft:birch_log:50", "minecraft:spruce_log:50", "minecraft:jungle_log:50", "minecraft:acacia_log:50", "minecraft:dark_oak_log:50", "minecraft:mangrove_log:50", "minecraft:cherry_log:50", "minecraft:apple:10"), o -> o instanceof String);
+        FARM_ZOMBIE_PRODUCTS = builder.defineList("zombie", () -> List.of("minecraft:rotten_flesh:500", "minecraft:iron_ingot:250", "minecraft:carrot:10", "minecraft:potato:10", "minecraft:zombie_spawn_egg:1"), o -> o instanceof String);
+        FARM_ZOMBIFIED_PIGLIN_PRODUCTS = builder.defineList("zombified_piglin", () -> List.of("minecraft:rotten_flesh:500", "minecraft:gold_nugget:250", "minecraft:gold_ingot:250", "minecraft:zombified_piglin_spawn_egg:1"), o -> o instanceof String);
+        builder.pop();
         builder.pop();
 
         // ---- 液体无限制造机 ----
