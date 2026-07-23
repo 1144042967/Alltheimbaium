@@ -35,7 +35,6 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -83,23 +82,19 @@ public class FarmBlock extends Block implements EntityBlock {
             return;
         }
         //增加等级
-        generator.tickCount++;
-        if (generator.tickCount >= 20L * Config.FARM_LEVEL_UP_INTERVAL_SECONDS.get()) {
-            generator.level++;
-            generator.tickCount = 0;
+        long maxLevel = Config.FARM_MAX_LEVEL.get();
+        if (generator.level < maxLevel) {
+            generator.tickCount++;
+            if (generator.tickCount >= 20L * Config.FARM_LEVEL_UP_INTERVAL_SECONDS.get()) {
+                generator.level++;
+                generator.tickCount = 0;
+            }
         }
-        //计算产量（含战利品表合并和全局增长率）
-        List<DataConfig.ItemProduct> productList = config.getResolvedProductList(level);
-        // 如果战利品表合并增加了产物，动态扩展数组
-        if (productList.size() > generator.outputArray.length) {
-            generator.outputArray = Arrays.copyOf(generator.outputArray, productList.size());
-            generator.saveArray = Arrays.copyOf(generator.saveArray, productList.size());
-        }
-        double growthRate = Config.FARM_GROWTH_RATE.get();
+        //计算产量
+        List<DataConfig.ItemProduct> productList = config.getProductList();
         for (int i = 0; i < productList.size(); i++) {
             DataConfig.ItemProduct product = productList.get(i);
-            long scaledCount = (long) (product.count * growthRate);
-            generator.outputArray[i] = Tool.suit(generator.outputArray[i] + Tool.suit(scaledCount * generator.level));
+            generator.outputArray[i] = Tool.suit(generator.outputArray[i] + Tool.suit(product.count * generator.level));
             long carry = getCarry();
             if (generator.outputArray[i] > carry) {
                 generator.saveArray[i] = Tool.suit(generator.saveArray[i] + generator.outputArray[i] / carry);

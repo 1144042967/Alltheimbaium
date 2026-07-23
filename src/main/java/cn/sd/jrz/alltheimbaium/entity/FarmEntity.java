@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
 import cn.sd.jrz.alltheimbaium.connection.FarmConnection;
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.DataConfig;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
@@ -32,7 +33,7 @@ public class FarmEntity extends BlockEntity implements ICapabilityProvider {
     public FarmEntity(BlockPos pos, BlockState state, DataConfig config) {
         super(config.getType(), pos, state);
         this.config = config;
-        this.level = 1;
+        this.level = Config.FARM_INITIAL_LEVEL.get();
         this.outputArray = new long[config.getProductList().size()];
         this.saveArray = new long[this.outputArray.length];
     }

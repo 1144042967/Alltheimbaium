@@ -80,6 +80,13 @@
 - Silent Gear： 增加了很多回收配方，Mek 钓鱼机产生的不可堆叠物品均可回收
 - Thermal： 添加了 Blood Magic 和 Evil Craft 血液的相互转化
 
+### 煤炭合成熔炼
+
+- 在 3×3 工作台中，外围 8 格放同一种可烧炼物品，中心放煤炭/木炭
+- 一次合成产出 8 个烧炼结果（不超过物品最大堆叠数）
+- 支持熔炉、高炉、烟熏炉中所有可烧炼的物品
+- 无需燃料消耗，直接在工作台中完成
+
 ### 酿造合成
 
 - 原版药水 + 酿造材料在工作台中按酿造配方合成
@@ -176,6 +183,13 @@ Can be used independently; There are a large number of recipe contents related t
 - Mystical: restores the Gaia Spirit related formula, adds farmland recycling formula, and adds growth accelerator upgrade formula
 - Silent Gear: adds many recycling formulas, non-stackable items from Mek fishing machines can all be recycled
 - Thermal: adds Blood Magic and Evil Craft blood conversion to each other
+
+### Coal Smelting Craft
+
+- In a 3×3 crafting table, place 8 identical smeltable items in the outer ring and 1 coal/charcoal in the center
+- Produces 8 smelted results at once (capped at max stack size)
+- Works with all furnace, blast furnace, and smoker recipes
+- No fuel required — smelting is done directly in the crafting table
 
 ### Brewing Craft
 

@@ -21,11 +21,15 @@ public class Config {
     // ==================== 时钟方块 ====================
     public static ForgeConfigSpec.BooleanValue CLOCK_DEFAULT_ACTIVE;
 
+    // ==================== 永恒图腾 ====================
+    public static ForgeConfigSpec.BooleanValue ETERNAL_TOTEM_DEFAULT_ENABLED;
+    public static ForgeConfigSpec.BooleanValue ETERNAL_TOTEM_TANK_CONVERSION;
+
     // ==================== 农场 ====================
     public static ForgeConfigSpec.IntValue FARM_LEVEL_UP_INTERVAL_SECONDS;
     public static ForgeConfigSpec.LongValue FARM_CARRY;
-    public static ForgeConfigSpec.BooleanValue FARM_USE_LOOT_TABLE;
-    public static ForgeConfigSpec.DoubleValue FARM_GROWTH_RATE;
+    public static ForgeConfigSpec.LongValue FARM_INITIAL_LEVEL;
+    public static ForgeConfigSpec.LongValue FARM_MAX_LEVEL;
     // 每个农场的实体类型（用于战利品表查询）和配置产物
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_BAMBOO_PRODUCTS;
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_BEE_PRODUCTS;
@@ -108,6 +112,16 @@ public class Config {
                 .define("default_active", false);
         builder.pop();
 
+        // ---- 永恒图腾 ----
+        builder.comment("永恒图腾设置").push("eternal_totem");
+        ETERNAL_TOTEM_DEFAULT_ENABLED = builder
+                .comment("永恒图腾的初始开关状态。true=启用，false=禁用")
+                .define("default_enabled", false);
+        ETERNAL_TOTEM_TANK_CONVERSION = builder
+                .comment("是否允许永恒图腾右键 Mekanism 终极化学品储罐升级为创造化学品储罐")
+                .define("tank_conversion", true);
+        builder.pop();
+
         // ---- 农场 ----
         builder.comment("农场设置").push("farm");
         FARM_LEVEL_UP_INTERVAL_SECONDS = builder
@@ -116,12 +130,12 @@ public class Config {
         FARM_CARRY = builder
                 .comment("进位阈值。产出累加至此值后进位为完整物品")
                 .defineInRange("carry", 10000L, 1L, Long.MAX_VALUE);
-        FARM_USE_LOOT_TABLE = builder
-                .comment("是否从对应实体的战利品表中获取产物。true 时与配置产物取交集")
-                .define("use_loot_table", true);
-        FARM_GROWTH_RATE = builder
-                .comment("全局增长率，产出 = 原产出 × 增长率")
-                .defineInRange("growth_rate", 1.0, 0.0, Double.MAX_VALUE);
+        FARM_INITIAL_LEVEL = builder
+                .comment("农场初始等级")
+                .defineInRange("initial_level", 1L, 1L, Long.MAX_VALUE);
+        FARM_MAX_LEVEL = builder
+                .comment("农场最大等级（达到后不再升级）")
+                .defineInRange("max_level", Long.MAX_VALUE, 1L, Long.MAX_VALUE);
 
         builder.comment("各农场产物配置，格式 item:count").push("products");
         FARM_BAMBOO_PRODUCTS = builder.defineList("bamboo", () -> List.of("minecraft:bamboo:500"), o -> o instanceof String);

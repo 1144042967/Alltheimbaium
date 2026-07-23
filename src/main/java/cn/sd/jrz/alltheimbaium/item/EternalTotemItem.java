@@ -1,5 +1,6 @@
 package cn.sd.jrz.alltheimbaium.item;
 
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -18,7 +19,7 @@ import java.util.List;
 
 public class EternalTotemItem extends Item {
 
-    public static boolean enabled = false;
+    public static boolean enabled = Config.ETERNAL_TOTEM_DEFAULT_ENABLED.get();
 
     public EternalTotemItem() {
         super(new Item.Properties()
