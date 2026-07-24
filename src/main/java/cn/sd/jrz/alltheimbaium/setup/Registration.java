@@ -10,12 +10,15 @@ import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
 import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.item.*;
+import cn.sd.jrz.alltheimbaium.recipe.BrewingCraftRecipe;
+import cn.sd.jrz.alltheimbaium.recipe.SmeltingCraftRecipe;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -32,6 +35,7 @@ public class Registration {
     private static final DeferredRegister<Block> BLOCKS = DeferredRegister.Blocks.createBlocks(Alltheimbaium.MODID);
     private static final DeferredRegister<Item> ITEMS = DeferredRegister.Items.createItems(Alltheimbaium.MODID);
     private static final DeferredRegister<BlockEntityType<?>> ENTITIES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, Alltheimbaium.MODID);
+    private static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(Registries.RECIPE_SERIALIZER, Alltheimbaium.MODID);
     private static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, Alltheimbaium.MODID);
 
     public static void init(IEventBus bus) {
@@ -39,6 +43,7 @@ public class Registration {
         BLOCKS.register(bus);
         ITEMS.register(bus);
         ENTITIES.register(bus);
+        RECIPE_SERIALIZERS.register(bus);
         bus.addListener(Registration::initCapabilities);
         CREATIVE_MODE_TABS.register(Alltheimbaium.MODID, () -> CreativeModeTab.builder()
                 .title(Component.translatable("itemGroup." + Alltheimbaium.MODID))
@@ -105,6 +110,7 @@ public class Registration {
                     output.accept(Registration.BLOCK_SILICON_X8.get());
                     output.accept(Registration.BLOCK_QUANTUM_ALLOY_X8.get());
                     output.accept(Registration.BLOCK_SKY_STEEL_X8.get());
+                    output.accept(Registration.ETERNAL_TOTEM.get());
                 })
                 .build()
         );
@@ -232,6 +238,9 @@ public class Registration {
     public static final DeferredHolder<Item, Item> BLOCK_SILICON_X8 = ITEMS.register("block_silicon_x8", () -> new Item(new Item.Properties()));
     public static final DeferredHolder<Item, Item> BLOCK_QUANTUM_ALLOY_X8 = ITEMS.register("block_quantum_alloy_x8", () -> new Item(new Item.Properties()));
     public static final DeferredHolder<Item, Item> BLOCK_SKY_STEEL_X8 = ITEMS.register("block_sky_steel_x8", () -> new Item(new Item.Properties()));
+    public static final DeferredHolder<Item, EternalTotemItem> ETERNAL_TOTEM = ITEMS.register("eternal_totem", EternalTotemItem::new);
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<SmeltingCraftRecipe>> SMELTING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("smelting_craft", () -> SmeltingCraftRecipe.SERIALIZER);
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<BrewingCraftRecipe>> BREWING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("brewing_craft", () -> BrewingCraftRecipe.SERIALIZER);
     public static final DeferredHolder<Item, FarmItem> FARM_BAMBOO_ITEM = ITEMS.register("farm_bamboo", () -> new FarmItem(FARM_BAMBOO_BLOCK.get(), DataConfig.FARM_BAMBOO));
     public static final DeferredHolder<Item, FarmItem> FARM_BEE_ITEM = ITEMS.register("farm_bee", () -> new FarmItem(FARM_BEE_BLOCK.get(), DataConfig.FARM_BEE));
     public static final DeferredHolder<Item, FarmItem> FARM_BLAZE_ITEM = ITEMS.register("farm_blaze", () -> new FarmItem(FARM_BLAZE_BLOCK.get(), DataConfig.FARM_BLAZE));
