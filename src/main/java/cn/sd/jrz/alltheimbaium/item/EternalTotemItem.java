@@ -18,7 +18,7 @@ import java.util.List;
 
 public class EternalTotemItem extends Item {
 
-    public static boolean enabled = Config.ETERNAL_TOTEM_DEFAULT_ENABLED.get();
+    public static boolean enabled;
 
     public EternalTotemItem() {
         super(new Item.Properties()

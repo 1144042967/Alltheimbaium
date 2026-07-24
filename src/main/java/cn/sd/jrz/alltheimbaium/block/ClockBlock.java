@@ -33,7 +33,7 @@ import java.util.function.Supplier;
 public class ClockBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(ClockBlock.class);
     private final Supplier<BlockEntityType<?>> entityTypeSupplier;
-    private static boolean active = Config.CLOCK_DEFAULT_ACTIVE.get();
+    private static boolean active;
     private final int speedMultiplier;
 
     public ClockBlock(Properties properties, Supplier<BlockEntityType<?>> entityTypeSupplier, int speedMultiplier) {
