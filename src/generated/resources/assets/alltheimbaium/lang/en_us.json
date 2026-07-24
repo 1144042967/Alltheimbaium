@@ -71,5 +71,18 @@
   "block.alltheimbaium.platform.description": "Right-click with empty hand to generate a 3x3 chunk platform (48x48 blocks). Edges are stone bricks, center is smooth stone.",
   "screen.alltheimbaium.clock.enabled": "Clock enabled - Accelerating at %dx speed",
   "screen.alltheimbaium.clock.disabled": "Clock disabled",
-  "screen.alltheimbaium.platform.generated": "Platform generated (3x3 chunks, 48x48 blocks)"
+  "screen.alltheimbaium.platform.generated": "Platform generated (3x3 chunks, 48x48 blocks)",
+
+  "item.alltheimbaium.eternal_totem": "§6[§b✦ §dEternal Totem §b✦§6]",
+  "item.alltheimbaium.eternal_totem.description": "§7Auto-triggers on death, never breaks\n§eRestores: §cFull HP §c8 Absorption §cStrong Regeneration\n§eBonus: §cFire Immunity §e80% Damage Reduction §bSpeed Boost §fAttack Boost\n§eChemical Tank: §aRight-click Ultimate Chemical Tank to upgrade to Creative Chemical Tank\n§7Right-click totem to toggle, disabled by default",
+  "chat.alltheimbaium.eternal_totem.enabled": "§aEternal Totem Enabled",
+  "chat.alltheimbaium.eternal_totem.disabled": "§cEternal Totem Disabled",
+
+  "item.alltheimbaium.potion_combine.single": "%s Mixed Potion",
+  "item.alltheimbaium.potion_combine.double": "%s %s Mixed Potion",
+  "item.alltheimbaium.potion_combine.single_splash": "%s Mixed Splash Potion",
+  "item.alltheimbaium.potion_combine.double_splash": "%s %s Mixed Splash Potion",
+  "item.alltheimbaium.potion_combine.single_lingering": "%s Mixed Lingering Potion",
+  "item.alltheimbaium.potion_combine.double_lingering": "%s %s Mixed Lingering Potion",
+  "item.alltheimbaium.potion_combine.mundane": "Mundane Potion"
 }

@@ -11,6 +11,7 @@ import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.item.*;
 import cn.sd.jrz.alltheimbaium.recipe.BrewingCraftRecipe;
+import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
 import cn.sd.jrz.alltheimbaium.recipe.SmeltingCraftRecipe;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.component.DataComponentType;
@@ -241,6 +242,7 @@ public class Registration {
     public static final DeferredHolder<Item, EternalTotemItem> ETERNAL_TOTEM = ITEMS.register("eternal_totem", EternalTotemItem::new);
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<SmeltingCraftRecipe>> SMELTING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("smelting_craft", () -> SmeltingCraftRecipe.SERIALIZER);
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<BrewingCraftRecipe>> BREWING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("brewing_craft", () -> BrewingCraftRecipe.SERIALIZER);
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<PotionCombineRecipe>> POTION_COMBINE_SERIALIZER = RECIPE_SERIALIZERS.register("potion_combine", () -> PotionCombineRecipe.SERIALIZER);
     public static final DeferredHolder<Item, FarmItem> FARM_BAMBOO_ITEM = ITEMS.register("farm_bamboo", () -> new FarmItem(FARM_BAMBOO_BLOCK.get(), DataConfig.FARM_BAMBOO));
     public static final DeferredHolder<Item, FarmItem> FARM_BEE_ITEM = ITEMS.register("farm_bee", () -> new FarmItem(FARM_BEE_BLOCK.get(), DataConfig.FARM_BEE));
     public static final DeferredHolder<Item, FarmItem> FARM_BLAZE_ITEM = ITEMS.register("farm_blaze", () -> new FarmItem(FARM_BLAZE_BLOCK.get(), DataConfig.FARM_BLAZE));
