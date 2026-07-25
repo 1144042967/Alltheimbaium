@@ -1,5 +1,6 @@
 package cn.sd.jrz.alltheimbaium.recipe;
 
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -34,7 +35,7 @@ import java.util.*;
  *   <li>持续时间：
  *     <ul>
  *       <li>效果仅在其中一瓶中存在 → 取该瓶的时间</li>
- *       <li>效果在两瓶中均存在 → (时间A + 时间B) × 0.75</li>
+ *       <li>效果在两瓶中均存在 → (时间A + 时间B) × 配置系数</li>
  *     </ul>
  *   </li>
  * </ul>
@@ -50,7 +51,19 @@ public class PotionCombineRecipe extends CustomRecipe {
     public static final RecipeSerializer<PotionCombineRecipe> SERIALIZER =
             new SimpleCraftingRecipeSerializer<>(PotionCombineRecipe::new);
 
-    /** 由 {@link #matches} 计算并缓存，供 {@link #assemble} 消费。 */
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    private static double durationFactor;
+
+    /**
+     * 由 Config.onConfigLoad() 在配置文件加载完成后调用
+     */
+    public static void loadConfig() {
+        durationFactor = Config.POTION_COMBINE_DURATION_FACTOR.get();
+    }
+
+    /**
+     * 由 {@link #matches} 计算并缓存，供 {@link #assemble} 消费。
+     */
     private ItemStack cachedResult = ItemStack.EMPTY;
 
     public PotionCombineRecipe(ResourceLocation id, CraftingBookCategory category) {
@@ -214,7 +227,7 @@ public class PotionCombineRecipe extends CustomRecipe {
      * 合并两个同类型效果。
      * <ul>
      *   <li>等级：取两者中更高者</li>
-     *   <li>持续时间：效果仅在一瓶中存在则直接取该时间；两瓶都有则 (d1 + d2) × 0.75</li>
+     *   <li>持续时间：效果仅在一瓶中存在则直接取该时间；两瓶都有则 (d1 + d2) × 配置系数</li>
      * </ul>
      */
     private static MobEffectInstance mergeEffect(MobEffectInstance a, MobEffectInstance b) {
@@ -225,8 +238,8 @@ public class PotionCombineRecipe extends CustomRecipe {
 
         int newDuration;
         if (ampA == ampB) {
-            // 同等级，两瓶都有此效果 → (d1 + d2) × 0.75
-            newDuration = (int) ((a.getDuration() + b.getDuration()) * 0.75);
+            // 同等级，两瓶都有此效果 → (d1 + d2) × 配置系数
+            newDuration = (int) ((a.getDuration() + b.getDuration()) * durationFactor);
         } else if (ampA > ampB) {
             // 等级来自 A → 取 A 的时间
             newDuration = a.getDuration();

@@ -9,6 +9,7 @@ import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.item.EternalTotemItem;
 import cn.sd.jrz.alltheimbaium.item.TotemEventHandler;
+import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -90,6 +91,9 @@ public class Config {
     // ==================== 液体无限制造机 ====================
     public static ForgeConfigSpec.LongValue LIQUID_FOUNTAIN_INFINITE_THRESHOLD;
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> LIQUID_FOUNTAIN_AUTO_INFINITE_MODS;
+
+    // ==================== 混合药水合成 ====================
+    public static ForgeConfigSpec.DoubleValue POTION_COMBINE_DURATION_FACTOR;
 
     // ==================== 存储方块制造机 ====================
     public static ForgeConfigSpec.IntValue STORAGE_FOUNTAIN_MAX_ITEM_TYPES;
@@ -209,6 +213,13 @@ public class Config {
                         o -> o instanceof String);
         builder.pop();
 
+        // ---- 混合药水合成 ----
+        builder.comment("混合药水合成设置").push("potion_combine");
+        POTION_COMBINE_DURATION_FACTOR = builder
+                .comment("两瓶药水同等级效果合并时，持续时间系数。公式: (时间A + 时间B) × 此系数")
+                .defineInRange("duration_factor", 0.75, 0.5, 1.0);
+        builder.pop();
+
         // ---- 存储方块制造机 ----
         builder.comment("存储方块制造机设置").push("storage_fountain");
         STORAGE_FOUNTAIN_MAX_ITEM_TYPES = builder
@@ -265,6 +276,7 @@ public class Config {
             LiquidFountainBlock.loadConfig();
             StorageFountainBlock.loadConfig();
             StorageFountainEntity.loadConfig();
+            PotionCombineRecipe.loadConfig();
         }
     }
 }
