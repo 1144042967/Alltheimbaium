@@ -6,7 +6,7 @@
   "screen.alltheimbaium.fountain.output": "§7产量: §a%s/tick",
   "screen.alltheimbaium.fountain.current": "§7%s, 已存储: §e%s",
   "screen.alltheimbaium.fountain.empty": "§7手持符合标签的物品右键可添加产物",
-  "screen.alltheimbaium.liquid.fountain.empty": "§c需要输入 %s mB 流体才能达到无限",
+  "screen.alltheimbaium.liquid.fountain.empty": "§c需要输入 %s mB §c流体才能达到无限",
   "screen.alltheimbaium.liquid.fountain.current": "§7%s, 已存储: §e%s/%s",
   "screen.alltheimbaium.liquid.fountain.max": "§7%s, 已存储: §b无限",
 

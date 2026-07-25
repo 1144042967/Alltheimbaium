@@ -6,7 +6,7 @@
   "screen.alltheimbaium.fountain.output": "§7Output: §a%s/tick",
   "screen.alltheimbaium.fountain.current": "§7%s, Stored: §e%s",
   "screen.alltheimbaium.fountain.empty": "§7Right-click with a tagged item to add products",
-  "screen.alltheimbaium.liquid.fountain.empty": "§cRequires %s mB of fluid to reach infinity",
+  "screen.alltheimbaium.liquid.fountain.empty": "§cRequires %s mB §cof fluid to reach infinity",
   "screen.alltheimbaium.liquid.fountain.current": "§7%s, Stored: §e%s/%s",
   "screen.alltheimbaium.liquid.fountain.max": "§7%s, Stored: §bInfinity",
 
