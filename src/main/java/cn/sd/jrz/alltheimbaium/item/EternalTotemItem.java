@@ -17,8 +17,8 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public class EternalTotemItem extends Item {
-
     public static boolean enabled;
+    public static boolean initialized;
 
     public EternalTotemItem() {
         super(new Item.Properties()
@@ -27,9 +27,18 @@ public class EternalTotemItem extends Item {
                 .fireResistant());
     }
 
+    public static void init() {
+        if (!initialized) {
+            initialized = true;
+            enabled = Config.ETERNAL_TOTEM_DEFAULT_ENABLED.get();
+        }
+    }
+
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    @Nonnull
+    public InteractionResultHolder<ItemStack> use(Level level, @Nonnull Player player, @Nonnull InteractionHand hand) {
         if (!level.isClientSide) {
+            init();
             enabled = !enabled;
             player.sendSystemMessage(Component.translatable(
                     enabled ? "chat.alltheimbaium.eternal_totem.enabled" : "chat.alltheimbaium.eternal_totem.disabled"

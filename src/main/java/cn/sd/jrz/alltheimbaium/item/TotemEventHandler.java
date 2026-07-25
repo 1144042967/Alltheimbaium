@@ -23,12 +23,13 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 @EventBusSubscriber(modid = "alltheimbaium")
 public class TotemEventHandler {
-
     private static final ResourceLocation ULTIMATE_CHEMICAL_TANK = ResourceLocation.fromNamespaceAndPath("mekanism", "ultimate_chemical_tank");
     private static final ResourceLocation CREATIVE_CHEMICAL_TANK = ResourceLocation.fromNamespaceAndPath("mekanism", "creative_chemical_tank");
 
+
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onLivingDeath(LivingDeathEvent event) {
+        EternalTotemItem.init();
         if (event.getEntity() instanceof ServerPlayer player && !event.isCanceled()) {
             if (hasEternalTotem(player) && EternalTotemItem.enabled) {
                 event.setCanceled(true);

@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.CommonEntity;
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -31,6 +32,7 @@ public class ClockBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(ClockBlock.class);
     private static final Direction[] DIRECTIONS = Direction.values();
     private final Supplier<BlockEntityType<?>> entityTypeSupplier;
+    private static boolean initialized;
     private static boolean active;
     private final int speedMultiplier;
 
@@ -49,6 +51,10 @@ public class ClockBlock extends Block implements EntityBlock {
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
         return (l, p, s, tile) -> {
             try {
+                if (!ClockBlock.initialized) {
+                    ClockBlock.initialized = true;
+                    ClockBlock.active = Config.CLOCK_DEFAULT_ACTIVE.get();
+                }
                 tick(l, tile);
             } catch (Throwable e) {
                 log.error("ClockBlock.getTicker error", e);
