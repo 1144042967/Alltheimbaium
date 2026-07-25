@@ -20,24 +20,32 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 
 public class LiquidFountainBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(LiquidFountainBlock.class);
 
     // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
     private static long infiniteThreshold;
+    private static List<? extends String> autoInfiniteMods;
 
-    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    /**
+     * 由 Config.onConfigLoad() 在配置文件加载完成后调用
+     */
     public static void loadConfig() {
         infiniteThreshold = Config.LIQUID_FOUNTAIN_INFINITE_THRESHOLD.get();
+        autoInfiniteMods = Config.LIQUID_FOUNTAIN_AUTO_INFINITE_MODS.get();
     }
 
-    public static long getMax() { return infiniteThreshold; }
+    public static long getMax() {
+        return infiniteThreshold;
+    }
 
     public LiquidFountainBlock(BlockBehaviour.Properties properties) {
         super(properties);
@@ -66,6 +74,16 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
         }
         if (!(tile instanceof LiquidFountainEntity generator)) {
             return;
+        }
+        // 检查命名空间，配置文件 auto_infinite_mods 列表中的 MOD 流体直接设为无限
+        if (generator.stack != FluidStack.EMPTY) {
+            String namespace = ForgeRegistries.FLUIDS.getKey(generator.stack.getFluid()).getNamespace();
+            for (String mod : autoInfiniteMods) {
+                if (namespace.contains(mod)) {
+                    generator.stack.setAmount(Integer.MAX_VALUE);
+                    break;
+                }
+            }
         }
         if (generator.stack == FluidStack.EMPTY || generator.stack.getAmount() < LiquidFountainBlock.getMax()) {
             if (generator.stack.getAmount() <= 0) {

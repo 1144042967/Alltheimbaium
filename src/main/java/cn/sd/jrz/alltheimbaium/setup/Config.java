@@ -89,6 +89,7 @@ public class Config {
 
     // ==================== 液体无限制造机 ====================
     public static ForgeConfigSpec.LongValue LIQUID_FOUNTAIN_INFINITE_THRESHOLD;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> LIQUID_FOUNTAIN_AUTO_INFINITE_MODS;
 
     // ==================== 存储方块制造机 ====================
     public static ForgeConfigSpec.IntValue STORAGE_FOUNTAIN_MAX_ITEM_TYPES;
@@ -201,6 +202,11 @@ public class Config {
         LIQUID_FOUNTAIN_INFINITE_THRESHOLD = builder
                 .comment("液体变为无限的数量阈值（mB）。达到此值后机器变为无限")
                 .defineInRange("infinite_threshold", 10_000_000L, 1L, Long.MAX_VALUE);
+        LIQUID_FOUNTAIN_AUTO_INFINITE_MODS = builder
+                .comment("这些 MOD 命名空间的流体在输入后直接变为无限（支持部分匹配）")
+                .defineList("auto_infinite_mods",
+                        () -> List.of("modern_industrialization", "extended_industrialization"),
+                        o -> o instanceof String);
         builder.pop();
 
         // ---- 存储方块制造机 ----

@@ -2,6 +2,7 @@ package cn.sd.jrz.alltheimbaium.connection;
 
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
+import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import org.slf4j.Logger;
@@ -59,7 +60,7 @@ public class LiquidFountainConnection implements IFluidHandler {
             if (owner.stack != FluidStack.EMPTY && !owner.stack.isFluidEqual(fluidStack)) {
                 return 0;
             }
-            int maxInput = (int) Math.min(fluidStack.getAmount(), LiquidFountainBlock.getMax() - owner.stack.getAmount());
+            int maxInput = Math.min(fluidStack.getAmount(), Tool.suitInt(LiquidFountainBlock.getMax() - owner.stack.getAmount()));
             if (fluidAction.execute()) {
                 if (owner.stack == FluidStack.EMPTY) {
                     owner.stack = new FluidStack(fluidStack.getFluid(), maxInput);
