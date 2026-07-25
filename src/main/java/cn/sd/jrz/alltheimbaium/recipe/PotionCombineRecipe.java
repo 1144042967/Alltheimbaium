@@ -1,5 +1,6 @@
 package cn.sd.jrz.alltheimbaium.recipe;
 
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
@@ -35,7 +36,7 @@ import java.util.*;
  *   <li>持续时间：
  *     <ul>
  *       <li>效果仅在其中一瓶中存在 → 取该瓶的时间</li>
- *       <li>效果在两瓶中均存在 → (时间A + 时间B) × 0.75</li>
+ *       <li>效果在两瓶中均存在 → (时间A + 时间B) × 配置系数（默认 0.75）</li>
  *     </ul>
  *   </li>
  * </ul>
@@ -221,7 +222,7 @@ public class PotionCombineRecipe extends CustomRecipe {
      * 合并两个同类型效果。
      * <ul>
      *   <li>等级：取两者中更高者</li>
-     *   <li>持续时间：效果仅在一瓶中存在则直接取该时间；两瓶都有则 (d1 + d2) × 0.75</li>
+     *   <li>持续时间：效果仅在一瓶中存在则直接取该时间；两瓶都有则 (d1 + d2) × 配置系数</li>
      * </ul>
      */
     private static MobEffectInstance mergeEffect(MobEffectInstance a, MobEffectInstance b) {
@@ -232,8 +233,8 @@ public class PotionCombineRecipe extends CustomRecipe {
 
         int newDuration;
         if (ampA == ampB) {
-            // 同等级，两瓶都有此效果 → (d1 + d2) × 0.75
-            newDuration = (int) ((a.getDuration() + b.getDuration()) * 0.75);
+            // 同等级，两瓶都有此效果 → (d1 + d2) × 配置系数
+            newDuration = (int) ((a.getDuration() + b.getDuration()) * Config.POTION_COMBINE_DURATION_FACTOR.get());
         } else if (ampA > ampB) {
             // 等级来自 A → 取 A 的时间
             newDuration = a.getDuration();

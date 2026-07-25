@@ -11,6 +11,7 @@
 - 能使流体变为无限的机器，ATI 液体无限制造机
 - 自动产生怪物资源的机器，多种 ATI 农场
 - 一键生成 3×3 区块平台的平台方块
+- 可重复使用的永恒图腾，死亡时自动触发
 - 多个对 ATM 整合包有效的简化配方
 
 ### ATI 耕地
@@ -62,6 +63,13 @@
 - 区块边界用石砖标识
 - 手持物品时不会触发
 
+### 永恒图腾
+
+- 类似不死图腾，但可重复使用
+- 死亡时自动触发，无需手持
+- 触发后给予多种强力增益效果
+- 右击可切换开关状态
+
 ### 额外配方
 
 - ATM： 添加了三种模板的合成
@@ -71,6 +79,27 @@
 - Mystical： 还原了盖亚之魂相关配方，增加了耕地回收配方，增加了生长加速器升级配方
 - Silent Gear： 增加了很多回收配方，Mek 钓鱼机产生的不可堆叠物品均可回收
 - Thermal： 添加了 Blood Magic 和 Evil Craft 血液的相互转化
+
+### 煤炭合成熔炼
+
+- 在 3×3 工作台中，外围 8 格放同一种可烧炼物品，中心放煤炭/木炭
+- 一次合成产出 8 个烧炼结果（不超过物品最大堆叠数）
+- 支持熔炉、高炉、烟熏炉中所有可烧炼的物品
+- 无需燃料消耗，直接在工作台中完成
+
+### 酿造合成
+
+- 原版药水 + 酿造材料在工作台中按酿造配方合成
+- 1 瓶原版药水 + 1 个酿造材料 = 1 瓶原版酿造结果
+
+### 混合药水合成
+
+- 任意两瓶药水（原版或混合）在工作台中合成 = 混合药水
+- 输出类型优先级：滞留 > 喷溅 > 普通
+- 混合药水 + 火药 → 喷溅混合药水
+- 混合药水 + 龙息 → 滞留混合药水
+- 混合药水 + 奶桶 → 普通混合药水
+- 效果合并：保留最高等级；只在其中一瓶中则取该瓶时间，两瓶都有则 (两者之和) × 0.75
 
 
 
@@ -86,6 +115,7 @@ Can be used independently; There are a large number of recipe contents related t
 - A machine that can turn fluids into infinity, ATI Liquid Infinity Fountain
 - A machine that automatically generates monster resources, ATI Farm
 - A platform block that generates a 3×3 chunk platform with one click
+- A reusable Eternal Totem that automatically triggers on death
 - Multiple effective simplified formulas for ATM integration packages
 
 ### ATI Farmland
@@ -137,6 +167,13 @@ Can be used independently; There are a large number of recipe contents related t
 - Chunk borders are marked with stone bricks
 - Does not trigger when holding an item
 
+### Eternal Totem
+
+- Similar to Totem of Undying, but reusable
+- Automatically triggers on death, no need to hold in hand
+- Grants multiple powerful buff effects after triggering
+- Right-click to toggle on/off state
+
 ### Additional Formulas
 
 - ATM: adds synthesis of three templates
@@ -146,3 +183,24 @@ Can be used independently; There are a large number of recipe contents related t
 - Mystical: restores the Gaia Spirit related formula, adds farmland recycling formula, and adds growth accelerator upgrade formula
 - Silent Gear: adds many recycling formulas, non-stackable items from Mek fishing machines can all be recycled
 - Thermal: adds Blood Magic and Evil Craft blood conversion to each other
+
+### Coal Smelting Craft
+
+- In a 3×3 crafting table, place 8 identical smeltable items in the outer ring and 1 coal/charcoal in the center
+- Produces 8 smelted results at once (capped at max stack size)
+- Works with all furnace, blast furnace, and smoker recipes
+- No fuel required — smelting is done directly in the crafting table
+
+### Brewing Craft
+
+- Vanilla potion + brewing ingredient in the crafting table uses vanilla brewing recipes
+- 1 vanilla potion + 1 brewing ingredient = 1 vanilla brewed result
+
+### Mixed Potion Craft
+
+- Any two potions (vanilla or mixed) in the crafting table = a mixed potion
+- Output type priority: lingering > splash > regular
+- Mixed potion + Gunpowder → splash mixed potion
+- Mixed potion + Dragon's Breath → lingering mixed potion
+- Mixed potion + Milk Bucket → regular mixed potion
+- Effect merge: highest level wins; duration from the source with the higher level; if both have it, (sum) × 0.75
