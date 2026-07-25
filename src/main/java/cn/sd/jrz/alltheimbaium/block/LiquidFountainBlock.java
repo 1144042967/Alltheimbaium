@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 
 public class LiquidFountainBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(LiquidFountainBlock.class);
@@ -35,12 +36,14 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
 
     // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
     private static int infiniteThreshold;
+    private static List<? extends String> autoInfiniteMods;
 
     /**
      * 由 Config.onConfigLoad() 在配置文件加载完成后调用
      */
     public static void loadConfig() {
         infiniteThreshold = Config.LIQUID_FOUNTAIN_INFINITE_THRESHOLD.get();
+        autoInfiniteMods = Config.LIQUID_FOUNTAIN_AUTO_INFINITE_MODS.get();
     }
 
     public static int getMax() {
@@ -75,11 +78,14 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
         if (!(tile instanceof LiquidFountainEntity generator)) {
             return;
         }
-        // 检查命名空间，MI/EI mod 的流体直接设为无限
+        // 检查命名空间，配置文件 auto_infinite_mods 列表中的 MOD 流体直接设为无限
         if (!generator.stack.isEmpty()) {
             String namespace = BuiltInRegistries.FLUID.getKey(generator.stack.getFluid()).getNamespace();
-            if (namespace.contains("modern_industrialization") || namespace.contains("extended_industrialization")) {
-                generator.stack.setAmount(Integer.MAX_VALUE);
+            for (String mod : autoInfiniteMods) {
+                if (namespace.contains(mod)) {
+                    generator.stack.setAmount(Integer.MAX_VALUE);
+                    break;
+                }
             }
         }
         if (generator.stack.isEmpty() || generator.stack.getAmount() < LiquidFountainBlock.getMax()) {
@@ -109,7 +115,7 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
     }
 
     @Override
-    public @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
+    public @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
         try {
             if (level.isClientSide) {
                 return InteractionResult.SUCCESS;
