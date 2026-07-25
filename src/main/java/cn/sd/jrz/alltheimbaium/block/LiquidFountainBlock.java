@@ -28,7 +28,16 @@ import javax.annotation.Nullable;
 
 public class LiquidFountainBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(LiquidFountainBlock.class);
-    public static long getMax() { return Config.LIQUID_FOUNTAIN_INFINITE_THRESHOLD.get(); }
+
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    private static long infiniteThreshold;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    public static void loadConfig() {
+        infiniteThreshold = Config.LIQUID_FOUNTAIN_INFINITE_THRESHOLD.get();
+    }
+
+    public static long getMax() { return infiniteThreshold; }
 
     public LiquidFountainBlock(BlockBehaviour.Properties properties) {
         super(properties);

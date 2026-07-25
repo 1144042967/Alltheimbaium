@@ -39,7 +39,26 @@ import java.util.List;
 
 public class StorageFountainBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(StorageFountainBlock.class);
-    public static long getCarry() { return Config.STORAGE_FOUNTAIN_CARRY.get(); }
+
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    static long carry;
+    static long growthIntervalSeconds;
+    static long growthStep;
+    static List<? extends String> acceptedMods;
+    static List<? extends String> acceptedTags;
+    static int maxItemTypes;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    public static void loadConfig() {
+        carry = Config.STORAGE_FOUNTAIN_CARRY.get();
+        growthIntervalSeconds = Config.STORAGE_FOUNTAIN_GROWTH_INTERVAL_SECONDS.get();
+        growthStep = Config.STORAGE_FOUNTAIN_GROWTH_STEP.get();
+        acceptedMods = Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get();
+        acceptedTags = Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get();
+        maxItemTypes = maxItemTypes;
+    }
+
+    public static long getCarry() { return carry; }
     public final Direction[] directions = Direction.values();
 
     public StorageFountainBlock(Properties properties) {
@@ -73,8 +92,8 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         BlockPos blockPos = generator.getBlockPos();
         //增加等级
         generator.tickCount++;
-        if (generator.tickCount >= 20L * Config.STORAGE_FOUNTAIN_GROWTH_INTERVAL_SECONDS.get()) {
-            generator.output += Config.STORAGE_FOUNTAIN_GROWTH_STEP.get();
+        if (generator.tickCount >= 20L * growthIntervalSeconds) {
+            generator.output += growthStep;
             generator.tickCount = 0;
         }
         //增长数值
@@ -171,12 +190,12 @@ public class StorageFountainBlock extends Block implements EntityBlock {
                 return InteractionResult.SUCCESS;
             }
             String namespace = BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
-            List<? extends String> acceptedMods = Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get();
-            boolean modContains = acceptedMods.stream().anyMatch(namespace::contains);
-            List<? extends String> acceptedTags = Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get();
+            List<? extends String> mods = StorageFountainBlock.acceptedMods;
+            boolean modContains = mods.stream().anyMatch(namespace::contains);
+            List<? extends String> tags = StorageFountainBlock.acceptedTags;
             boolean tagContains = stack.getTags().anyMatch(tag -> {
                 String path = tag.location().getPath();
-                return acceptedTags.stream().anyMatch(path::contains);
+                return tags.stream().anyMatch(path::contains);
             });
             if (modContains || tagContains) {
                 addOutputByBlock(generator, stack);
@@ -237,7 +256,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
                                     continue nextItem;
                                 }
                             }
-                            if (generator.itemList.size() < Config.STORAGE_FOUNTAIN_MAX_ITEM_TYPES.get()) {
+                            if (generator.itemList.size() < maxItemTypes) {
                                 generator.itemList.add(stack);
                                 generator.blockList.add(block * count);
                             }
@@ -258,7 +277,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
                 return;
             }
         }
-        if (generator.itemList.size() >= Config.STORAGE_FOUNTAIN_MAX_ITEM_TYPES.get()) {
+        if (generator.itemList.size() >= maxItemTypes) {
             return;
         }
         stackInHand = stackInHand.copy();

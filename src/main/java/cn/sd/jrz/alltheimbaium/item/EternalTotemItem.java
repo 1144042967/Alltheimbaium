@@ -19,7 +19,13 @@ import java.util.List;
 
 public class EternalTotemItem extends Item {
 
-    public static boolean enabled = Config.ETERNAL_TOTEM_DEFAULT_ENABLED.get();
+    // 运行时状态，初始值由 loadConfig() 从配置文件读取后设置
+    public static boolean enabled = false;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用，设置永恒图腾初始开关状态 */
+    public static void loadConfig() {
+        enabled = Config.ETERNAL_TOTEM_DEFAULT_ENABLED.get();
+    }
 
     public EternalTotemItem() {
         super(new Item.Properties()

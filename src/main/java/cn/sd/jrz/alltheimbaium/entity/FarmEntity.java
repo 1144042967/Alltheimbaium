@@ -30,10 +30,18 @@ public class FarmEntity extends BlockEntity implements ICapabilityProvider {
     public long[] outputArray;
     public long[] saveArray;
 
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    static long initialLevel;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    public static void loadConfig() {
+        initialLevel = Config.FARM_INITIAL_LEVEL.get();
+    }
+
     public FarmEntity(BlockPos pos, BlockState state, DataConfig config) {
         super(config.getType(), pos, state);
         this.config = config;
-        this.level = Config.FARM_INITIAL_LEVEL.get();
+        this.level = initialLevel;
         this.outputArray = new long[config.getProductList().size()];
         this.saveArray = new long[this.outputArray.length];
     }

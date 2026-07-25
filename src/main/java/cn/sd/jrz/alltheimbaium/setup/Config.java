@@ -1,7 +1,19 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
+import cn.sd.jrz.alltheimbaium.block.AlltheimbaiumFarmlandBlock;
+import cn.sd.jrz.alltheimbaium.block.FarmBlock;
+import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
+import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
+import cn.sd.jrz.alltheimbaium.entity.ClockEntity;
+import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
+import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
+import cn.sd.jrz.alltheimbaium.item.EternalTotemItem;
+import cn.sd.jrz.alltheimbaium.item.TotemEventHandler;
 import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 import java.util.List;
@@ -9,7 +21,11 @@ import java.util.List;
 /**
  * 配置文件。使用 ForgeConfigSpec，参考 auto-resource 项目的配置模式。
  * 配置类型为 SERVER（每世界可不同），在 Alltheimbaium 构造器中注册。
+ * <p>
+ * 监听 {@link ModConfigEvent.Loading} 事件，在 Forge 完成配置文件加载后，
+ * 将配置值统一分发到各模块的静态字段中，确保运行时无需直接调用 Config.get()。
  */
+@Mod.EventBusSubscriber(modid = "alltheimbaium", bus = Mod.EventBusSubscriber.Bus.MOD)
 public class Config {
 
     // ==================== ATI 耕地 ====================
@@ -225,5 +241,24 @@ public class Config {
      */
     public static void init(FMLJavaModLoadingContext context) {
         context.registerConfig(ModConfig.Type.SERVER, SERVER_CONFIG);
+    }
+
+    /**
+     * 配置文件加载完成后，将配置值一次性分发到各模块的静态字段中。
+     * 此后运行时逻辑读取各模块自身的本地字段，不再调用 Config.xxx.get()。
+     */
+    @SubscribeEvent
+    public static void onConfigLoad(ModConfigEvent.Loading event) {
+        if (event.getConfig().getSpec() == SERVER_CONFIG) {
+            AlltheimbaiumFarmlandBlock.loadConfig();
+            ClockEntity.loadConfig();
+            EternalTotemItem.loadConfig();
+            TotemEventHandler.loadConfig();
+            FarmBlock.loadConfig();
+            FarmEntity.loadConfig();
+            LiquidFountainBlock.loadConfig();
+            StorageFountainBlock.loadConfig();
+            StorageFountainEntity.loadConfig();
+        }
     }
 }

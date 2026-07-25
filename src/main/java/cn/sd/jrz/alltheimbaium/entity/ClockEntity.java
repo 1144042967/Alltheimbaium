@@ -17,8 +17,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.function.Supplier;
 
 public class ClockEntity extends BlockEntity {
-    private static boolean active = Config.CLOCK_DEFAULT_ACTIVE.get();
+    // 运行时状态，初始值由 loadConfig() 从配置文件读取后设置
+    private static boolean active = false;
     private final int speedMultiplier;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用，设置时钟初始开关状态 */
+    public static void loadConfig() {
+        active = Config.CLOCK_DEFAULT_ACTIVE.get();
+    }
 
     public ClockEntity(BlockPos pos, BlockState state, Supplier<BlockEntityType<?>> supplier, int speedMultiplier) {
         super(supplier.get(), pos, state);

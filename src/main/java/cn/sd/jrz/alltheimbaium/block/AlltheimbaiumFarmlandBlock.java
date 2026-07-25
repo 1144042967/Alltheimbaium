@@ -33,6 +33,19 @@ import java.util.List;
 public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.FarmBlock implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(AlltheimbaiumFarmlandBlock.class);
 
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    static int tickInterval;
+    static int growthAmount;
+    static boolean bonemealEnabled;
+    static int bonemealInterval;
+
+    public static void loadConfig() {
+        tickInterval = Config.FARMLAND_TICK_INTERVAL.get();
+        growthAmount = Config.FARMLAND_GROWTH_AMOUNT.get();
+        bonemealEnabled = Config.FARMLAND_BONEMEAL_ENABLED.get();
+        bonemealInterval = Config.FARMLAND_BONEMEAL_INTERVAL.get();
+    }
+
     public AlltheimbaiumFarmlandBlock() {
         super(Properties.copy(Blocks.FARMLAND));
     }
@@ -69,7 +82,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
             return;
         }
 
-        int interval = Config.FARMLAND_TICK_INTERVAL.get();
+        int interval = tickInterval;
         tickCounter++;
         if (tickCounter % interval != 0) {
             return;
@@ -80,7 +93,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
         Block block = state.getBlock();
 
         // 骨粉效果
-        if (Config.FARMLAND_BONEMEAL_ENABLED.get() && tickCounter % Config.FARMLAND_BONEMEAL_INTERVAL.get() == 0) {
+        if (bonemealEnabled && tickCounter % bonemealInterval == 0) {
             if (block instanceof BonemealableBlock bonemealable) {
                 bonemealable.performBonemeal((ServerLevel) level, level.random, pos, state);
             }
@@ -94,7 +107,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
             int age = crop.getAge(state);
             int maxAge = crop.getMaxAge();
             if (age < maxAge) {
-                int growthAmount = Config.FARMLAND_GROWTH_AMOUNT.get();
+                int growthAmount = AlltheimbaiumFarmlandBlock.growthAmount;
                 int newAge;
                 if (growthAmount == -1) {
                     newAge = maxAge;

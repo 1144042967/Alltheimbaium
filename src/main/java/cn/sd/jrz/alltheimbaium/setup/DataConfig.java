@@ -16,6 +16,7 @@ public class DataConfig {
 
     private final ForgeConfigSpec.ConfigValue<List<? extends String>> productsConfig;
     private final Supplier<BlockEntityType<?>> entityTypeSupplier;
+    private List<ItemProduct> cachedProducts;
 
     public DataConfig(ForgeConfigSpec.ConfigValue<List<? extends String>> productsConfig,
                       Supplier<BlockEntityType<?>> entityTypeSupplier) {
@@ -25,9 +26,12 @@ public class DataConfig {
 
     public BlockEntityType<?> getType() { return entityTypeSupplier.get(); }
 
-    /** 获取产物列表（从配置解析）。 */
+    /** 获取产物列表（带缓存，首次调用时从配置解析，后续直接返回缓存）。 */
     public List<ItemProduct> getProductList() {
-        return parseProducts(productsConfig.get());
+        if (cachedProducts == null) {
+            cachedProducts = parseProducts(productsConfig.get());
+        }
+        return cachedProducts;
     }
 
     /** 解析产物配置字符串列表，格式 "namespace:item:count" */

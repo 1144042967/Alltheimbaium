@@ -41,12 +41,23 @@ import java.util.List;
 public class FarmBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(FarmBlock.class);
 
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    static long carry;
+    static long maxLevel;
+    static int levelUpIntervalSeconds;
+
+    public static void loadConfig() {
+        carry = Config.FARM_CARRY.get();
+        maxLevel = Config.FARM_MAX_LEVEL.get();
+        levelUpIntervalSeconds = Config.FARM_LEVEL_UP_INTERVAL_SECONDS.get();
+    }
+
     public static long getCarry() {
-        return Config.FARM_CARRY.get();
+        return carry;
     }
 
     public static int getScale() {
-        return String.valueOf(Config.FARM_CARRY.get()).length() - 1;
+        return String.valueOf(carry).length() - 1;
     }
 
     private final DataConfig config;
@@ -82,10 +93,10 @@ public class FarmBlock extends Block implements EntityBlock {
             return;
         }
         //增加等级
-        long maxLevel = Config.FARM_MAX_LEVEL.get();
-        if (generator.level < maxLevel) {
+        long max = FarmBlock.maxLevel;
+        if (generator.level < max) {
             generator.tickCount++;
-            if (generator.tickCount >= 20L * Config.FARM_LEVEL_UP_INTERVAL_SECONDS.get()) {
+            if (generator.tickCount >= 20L * levelUpIntervalSeconds) {
                 generator.level++;
                 generator.tickCount = 0;
             }

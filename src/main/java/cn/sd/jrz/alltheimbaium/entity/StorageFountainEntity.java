@@ -28,13 +28,22 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
     private static final Logger log = LoggerFactory.getLogger(StorageFountainEntity.class);
     private final LazyOptional<StorageFountainConnection> fecOptional = LazyOptional.of(() -> new StorageFountainConnection(this));
     public int findIndex = 0;
-    public long output = Config.STORAGE_FOUNTAIN_INITIAL_OUTPUT.get();
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    static long initialOutput;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    public static void loadConfig() {
+        initialOutput = Config.STORAGE_FOUNTAIN_INITIAL_OUTPUT.get();
+    }
+
+    public long output;
     public List<ItemStack> itemList = new ArrayList<>();
     public List<Long> blockList = new ArrayList<>();
     public long tickCount = 0;
 
     public StorageFountainEntity(BlockPos pos, BlockState state) {
         super(Registration.STORAGE_FOUNTAIN_ENTITY.get(), pos, state);
+        this.output = initialOutput;
     }
 
     @Override
