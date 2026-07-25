@@ -6,13 +6,9 @@ import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -173,36 +169,20 @@ public class StorageFountainBlock extends Block implements EntityBlock {
             }
             ItemStack stack = player.getMainHandItem();
             if (stack.isEmpty()) {
-                if (takeItem(player, generator)) {
+                // 空手 → 随机取出一个物品；如果无法取出，只打印内容
+                if (!takeRandomItem(player, generator)) {
                     showMessage(player, generator);
-                    return InteractionResult.SUCCESS;
                 }
-                showMessage(player, generator);
-                return InteractionResult.SUCCESS;
-            }
-            if (stack.is(this.asItem())) {
-                addOutputByThis(player, generator, stack);
-                showMessage(player, generator);
-                return InteractionResult.SUCCESS;
-            }
-            if (takeItem(player, generator, stack)) {
-                showMessage(player, generator);
-                return InteractionResult.SUCCESS;
-            }
-            String namespace = BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
-            List<? extends String> mods = StorageFountainBlock.acceptedMods;
-            boolean modContains = mods.stream().anyMatch(namespace::contains);
-            List<? extends String> tags = StorageFountainBlock.acceptedTags;
-            boolean tagContains = stack.getTags().anyMatch(tag -> {
-                String path = tag.location().getPath();
-                return tags.stream().anyMatch(path::contains);
-            });
-            if (modContains || tagContains) {
+            } else if (takeSpecificItem(player, generator, stack)) {
+                // 主手物品在存储列表中 → 尝试取出；成功则不额外打印
+            } else if (isAcceptedItem(stack)) {
+                // 主手物品不在存储列表中，但在接受的 MOD/标签中 → 添加到生成列表
                 addOutputByBlock(generator, stack);
                 showMessage(player, generator);
-                return InteractionResult.SUCCESS;
+            } else {
+                // 主手物品不在存储列表中，也不在接受范围内 → 只打印内容
+                showMessage(player, generator);
             }
-            showMessage(player, generator);
             return InteractionResult.SUCCESS;
         } catch (Throwable e) {
             log.error("StorageFountainBlock.use error", e);
@@ -210,92 +190,51 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         return super.use(state, level, pos, player, handIn, hit);
     }
 
-    private boolean takeItem(Player player, StorageFountainEntity generator) {
+    /**
+     * 判断物品是否符合接受的 MOD 命名空间或标签
+     */
+    private static boolean isAcceptedItem(ItemStack stack) {
+        String namespace = BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
+        for (String mod : acceptedMods) {
+            if (namespace.contains(mod)) return true;
+        }
+        return stack.getTags().anyMatch(tag -> {
+            String path = tag.location().getPath();
+            for (String accepted : acceptedTags) {
+                if (path.contains(accepted)) return true;
+            }
+            return false;
+        });
+    }
+
+    /**
+     * 从有库存的产物中随机给予玩家一个，成功返回 true
+     */
+    private boolean takeRandomItem(Player player, StorageFountainEntity generator) {
         List<Integer> indexList = canTransport(generator);
-        int index;
         if (indexList.isEmpty()) {
             return false;
-        } else if (indexList.size() == 1) {
-            index = indexList.get(0);
-        } else {
-            index = indexList.get((int) (Math.random() * indexList.size()));
         }
+        int index = indexList.get((int) (Math.random() * indexList.size()));
         ItemStack stack = generator.itemList.get(index).copy();
-        Long count = generator.blockList.get(index);
         stack.setCount(1);
         Tool.takeItem(player, stack);
-        generator.blockList.set(index, count - StorageFountainBlock.getCarry());
+        generator.blockList.set(index, generator.blockList.get(index) - StorageFountainBlock.getCarry());
         return true;
     }
 
-    private void addOutputByThis(Player player, StorageFountainEntity generator, ItemStack stackInHand) {
-        long count = stackInHand.getCount();
-        long output = 0;
-        if (stackInHand.hasTag()) {
-            CompoundTag tag = stackInHand.getTagElement("BlockEntityTag");
-            if (tag != null) {
-                if (tag.contains("output", Tag.TAG_LONG)) {
-                    output = Tool.suit(tag.getLong("output"));
-                }
-                if (tag.contains("save_stick")) {
-                    ListTag array = (ListTag) tag.get("save_stick");
-                    if (array != null) {
-                        List<ItemStack> tempItemList = Tool.toItemList(array);
-                        List<Long> tempBlockList = Tool.toBlockList(array);
-                        nextItem:
-                        for (int i = 0; i < Math.min(tempItemList.size(), tempBlockList.size()); i++) {
-                            ItemStack stack = tempItemList.get(i);
-                            Long block = tempBlockList.get(i);
-                            if (stack == null || block == null) {
-                                continue;
-                            }
-                            stack.setCount(1);
-                            for (int index = 0; index < Math.min(generator.itemList.size(), generator.blockList.size()); i++) {
-                                if (generator.itemList.get(index).equals(stack, true)) {
-                                    generator.blockList.set(index, generator.blockList.get(index) + block * count);
-                                    continue nextItem;
-                                }
-                            }
-                            if (generator.itemList.size() < maxItemTypes) {
-                                generator.itemList.add(stack);
-                                generator.blockList.add(block * count);
-                            }
-                        }
-                        Tool.sort(generator.itemList, generator.blockList);
-                    }
-                }
-            }
-        }
-        generator.output = Tool.suit(generator.output + output * count);
-        player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-    }
-
-    private void addOutputByBlock(StorageFountainEntity generator, ItemStack stackInHand) {
-        List<ItemStack> itemList = generator.itemList;
-        for (ItemStack stack : itemList) {
-            if (stackInHand.equals(stack, true)) {
-                return;
-            }
-        }
-        if (generator.itemList.size() >= maxItemTypes) {
-            return;
-        }
-        stackInHand = stackInHand.copy();
-        stackInHand.setCount(1);
-        generator.itemList.add(stackInHand);
-        generator.blockList.add(0L);
-        Tool.sort(generator.itemList, generator.blockList);
-    }
-
-    private boolean takeItem(Player player, StorageFountainEntity generator, ItemStack stackInHand) {
-        stackInHand = stackInHand.copy();
-        stackInHand.setCount(1);
+    /**
+     * 手持指定产物时给予对应的物品，成功返回 true
+     */
+    private static boolean takeSpecificItem(Player player, StorageFountainEntity generator, ItemStack stackInHand) {
+        ItemStack single = stackInHand.copy();
+        single.setCount(1);
         List<ItemStack> stackList = generator.itemList;
         List<Long> blockList = generator.blockList;
         for (int i = 0; i < Math.min(stackList.size(), blockList.size()); i++) {
-            if (stackList.get(i).equals(stackInHand, true)) {
+            if (stackList.get(i).equals(single, true)) {
                 if (blockList.get(i) >= StorageFountainBlock.getCarry()) {
-                    Tool.takeItem(player, stackInHand);
+                    Tool.takeItem(player, stackList.get(i).copy());
                     blockList.set(i, blockList.get(i) - StorageFountainBlock.getCarry());
                     return true;
                 }
@@ -303,6 +242,26 @@ public class StorageFountainBlock extends Block implements EntityBlock {
             }
         }
         return false;
+    }
+
+    /**
+     * 将接受的物品添加到生成列表中
+     */
+    private static void addOutputByBlock(StorageFountainEntity generator, ItemStack stackInHand) {
+        // 已存在则跳过
+        for (ItemStack existing : generator.itemList) {
+            if (stackInHand.equals(existing, true)) {
+                return;
+            }
+        }
+        if (generator.itemList.size() >= maxItemTypes) {
+            return;
+        }
+        ItemStack single = stackInHand.copy();
+        single.setCount(1);
+        generator.itemList.add(single);
+        generator.blockList.add(0L);
+        Tool.sort(generator.itemList, generator.blockList);
     }
 
     private void showMessage(Player player, StorageFountainEntity generator) {

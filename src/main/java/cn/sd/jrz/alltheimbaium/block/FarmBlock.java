@@ -6,16 +6,12 @@ import cn.sd.jrz.alltheimbaium.setup.DataConfig;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -130,7 +126,10 @@ public class FarmBlock extends Block implements EntityBlock {
             if (indexList.isEmpty()) {
                 break;
             }
-            transport(generator, indexList, handler);
+            Collections.shuffle(indexList);
+            for (int index : indexList) {
+                transport(generator, index, handler);
+            }
         }
         generator.setChanged();
     }
@@ -145,17 +144,6 @@ public class FarmBlock extends Block implements EntityBlock {
             }
         }
         return indexList;
-    }
-
-    private void transport(FarmEntity generator, List<Integer> indexList, IItemHandler handler) {
-        if (indexList.size() == 1) {
-            transport(generator, indexList.get(0), handler);
-            return;
-        }
-        Collections.shuffle(indexList);
-        for (int index : indexList) {
-            transport(generator, index, handler);
-        }
     }
 
     private void transport(FarmEntity generator, int index, IItemHandler handler) {
@@ -185,22 +173,13 @@ public class FarmBlock extends Block implements EntityBlock {
                 return InteractionResult.FAIL;
             }
             ItemStack stack = player.getMainHandItem();
-            if (stack == ItemStack.EMPTY || stack.getItem() == Items.AIR) {
-                if (takeItem(player, generator)) {
-                    return InteractionResult.SUCCESS;
-                }
-                showMessage(player, generator);
-                return InteractionResult.SUCCESS;
+            if (stack.isEmpty()) {
+                // 空手右键 → 随机获得一个有库存的产物
+                takeRandomItem(player, generator);
+            } else {
+                // 手持产物右键 → 获得对应的物品
+                takeSpecificItem(player, generator, stack);
             }
-            if (stack.is(this.asItem())) {
-                addLevel(player, generator, stack);
-                showMessage(player, generator);
-                return InteractionResult.SUCCESS;
-            }
-            if (takeItem(player, generator, stack)) {
-                return InteractionResult.SUCCESS;
-            }
-            showMessage(player, generator);
             return InteractionResult.SUCCESS;
         } catch (Throwable e) {
             log.error("FarmBlock.use error", e);
@@ -208,56 +187,43 @@ public class FarmBlock extends Block implements EntityBlock {
         return super.use(state, level, pos, player, handIn, hit);
     }
 
-    private boolean takeItem(Player player, FarmEntity generator) {
-        Integer canOutputIndex = getCanOutputIndex(generator);
-        if (canOutputIndex == null) {
-            return false;
-        }
-        Tool.takeItem(player, new ItemStack(config.getProductList().get(canOutputIndex).item));
-        generator.saveArray[canOutputIndex] = Tool.suitInt(generator.saveArray[canOutputIndex] - 1);
-        return true;
-    }
-
-    private Integer getCanOutputIndex(FarmEntity generator) {
-        List<Integer> indexList = canTransport(generator);
-        if (indexList.isEmpty()) {
-            return null;
-        } else if (indexList.size() == 1) {
-            return indexList.get(0);
-        } else {
-            return indexList.get((int) (Math.random() * indexList.size()));
-        }
-    }
-
-    private void addLevel(Player player, FarmEntity generator, ItemStack stackInHand) {
-        long count = stackInHand.getCount();
-        long level = 1;
-        if (stackInHand.hasTag()) {
-            CompoundTag tag = stackInHand.getTagElement("BlockEntityTag");
-            if (tag != null) {
-                if (tag.contains("level", Tag.TAG_LONG)) {
-                    level = Tool.suit(tag.getLong("level"));
-                }
+    /**
+     * 从有库存的产物中随机给予玩家一个
+     */
+    private void takeRandomItem(Player player, FarmEntity generator) {
+        List<Integer> available = new ArrayList<>();
+        for (int i = 0; i < generator.saveArray.length; i++) {
+            if (generator.saveArray[i] >= 1) {
+                available.add(i);
             }
         }
-        generator.level = Tool.suit(generator.level + Tool.suit(count * level));
-        player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        if (available.isEmpty()) {
+            showMessage(player, generator);
+            return;
+        }
+        int index = available.get((int) (Math.random() * available.size()));
+        Tool.takeItem(player, new ItemStack(config.getProductList().get(index).item));
+        generator.saveArray[index] = Tool.suit(generator.saveArray[index] - 1);
     }
 
-    private boolean takeItem(Player player, FarmEntity generator, ItemStack stackInHand) {
+    /**
+     * 手持指定产物时给予对应的物品
+     */
+    private void takeSpecificItem(Player player, FarmEntity generator, ItemStack stackInHand) {
         for (int i = 0; i < config.getProductList().size(); i++) {
             DataConfig.ItemProduct product = config.getProductList().get(i);
             if (!stackInHand.is(product.item)) {
+                showMessage(player, generator);
                 continue;
             }
             if (generator.saveArray[i] < 1) {
-                return false;
+                showMessage(player, generator);
+                return;
             }
             Tool.takeItem(player, new ItemStack(product.item));
-            generator.saveArray[i] = Tool.suitInt(generator.saveArray[i] - 1);
-            return true;
+            generator.saveArray[i] = Tool.suit(generator.saveArray[i] - 1);
+            return;
         }
-        return false;
     }
 
     private void showMessage(Player player, FarmEntity generator) {
