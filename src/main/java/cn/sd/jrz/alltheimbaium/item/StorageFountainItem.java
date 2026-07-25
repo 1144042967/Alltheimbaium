@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.item;
 
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.network.chat.Component;
@@ -52,7 +53,11 @@ public class StorageFountainItem extends BlockItem {
                 tooltip.add(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
             }
             if (itemList.isEmpty()) {
+                String mods = String.join(", ", Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get());
+                String tags = String.join(", ", Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get());
                 tooltip.add(Component.translatable("screen.alltheimbaium.fountain.empty"));
+                tooltip.add(Component.literal("§7MOD: §e" + mods));
+                tooltip.add(Component.literal("§7Tags: §e" + tags));
             }
         } catch (Throwable e) {
             log.error("StorageFountainItem.appendHoverText error", e);
