@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -31,7 +32,20 @@ import javax.annotation.Nullable;
 public class LiquidFountainBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(LiquidFountainBlock.class);
     private static final Direction[] DIRECTIONS = Direction.values();
-    public static final Integer MAX = 10000 * 1000;
+
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    private static int infiniteThreshold;
+
+    /**
+     * 由 Config.onConfigLoad() 在配置文件加载完成后调用
+     */
+    public static void loadConfig() {
+        infiniteThreshold = Config.LIQUID_FOUNTAIN_INFINITE_THRESHOLD.get();
+    }
+
+    public static int getMax() {
+        return infiniteThreshold;
+    }
 
     public LiquidFountainBlock(BlockBehaviour.Properties properties) {
         super(properties);
@@ -68,7 +82,7 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
                 generator.stack.setAmount(Integer.MAX_VALUE);
             }
         }
-        if (generator.stack.isEmpty() || generator.stack.getAmount() < LiquidFountainBlock.MAX) {
+        if (generator.stack.isEmpty() || generator.stack.getAmount() < LiquidFountainBlock.getMax()) {
             if (!generator.stack.isEmpty() && generator.stack.getAmount() <= 0) {
                 generator.stack = FluidStack.EMPTY;
             }
@@ -134,8 +148,8 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.empty"));
             return InteractionResult.SUCCESS;
         }
-        if (stack.getAmount() < LiquidFountainBlock.MAX) {
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.current", stack.getHoverName(), stack.getAmount(), LiquidFountainBlock.MAX));
+        if (stack.getAmount() < LiquidFountainBlock.getMax()) {
+            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.current", stack.getHoverName(), stack.getAmount(), LiquidFountainBlock.getMax()));
             return InteractionResult.SUCCESS;
         }
         player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.max", stack.getHoverName()));

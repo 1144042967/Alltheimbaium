@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.CommonEntity;
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -28,9 +29,25 @@ import java.util.List;
 public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.FarmBlock implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(AlltheimbaiumFarmlandBlock.class);
 
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    static int tickInterval;
+    static int growthAmount;
+    static boolean bonemealEnabled;
+    static int bonemealInterval;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    public static void loadConfig() {
+        tickInterval = Config.FARMLAND_TICK_INTERVAL.get();
+        growthAmount = Config.FARMLAND_GROWTH_AMOUNT.get();
+        bonemealEnabled = Config.FARMLAND_BONEMEAL_ENABLED.get();
+        bonemealInterval = Config.FARMLAND_BONEMEAL_INTERVAL.get();
+    }
+
     public AlltheimbaiumFarmlandBlock() {
         super(Properties.ofFullCopy(Blocks.FARMLAND));
     }
+
+    private int tickCounter;
 
     @Override
     public boolean canSurvive(@Nonnull BlockState state, @Nonnull LevelReader reader, @Nonnull BlockPos pos) {
@@ -62,12 +79,24 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
         if (level.isClientSide) {
             return;
         }
+
+        tickCounter++;
+        if (tickCounter % tickInterval != 0) {
+            return;
+        }
+
         BlockPos pos = tile.getBlockPos().above();
         BlockState state = level.getBlockState(pos);
         Block block = state.getBlock();
-        if (block instanceof BonemealableBlock bonemealable) {
-            bonemealable.performBonemeal((ServerLevel) level, level.random, pos, state);
+
+        // 骨粉效果
+        if (bonemealEnabled && tickCounter % bonemealInterval == 0) {
+            if (block instanceof BonemealableBlock bonemealable) {
+                bonemealable.performBonemeal((ServerLevel) level, level.random, pos, state);
+            }
         }
+
+        // 作物生长
         if (!state.hasProperty(CropBlock.AGE)) {
             return;
         }
@@ -75,7 +104,13 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
             int age = crop.getAge(state);
             int maxAge = crop.getMaxAge();
             if (age < maxAge) {
-                state = state.setValue(CropBlock.AGE, maxAge);
+                int newAge;
+                if (growthAmount == -1) {
+                    newAge = maxAge;
+                } else {
+                    newAge = Math.min(age + growthAmount, maxAge);
+                }
+                state = state.setValue(CropBlock.AGE, newAge);
                 level.setBlock(pos, state, 2);
             }
         }

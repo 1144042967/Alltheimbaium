@@ -17,8 +17,8 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public class EternalTotemItem extends Item {
+    // 运行时状态，初始值由 loadConfig() 从配置文件读取
     public static boolean enabled;
-    public static boolean initialized;
 
     public EternalTotemItem() {
         super(new Item.Properties()
@@ -27,18 +27,17 @@ public class EternalTotemItem extends Item {
                 .fireResistant());
     }
 
-    public static void init() {
-        if (!initialized) {
-            initialized = true;
-            enabled = Config.ETERNAL_TOTEM_DEFAULT_ENABLED.get();
-        }
+    /**
+     * 由 Config.onConfigLoad() 在配置文件加载完成后调用
+     */
+    public static void loadConfig() {
+        enabled = Config.ETERNAL_TOTEM_DEFAULT_ENABLED.get();
     }
 
     @Override
     @Nonnull
     public InteractionResultHolder<ItemStack> use(Level level, @Nonnull Player player, @Nonnull InteractionHand hand) {
         if (!level.isClientSide) {
-            init();
             enabled = !enabled;
             player.sendSystemMessage(Component.translatable(
                     enabled ? "chat.alltheimbaium.eternal_totem.enabled" : "chat.alltheimbaium.eternal_totem.disabled"

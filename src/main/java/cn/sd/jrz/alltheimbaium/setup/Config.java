@@ -1,7 +1,17 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
+import cn.sd.jrz.alltheimbaium.block.*;
+import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
+import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
+import cn.sd.jrz.alltheimbaium.item.EternalTotemItem;
+import cn.sd.jrz.alltheimbaium.item.StorageFountainItem;
+import cn.sd.jrz.alltheimbaium.item.TotemEventHandler;
+import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.List;
@@ -9,7 +19,12 @@ import java.util.List;
 /**
  * 配置文件。使用 NeoForge ModConfigSpec。
  * 配置类型为 SERVER（每世界可不同），在 Alltheimbaium 构造器中注册。
+ * <p>
+ * 监听 {@link ModConfigEvent.Loading} 事件，在 NeoForge 完成配置文件加载后，
+ * 将配置值统一分发到各模块的静态字段中，确保运行时无需直接调用 Config.get()。
  */
+@SuppressWarnings("removal")
+@EventBusSubscriber(modid = "alltheimbaium", bus = EventBusSubscriber.Bus.MOD)
 public class Config {
 
     // ==================== ATI 耕地 ====================
@@ -71,7 +86,7 @@ public class Config {
     public static ModConfigSpec.ConfigValue<List<? extends String>> FARM_ZOMBIFIED_PIGLIN_PRODUCTS;
 
     // ==================== 液体无限制造机 ====================
-    public static ModConfigSpec.LongValue LIQUID_FOUNTAIN_INFINITE_THRESHOLD;
+    public static ModConfigSpec.IntValue LIQUID_FOUNTAIN_INFINITE_THRESHOLD;
 
     // ==================== 混合药水合成 ====================
     public static ModConfigSpec.DoubleValue POTION_COMBINE_DURATION_FACTOR;
@@ -156,7 +171,7 @@ public class Config {
         builder.pop();
 
         builder.comment("液体无限制造机设置").push("liquid_fountain");
-        LIQUID_FOUNTAIN_INFINITE_THRESHOLD = builder.comment("液体变为无限的数量阈值（mB）").defineInRange("infinite_threshold", 10_000_000L, 1L, Long.MAX_VALUE);
+        LIQUID_FOUNTAIN_INFINITE_THRESHOLD = builder.comment("液体变为无限的数量阈值（mB）").defineInRange("infinite_threshold", 10_000_000, 1, Integer.MAX_VALUE);
         builder.pop();
 
         builder.comment("混合药水合成设置").push("potion_combine");
@@ -178,5 +193,26 @@ public class Config {
 
     public static void init(ModContainer container) {
         container.registerConfig(ModConfig.Type.SERVER, SERVER_CONFIG);
+    }
+
+    /**
+     * 配置文件加载完成后，将配置值一次性分发到各模块的静态字段中。
+     * 此后运行时逻辑读取各模块自身的本地字段，不再调用 Config.xxx.get()。
+     */
+    @SubscribeEvent
+    public static void onConfigLoad(ModConfigEvent.Loading event) {
+        if (event.getConfig().getSpec() == SERVER_CONFIG) {
+            AlltheimbaiumFarmlandBlock.loadConfig();
+            ClockBlock.loadConfig();
+            EternalTotemItem.loadConfig();
+            TotemEventHandler.loadConfig();
+            FarmBlock.loadConfig();
+            FarmEntity.loadConfig();
+            LiquidFountainBlock.loadConfig();
+            StorageFountainBlock.loadConfig();
+            StorageFountainEntity.loadConfig();
+            StorageFountainItem.loadConfig();
+            PotionCombineRecipe.loadConfig();
+        }
     }
 }

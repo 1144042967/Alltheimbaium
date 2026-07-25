@@ -32,9 +32,14 @@ public class ClockBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(ClockBlock.class);
     private static final Direction[] DIRECTIONS = Direction.values();
     private final Supplier<BlockEntityType<?>> entityTypeSupplier;
-    private static boolean initialized;
+    // 运行时状态，初始值由 loadConfig() 从配置文件读取
     private static boolean active;
     private final int speedMultiplier;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    public static void loadConfig() {
+        active = Config.CLOCK_DEFAULT_ACTIVE.get();
+    }
 
     public ClockBlock(Properties properties, Supplier<BlockEntityType<?>> entityTypeSupplier, int speedMultiplier) {
         super(properties);
@@ -51,10 +56,6 @@ public class ClockBlock extends Block implements EntityBlock {
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
         return (l, p, s, tile) -> {
             try {
-                if (!ClockBlock.initialized) {
-                    ClockBlock.initialized = true;
-                    ClockBlock.active = Config.CLOCK_DEFAULT_ACTIVE.get();
-                }
                 tick(l, tile);
             } catch (Throwable e) {
                 log.error("ClockBlock.getTicker error", e);

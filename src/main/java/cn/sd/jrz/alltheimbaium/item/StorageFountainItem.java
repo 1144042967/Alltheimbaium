@@ -22,6 +22,16 @@ import java.util.List;
 public class StorageFountainItem extends BlockItem {
     private static final Logger log = LoggerFactory.getLogger(StorageFountainItem.class);
 
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    static List<? extends String> acceptedMods;
+    static List<? extends String> acceptedTags;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    public static void loadConfig() {
+        acceptedMods = Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get();
+        acceptedTags = Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get();
+    }
+
     public StorageFountainItem(Block block) {
         super(block, new Properties().fireResistant());
     }
@@ -43,18 +53,18 @@ public class StorageFountainItem extends BlockItem {
                     blockList = Tool.fromBlockString(dataArray[2]);
                 }
             }
-            String outputPerTick = String.format("%.4f", (double) output / StorageFountainBlock.CARRY);
+            String outputPerTick = String.format("%.4f", (double) output / StorageFountainBlock.getCarry());
             tooltip.add(Component.translatable("screen.alltheimbaium.fountain.output", outputPerTick));
             for (int i = 0; i < Math.min(itemList.size(), blockList.size()); i++) {
                 ItemStack itemStack = itemList.get(i);
                 Long block = blockList.get(i);
                 String name = itemStack.getItem().getDescription().getString();
-                String save = String.format("%.4f", (double) block / StorageFountainBlock.CARRY);
+                String save = String.format("%.4f", (double) block / StorageFountainBlock.getCarry());
                 tooltip.add(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
             }
             if (itemList.isEmpty()) {
-                String mods = String.join(", ", Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get());
-                String tags = String.join(", ", Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get());
+                String mods = String.join(", ", acceptedMods);
+                String tags = String.join(", ", acceptedTags);
                 tooltip.add(Component.translatable("screen.alltheimbaium.fountain.empty"));
                 tooltip.add(Component.literal("§7MOD: §e" + mods));
                 tooltip.add(Component.literal("§7Tags: §e" + tags));

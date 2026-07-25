@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.DataConfig;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
@@ -35,7 +36,21 @@ import java.util.List;
 
 public class FarmBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(FarmBlock.class);
-    public static final long CARRY = 10000;
+
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    static long carry;
+    static long maxLevel;
+    static int levelUpIntervalSeconds;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    public static void loadConfig() {
+        carry = Config.FARM_CARRY.get();
+        maxLevel = Config.FARM_MAX_LEVEL.get();
+        levelUpIntervalSeconds = Config.FARM_LEVEL_UP_INTERVAL_SECONDS.get();
+    }
+
+    public static long getCarry() { return carry; }
+
     private final DataConfig config;
     public final Direction[] directions = Direction.values();
 
@@ -69,19 +84,23 @@ public class FarmBlock extends Block implements EntityBlock {
             return;
         }
         //增加等级
-        generator.tickCount++;
-        if (generator.tickCount >= 20 * 20) {
-            generator.level++;
-            generator.tickCount = 0;
+        long max = FarmBlock.maxLevel;
+        if (generator.level < max) {
+            generator.tickCount++;
+            if (generator.tickCount >= 20L * levelUpIntervalSeconds) {
+                generator.level++;
+                generator.tickCount = 0;
+            }
         }
         //计算产量
         List<DataConfig.ItemProduct> productList = config.getProductList();
         for (int i = 0; i < productList.size(); i++) {
             DataConfig.ItemProduct product = productList.get(i);
             generator.outputArray[i] = Tool.suit(generator.outputArray[i] + Tool.suit(product.count * generator.level));
-            if (generator.outputArray[i] > CARRY) {
-                generator.saveArray[i] = Tool.suit(generator.saveArray[i] + generator.outputArray[i] / CARRY);
-                generator.outputArray[i] = generator.outputArray[i] % CARRY;
+            long carry = FarmBlock.carry;
+            if (generator.outputArray[i] > carry) {
+                generator.saveArray[i] = Tool.suit(generator.saveArray[i] + generator.outputArray[i] / carry);
+                generator.outputArray[i] = generator.outputArray[i] % carry;
             }
         }
         //传输
@@ -231,7 +250,7 @@ public class FarmBlock extends Block implements EntityBlock {
             Item item = product.item;
             String name = item.getDescription().getString();
             long current = generator.saveArray[i];
-            String output = String.format("%.4f", (double) (level * product.count) / FarmBlock.CARRY);
+            String output = String.format("%.4f", (double) (level * product.count) / FarmBlock.getCarry());
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.farm.product", name, current, output));
         }
     }

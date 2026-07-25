@@ -26,10 +26,17 @@ public class TotemEventHandler {
     private static final ResourceLocation ULTIMATE_CHEMICAL_TANK = ResourceLocation.fromNamespaceAndPath("mekanism", "ultimate_chemical_tank");
     private static final ResourceLocation CREATIVE_CHEMICAL_TANK = ResourceLocation.fromNamespaceAndPath("mekanism", "creative_chemical_tank");
 
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    private static boolean tankConversion;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    public static void loadConfig() {
+        tankConversion = Config.ETERNAL_TOTEM_TANK_CONVERSION.get();
+    }
+
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onLivingDeath(LivingDeathEvent event) {
-        EternalTotemItem.init();
         if (event.getEntity() instanceof ServerPlayer player && !event.isCanceled()) {
             if (hasEternalTotem(player) && EternalTotemItem.enabled) {
                 event.setCanceled(true);
@@ -40,7 +47,7 @@ public class TotemEventHandler {
 
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        if (!Config.ETERNAL_TOTEM_TANK_CONVERSION.get()) {
+        if (!tankConversion) {
             return;
         }
         if (event.getHand() != InteractionHand.MAIN_HAND) {

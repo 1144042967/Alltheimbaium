@@ -33,7 +33,26 @@ import java.util.List;
 
 public class StorageFountainBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(StorageFountainBlock.class);
-    public static final long CARRY = 1000;
+
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    static long carry;
+    static long growthIntervalSeconds;
+    static long growthStep;
+    static List<? extends String> acceptedMods;
+    static List<? extends String> acceptedTags;
+    static int maxItemTypes;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    public static void loadConfig() {
+        carry = Config.STORAGE_FOUNTAIN_CARRY.get();
+        growthIntervalSeconds = Config.STORAGE_FOUNTAIN_GROWTH_INTERVAL_SECONDS.get();
+        growthStep = Config.STORAGE_FOUNTAIN_GROWTH_STEP.get();
+        acceptedMods = Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get();
+        acceptedTags = Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get();
+        maxItemTypes = Config.STORAGE_FOUNTAIN_MAX_ITEM_TYPES.get();
+    }
+
+    public static long getCarry() { return carry; }
     public final Direction[] directions = Direction.values();
 
     public StorageFountainBlock(Properties properties) {
@@ -67,8 +86,8 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         BlockPos blockPos = generator.getBlockPos();
         //增加等级
         generator.tickCount++;
-        if (generator.tickCount >= 20 * 20) {
-            generator.output += 5;
+        if (generator.tickCount >= 20L * growthIntervalSeconds) {
+            generator.output += growthStep;
             generator.tickCount = 0;
         }
         //增长数值
@@ -103,7 +122,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         List<Integer> indexList = new ArrayList<>();
         for (int i = 0; i < blockList.size(); i++) {
             Long count = blockList.get(i);
-            if (count < StorageFountainBlock.CARRY) {
+            if (count < StorageFountainBlock.getCarry()) {
                 continue;
             }
             indexList.add(i);
@@ -120,7 +139,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     private void transport(StorageFountainEntity generator, int index, IItemHandler handler) {
         ItemStack stack = generator.itemList.get(index).copy();
         Long block = generator.blockList.get(index);
-        long maxOutputCount = block / StorageFountainBlock.CARRY;
+        long maxOutputCount = block / StorageFountainBlock.getCarry();
         stack.setCount(Tool.suitInt(maxOutputCount));
         ItemStack result = ItemHandlerHelper.insertItemStacked(handler, stack, false);
         int count = result.getCount();
@@ -130,7 +149,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         if (count > Tool.suitInt(maxOutputCount)) {
             count = Tool.suitInt(maxOutputCount);
         }
-        generator.blockList.set(index, block - (maxOutputCount - count) * StorageFountainBlock.CARRY);
+        generator.blockList.set(index, block - (maxOutputCount - count) * StorageFountainBlock.getCarry());
     }
 
     @Override
@@ -193,12 +212,12 @@ public class StorageFountainBlock extends Block implements EntityBlock {
      */
     private static boolean isAcceptedItem(ItemStack stack) {
         String namespace = BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
-        for (String mod : Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get()) {
+        for (String mod : acceptedMods) {
             if (namespace.contains(mod)) return true;
         }
         return stack.getTags().anyMatch(tag -> {
             String path = tag.location().getPath();
-            for (String accepted : Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get()) {
+            for (String accepted : acceptedTags) {
                 if (path.contains(accepted)) return true;
             }
             return false;
@@ -217,7 +236,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         ItemStack stack = generator.itemList.get(index).copy();
         stack.setCount(1);
         Tool.takeItem(player, stack);
-        generator.blockList.set(index, generator.blockList.get(index) - StorageFountainBlock.CARRY);
+        generator.blockList.set(index, generator.blockList.get(index) - StorageFountainBlock.getCarry());
         return true;
     }
 
@@ -231,9 +250,9 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         List<Long> blockList = generator.blockList;
         for (int i = 0; i < Math.min(stackList.size(), blockList.size()); i++) {
             if (ItemStack.isSameItemSameComponents(single, stackList.get(i))) {
-                if (blockList.get(i) >= StorageFountainBlock.CARRY) {
+                if (blockList.get(i) >= StorageFountainBlock.getCarry()) {
                     Tool.takeItem(player, stackList.get(i).copyWithCount(1));
-                    blockList.set(i, blockList.get(i) - StorageFountainBlock.CARRY);
+                    blockList.set(i, blockList.get(i) - StorageFountainBlock.getCarry());
                     return true;
                 }
                 return false;
@@ -252,7 +271,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
                 return;
             }
         }
-        if (generator.itemList.size() >= 9) {
+        if (generator.itemList.size() >= maxItemTypes) {
             return;
         }
         ItemStack single = stackInHand.copy();
@@ -267,13 +286,13 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         long tickCount = generator.tickCount;
         List<ItemStack> stackList = generator.itemList;
         List<Long> blockList = generator.blockList;
-        String outputPerTick = String.format("%.4f", (double) output / StorageFountainBlock.CARRY);
+        String outputPerTick = String.format("%.4f", (double) output / StorageFountainBlock.getCarry());
         player.sendSystemMessage(Component.translatable("screen.alltheimbaium.fountain.description", outputPerTick, 100D * tickCount / 20 / 20));
         for (int i = 0; i < Math.min(stackList.size(), blockList.size()); i++) {
             ItemStack item = stackList.get(i);
             Long block = blockList.get(i);
             String name = item.getItem().getDescription().getString();
-            String save = String.format("%.4f", (double) block / StorageFountainBlock.CARRY);
+            String save = String.format("%.4f", (double) block / StorageFountainBlock.getCarry());
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
         }
         if (stackList.isEmpty()) {

@@ -51,7 +51,7 @@ public class FarmItem extends BlockItem {
                 Item item = product.item;
                 String name = item.getDescription().getString();
                 long current = saveArray[i];
-                String output = String.format("%.4f", (double) (level * product.count) / FarmBlock.CARRY);
+                String output = String.format("%.4f", (double) (level * product.count) / FarmBlock.getCarry());
                 tooltip.add(Component.translatable("screen.alltheimbaium.farm.product", name, current, output));
             }
         } catch (Throwable e) {

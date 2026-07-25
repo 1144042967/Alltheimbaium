@@ -30,7 +30,7 @@ public class StorageFountainConnection implements net.neoforged.neoforge.items.I
             return ItemStack.EMPTY;
         }
         stack = stack.copy();
-        stack.setCount(Tool.suitInt(count / StorageFountainBlock.CARRY));
+        stack.setCount(Tool.suitInt(count / StorageFountainBlock.getCarry()));
         return stack;
     }
 
@@ -46,13 +46,13 @@ public class StorageFountainConnection implements net.neoforged.neoforge.items.I
         }
         ItemStack stack = owner.itemList.get(slot);
         Long block = owner.blockList.get(slot);
-        int maxAmount = Tool.suitInt(block / StorageFountainBlock.CARRY);
+        int maxAmount = Tool.suitInt(block / StorageFountainBlock.getCarry());
         if (maxAmount <= 0) {
             return ItemStack.EMPTY;
         }
         int ret = Math.min(maxAmount, amount);
         if (!simulate) {
-            owner.blockList.set(slot, block - ret * StorageFountainBlock.CARRY);
+            owner.blockList.set(slot, block - ret * StorageFountainBlock.getCarry());
             owner.setChanged();
         }
         stack = stack.copy();
