@@ -173,27 +173,53 @@ public class FarmBlock extends Block implements EntityBlock {
             return InteractionResult.FAIL;
         }
         ItemStack stack = player.getMainHandItem();
-        if (takeItem(player, generator, stack)) {
-            return InteractionResult.SUCCESS;
+        if (stack.isEmpty()) {
+            // 空手右键 → 随机获得一个有库存的产物
+            takeRandomItem(player, generator);
+        } else {
+            // 手持产物右键 → 获得对应的那个物品
+            takeSpecificItem(player, generator, stack);
         }
-        showMessage(player, generator);
         return InteractionResult.SUCCESS;
     }
 
-    private boolean takeItem(Player player, FarmEntity generator, ItemStack stackInHand) {
+    /**
+     * 从有库存的产物中随机给予玩家一个
+     */
+    private void takeRandomItem(Player player, FarmEntity generator) {
+        List<Integer> available = new ArrayList<>();
+        for (int i = 0; i < generator.saveArray.length; i++) {
+            if (generator.saveArray[i] >= 1) {
+                available.add(i);
+            }
+        }
+        if (available.isEmpty()) {
+            showMessage(player, generator);
+            return;
+        }
+        int index = available.get((int) (Math.random() * available.size()));
+        Tool.takeItem(player, new ItemStack(config.getProductList().get(index).item));
+        generator.saveArray[index] = Tool.suit(generator.saveArray[index] - 1);
+    }
+
+    /**
+     * 手持指定产物时给予对应的物品
+     */
+    private void takeSpecificItem(Player player, FarmEntity generator, ItemStack stackInHand) {
         for (int i = 0; i < config.getProductList().size(); i++) {
             DataConfig.ItemProduct product = config.getProductList().get(i);
             if (!stackInHand.is(product.item)) {
+                showMessage(player, generator);
                 continue;
             }
             if (generator.saveArray[i] < 1) {
-                return false;
+                showMessage(player, generator);
+                return;
             }
             Tool.takeItem(player, new ItemStack(product.item));
-            generator.saveArray[i] = Tool.suitInt(generator.saveArray[i] - 1);
-            return true;
+            generator.saveArray[i] = Tool.suit(generator.saveArray[i] - 1);
+            return;
         }
-        return false;
     }
 
     private void showMessage(Player player, FarmEntity generator) {
@@ -205,7 +231,7 @@ public class FarmBlock extends Block implements EntityBlock {
             Item item = product.item;
             String name = item.getDescription().getString();
             long current = generator.saveArray[i];
-            String output = String.format("%.3f", (double) (level * product.count) / FarmBlock.CARRY);
+            String output = String.format("%.4f", (double) (level * product.count) / FarmBlock.CARRY);
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.farm.product", name, current, output));
         }
     }

@@ -42,13 +42,13 @@ public class StorageFountainItem extends BlockItem {
                     blockList = Tool.fromBlockString(dataArray[2]);
                 }
             }
-            String outputPerTick = String.format("%.3f", (double) output / StorageFountainBlock.CARRY);
+            String outputPerTick = String.format("%.4f", (double) output / StorageFountainBlock.CARRY);
             tooltip.add(Component.translatable("screen.alltheimbaium.fountain.output", outputPerTick));
             for (int i = 0; i < Math.min(itemList.size(), blockList.size()); i++) {
                 ItemStack itemStack = itemList.get(i);
                 Long block = blockList.get(i);
                 String name = itemStack.getItem().getDescription().getString();
-                String save = String.format("%.3f", (double) block / StorageFountainBlock.CARRY);
+                String save = String.format("%.4f", (double) block / StorageFountainBlock.CARRY);
                 tooltip.add(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
             }
             if (itemList.isEmpty()) {
