@@ -51,7 +51,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         growthStep = Config.STORAGE_FOUNTAIN_GROWTH_STEP.get();
         acceptedMods = Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get();
         acceptedTags = Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get();
-        maxItemTypes = maxItemTypes;
+        maxItemTypes = Config.STORAGE_FOUNTAIN_MAX_ITEM_TYPES.get();
     }
 
     public static long getCarry() { return carry; }

@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.item;
 
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
+import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -25,6 +26,16 @@ import java.util.List;
 
 public class StorageFountainItem extends BlockItem {
     private static final Logger log = LoggerFactory.getLogger(StorageFountainItem.class);
+
+    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
+    static List<? extends String> acceptedMods;
+    static List<? extends String> acceptedTags;
+
+    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    public static void loadConfig() {
+        acceptedMods = Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get();
+        acceptedTags = Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get();
+    }
 
     public StorageFountainItem(Block block) {
         super(block, new Properties().fireResistant());
@@ -63,7 +74,11 @@ public class StorageFountainItem extends BlockItem {
                 tooltip.add(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
             }
             if (stackList.isEmpty()) {
+                String mods = String.join(", ", acceptedMods);
+                String tags = String.join(", ", acceptedTags);
                 tooltip.add(Component.translatable("screen.alltheimbaium.fountain.empty"));
+                tooltip.add(Component.literal("§7MOD: §e" + mods));
+                tooltip.add(Component.literal("§7Tags: §e" + tags));
             }
         } catch (Throwable e) {
             log.error("StorageFountainItem.appendHoverText error", e);

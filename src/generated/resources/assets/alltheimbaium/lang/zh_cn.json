@@ -5,8 +5,8 @@
   "screen.alltheimbaium.fountain.description": "§7产量: §a%s/tick, 增长: §e%s%%",
   "screen.alltheimbaium.fountain.output": "§7产量: §a%s/tick",
   "screen.alltheimbaium.fountain.current": "§7%s, 已存储: §e%s",
-  "screen.alltheimbaium.fountain.empty": "§7接受MOD：modern_industrialization、extended_industrialization\n§7接受标签：storage_blocks、ores、ingots、dusts、gems、alloys、plates、enriched、circuits、pellets",
-  "screen.alltheimbaium.liquid.fountain.empty": "§c请输入一些流体",
+  "screen.alltheimbaium.fountain.empty": "§7手持符合标签的物品右键可添加产物",
+  "screen.alltheimbaium.liquid.fountain.empty": "§c需要输入 %s mB §c流体才能达到无限",
   "screen.alltheimbaium.liquid.fountain.current": "§7%s, 已存储: §e%s/%s",
   "screen.alltheimbaium.liquid.fountain.max": "§7%s, 已存储: §b无限",
 

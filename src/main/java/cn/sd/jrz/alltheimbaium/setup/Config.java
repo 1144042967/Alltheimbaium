@@ -8,6 +8,7 @@ import cn.sd.jrz.alltheimbaium.entity.ClockEntity;
 import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.item.EternalTotemItem;
+import cn.sd.jrz.alltheimbaium.item.StorageFountainItem;
 import cn.sd.jrz.alltheimbaium.item.TotemEventHandler;
 import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -275,7 +276,9 @@ public class Config {
             FarmEntity.loadConfig();
             LiquidFountainBlock.loadConfig();
             StorageFountainBlock.loadConfig();
+            StorageFountainBlock.loadConfig();
             StorageFountainEntity.loadConfig();
+            StorageFountainItem.loadConfig();
             PotionCombineRecipe.loadConfig();
         }
     }

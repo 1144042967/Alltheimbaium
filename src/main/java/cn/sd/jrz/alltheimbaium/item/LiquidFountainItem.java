@@ -58,7 +58,7 @@ public class LiquidFountainItem extends BlockItem {
                 }
             }
             if (fluidStack == FluidStack.EMPTY) {
-                tooltip.add(Component.translatable("screen.alltheimbaium.liquid.fountain.empty"));
+                tooltip.add(Component.translatable("screen.alltheimbaium.liquid.fountain.empty", String.format("%,d", LiquidFountainBlock.getMax())));
                 return;
             }
             if (fluidStack.getAmount() < LiquidFountainBlock.getMax()) {

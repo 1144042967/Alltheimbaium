@@ -5,8 +5,8 @@
   "screen.alltheimbaium.fountain.description": "§7Output: §a%s/tick, Growth: §e%s%%",
   "screen.alltheimbaium.fountain.output": "§7Output: §a%s/tick",
   "screen.alltheimbaium.fountain.current": "§7%s, Stored: §e%s",
-  "screen.alltheimbaium.fountain.empty": "§7Accepts MODs: modern_industrialization, extended_industrialization\n§7Accepts Tags: storage_blocks, ores, ingots, dusts, gems, alloys, plates, enriched, circuits, pellets",
-  "screen.alltheimbaium.liquid.fountain.empty": "§cPlease input some liquid",
+  "screen.alltheimbaium.fountain.empty": "§7Right-click with a tagged item to add products",
+  "screen.alltheimbaium.liquid.fountain.empty": "§cRequires %s mB §cof fluid to reach infinity",
   "screen.alltheimbaium.liquid.fountain.current": "§7%s, Stored: §e%s/%s",
   "screen.alltheimbaium.liquid.fountain.max": "§7%s, Stored: §bInfinity",
 
