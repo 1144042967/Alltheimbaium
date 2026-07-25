@@ -9,16 +9,12 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public class Tool {
-    private static final Logger log = LoggerFactory.getLogger(Tool.class);
-
     public static long suit(long value) {
         return value < 0 ? Long.MAX_VALUE : value;
     }

@@ -29,8 +29,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -38,7 +36,6 @@ import java.util.List;
 public class FarmBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(FarmBlock.class);
     public static final long CARRY = 10000;
-    public static final int SCALE = String.valueOf(CARRY).length() - 1;
     private final DataConfig config;
     public final Direction[] directions = Direction.values();
 
@@ -105,7 +102,10 @@ public class FarmBlock extends Block implements EntityBlock {
             if (indexList.isEmpty()) {
                 break;
             }
-            transport(generator, indexList, handler);
+            Collections.shuffle(indexList);
+            for (int index : indexList) {
+                transport(generator, index, handler);
+            }
         }
         generator.setChanged();
     }
@@ -120,17 +120,6 @@ public class FarmBlock extends Block implements EntityBlock {
             }
         }
         return indexList;
-    }
-
-    private void transport(FarmEntity generator, List<Integer> indexList, IItemHandler handler) {
-        if (indexList.size() == 1) {
-            transport(generator, indexList.getFirst(), handler);
-            return;
-        }
-        Collections.shuffle(indexList);
-        for (int index : indexList) {
-            transport(generator, index, handler);
-        }
     }
 
     private void transport(FarmEntity generator, int index, IItemHandler handler) {
@@ -214,9 +203,9 @@ public class FarmBlock extends Block implements EntityBlock {
         for (int i = 0; i < productList.size(); i++) {
             DataConfig.ItemProduct product = productList.get(i);
             Item item = product.item;
-            String name = item.getName(new ItemStack(item)).getString();
+            String name = item.getDescription().getString();
             long current = generator.saveArray[i];
-            BigDecimal output = new BigDecimal(level * product.count).divide(new BigDecimal(FarmBlock.CARRY), SCALE, RoundingMode.HALF_UP);
+            String output = String.format("%.3f", (double) (level * product.count) / FarmBlock.CARRY);
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.farm.product", name, current, output));
         }
     }

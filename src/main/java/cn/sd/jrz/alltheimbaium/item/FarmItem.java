@@ -1,7 +1,6 @@
 package cn.sd.jrz.alltheimbaium.item;
 
 import cn.sd.jrz.alltheimbaium.block.FarmBlock;
-import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
 import cn.sd.jrz.alltheimbaium.setup.DataConfig;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
@@ -17,8 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 
 public class FarmItem extends BlockItem {
@@ -52,9 +49,9 @@ public class FarmItem extends BlockItem {
             for (int i = 0; i < config.getProductList().size(); i++) {
                 DataConfig.ItemProduct product = config.getProductList().get(i);
                 Item item = product.item;
-                String name = item.getName(new ItemStack(item)).getString();
+                String name = item.getDescription().getString();
                 long current = saveArray[i];
-                BigDecimal output = new BigDecimal(level * product.count).divide(new BigDecimal(FarmBlock.CARRY), FarmBlock.SCALE, RoundingMode.HALF_UP);
+                String output = String.format("%.3f", (double) (level * product.count) / FarmBlock.CARRY);
                 tooltip.add(Component.translatable("screen.alltheimbaium.farm.product", name, current, output));
             }
         } catch (Throwable e) {

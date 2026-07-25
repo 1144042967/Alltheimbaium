@@ -41,7 +41,7 @@ public class LiquidFountainItem extends BlockItem {
                 }
 
             }
-            if (fluidStack == FluidStack.EMPTY) {
+            if (fluidStack.isEmpty()) {
                 tooltip.add(Component.translatable("screen.alltheimbaium.liquid.fountain.empty"));
                 return;
             }

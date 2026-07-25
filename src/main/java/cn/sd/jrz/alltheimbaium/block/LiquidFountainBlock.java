@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 
 public class LiquidFountainBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(LiquidFountainBlock.class);
+    private static final Direction[] DIRECTIONS = Direction.values();
     public static final Integer MAX = 10000 * 1000;
 
     public LiquidFountainBlock(BlockBehaviour.Properties properties) {
@@ -60,22 +61,25 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
         if (!(tile instanceof LiquidFountainEntity generator)) {
             return;
         }
-        String namespace = BuiltInRegistries.FLUID.getKey(generator.stack.getFluid()).getNamespace();
-        if (namespace.contains("modern_industrialization") || namespace.contains("extended_industrialization")) {
-            generator.stack.setAmount(Integer.MAX_VALUE);
+        // 检查命名空间，MI/EI mod 的流体直接设为无限
+        if (!generator.stack.isEmpty()) {
+            String namespace = BuiltInRegistries.FLUID.getKey(generator.stack.getFluid()).getNamespace();
+            if (namespace.contains("modern_industrialization") || namespace.contains("extended_industrialization")) {
+                generator.stack.setAmount(Integer.MAX_VALUE);
+            }
         }
-        if (generator.stack == FluidStack.EMPTY || generator.stack.getAmount() < LiquidFountainBlock.MAX) {
-            if (generator.stack.getAmount() <= 0) {
+        if (generator.stack.isEmpty() || generator.stack.getAmount() < LiquidFountainBlock.MAX) {
+            if (!generator.stack.isEmpty() && generator.stack.getAmount() <= 0) {
                 generator.stack = FluidStack.EMPTY;
             }
             return;
         }
         generator.stack.setAmount(Integer.MAX_VALUE);
         BlockPos blockPos = generator.getBlockPos();
-        //传输
-        for (Direction direction : Direction.values()) {
+        // 传输
+        for (Direction direction : DIRECTIONS) {
             BlockPos pos = blockPos.relative(direction);
-            BlockEntity entity = level.getBlockEntity(blockPos.relative(direction));
+            BlockEntity entity = level.getBlockEntity(pos);
             if (entity == null) {
                 continue;
             }
@@ -83,9 +87,9 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
             if (handler == null) {
                 continue;
             }
-            FluidStack stack = generator.stack;
+            FluidStack stack = generator.stack.copy();
             stack.setAmount(Integer.MAX_VALUE);
-            handler.fill(stack.copy(), IFluidHandler.FluidAction.EXECUTE);
+            handler.fill(stack, IFluidHandler.FluidAction.EXECUTE);
         }
         generator.setChanged();
     }
@@ -126,7 +130,7 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
             return InteractionResult.FAIL;
         }
         FluidStack stack = generator.stack;
-        if (stack == FluidStack.EMPTY) {
+        if (stack.isEmpty()) {
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.empty"));
             return InteractionResult.SUCCESS;
         }

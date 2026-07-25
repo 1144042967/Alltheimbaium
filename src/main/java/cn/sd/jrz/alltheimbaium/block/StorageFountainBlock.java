@@ -27,10 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class StorageFountainBlock extends Block implements EntityBlock {
@@ -74,7 +71,10 @@ public class StorageFountainBlock extends Block implements EntityBlock {
             generator.tickCount = 0;
         }
         //增长数值
-        generator.blockList.replaceAll(aLong -> aLong + generator.output);
+        //noinspection Java8ListReplaceAll
+        for (int i = 0; i < generator.blockList.size(); i++) {
+            generator.blockList.set(i, Tool.suit(generator.blockList.get(i) + generator.output));
+        }
         //传输
         for (int i = 0; i < directions.length; i++) {
             generator.findIndex = (generator.findIndex + 1) % directions.length;
@@ -111,11 +111,6 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     }
 
     private void transport(StorageFountainEntity generator, List<Integer> indexList, IItemHandler handler) {
-        if (indexList.size() == 1) {
-            transport(generator, indexList.getFirst(), handler);
-            return;
-        }
-        Collections.shuffle(indexList);
         for (int index : indexList) {
             transport(generator, index, handler);
         }
@@ -138,7 +133,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     }
 
     @Override
-    public @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
+    public @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
         try {
             if (level.isClientSide) {
                 return InteractionResult.SUCCESS;
@@ -263,13 +258,13 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         long tickCount = generator.tickCount;
         List<ItemStack> stackList = generator.itemList;
         List<Long> blockList = generator.blockList;
-        BigDecimal outputPerTick = new BigDecimal(output).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
+        String outputPerTick = String.format("%.3f", (double) output / StorageFountainBlock.CARRY);
         player.sendSystemMessage(Component.translatable("screen.alltheimbaium.fountain.description", outputPerTick, 100D * tickCount / 20 / 20));
         for (int i = 0; i < Math.min(stackList.size(), blockList.size()); i++) {
             ItemStack item = stackList.get(i);
             Long block = blockList.get(i);
-            String name = item.getItem().getName(item).getString();
-            BigDecimal save = new BigDecimal(block).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
+            String name = item.getItem().getDescription().getString();
+            String save = String.format("%.3f", (double) block / StorageFountainBlock.CARRY);
             player.sendSystemMessage(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
         }
         if (stackList.isEmpty()) {

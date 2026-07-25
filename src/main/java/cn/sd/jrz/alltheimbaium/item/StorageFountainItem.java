@@ -15,8 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,13 +42,13 @@ public class StorageFountainItem extends BlockItem {
                     blockList = Tool.fromBlockString(dataArray[2]);
                 }
             }
-            BigDecimal outputPerTick = new BigDecimal(output).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
+            String outputPerTick = String.format("%.3f", (double) output / StorageFountainBlock.CARRY);
             tooltip.add(Component.translatable("screen.alltheimbaium.fountain.output", outputPerTick));
             for (int i = 0; i < Math.min(itemList.size(), blockList.size()); i++) {
                 ItemStack itemStack = itemList.get(i);
                 Long block = blockList.get(i);
-                String name = itemStack.getItem().getName(itemStack).getString();
-                BigDecimal save = new BigDecimal(block).divide(new BigDecimal(StorageFountainBlock.CARRY), 3, RoundingMode.HALF_UP);
+                String name = itemStack.getItem().getDescription().getString();
+                String save = String.format("%.3f", (double) block / StorageFountainBlock.CARRY);
                 tooltip.add(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
             }
             if (itemList.isEmpty()) {

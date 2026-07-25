@@ -30,7 +30,7 @@ public class LiquidFountainConnection implements IFluidHandler {
 
     @Override
     public boolean isFluidValid(int i, @NotNull FluidStack fluidStack) {
-        return !isInfinity() && (owner.stack == FluidStack.EMPTY || FluidStack.isSameFluidSameComponents(fluidStack, owner.stack));
+        return !isInfinity() && (owner.stack.isEmpty() || FluidStack.isSameFluidSameComponents(fluidStack, owner.stack));
     }
 
     @Override
@@ -41,12 +41,12 @@ public class LiquidFountainConnection implements IFluidHandler {
         if (fluidStack.getAmount() <= 0) {
             return 0;
         }
-        if (owner.stack != FluidStack.EMPTY && !FluidStack.isSameFluidSameComponents(owner.stack, fluidStack)) {
+        if (!owner.stack.isEmpty() && !FluidStack.isSameFluidSameComponents(owner.stack, fluidStack)) {
             return 0;
         }
         int maxInput = Math.min(fluidStack.getAmount(), LiquidFountainBlock.MAX - owner.stack.getAmount());
         if (fluidAction.execute()) {
-            if (owner.stack == FluidStack.EMPTY) {
+            if (owner.stack.isEmpty()) {
                 owner.stack = new FluidStack(fluidStack.getFluid(), maxInput);
             } else {
                 owner.stack.grow(maxInput);
@@ -71,7 +71,7 @@ public class LiquidFountainConnection implements IFluidHandler {
             copy.setAmount(amount);
             return copy;
         }
-        if (owner.stack == FluidStack.EMPTY) {
+        if (owner.stack.isEmpty()) {
             return FluidStack.EMPTY;
         }
         int output = owner.stack.getAmount();
@@ -89,6 +89,6 @@ public class LiquidFountainConnection implements IFluidHandler {
     }
 
     private boolean isInfinity() {
-        return owner.stack != FluidStack.EMPTY && owner.stack.getAmount() >= LiquidFountainBlock.MAX;
+        return !owner.stack.isEmpty() && owner.stack.getAmount() >= LiquidFountainBlock.MAX;
     }
 }

@@ -1,7 +1,6 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.CommonEntity;
-import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -20,8 +19,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +29,7 @@ import java.util.function.Supplier;
 
 public class ClockBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(ClockBlock.class);
+    private static final Direction[] DIRECTIONS = Direction.values();
     private final Supplier<BlockEntityType<?>> entityTypeSupplier;
     private static boolean active;
     private final int speedMultiplier;
@@ -48,7 +46,6 @@ public class ClockBlock extends Block implements EntityBlock {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
         return (l, p, s, tile) -> {
             try {
@@ -63,7 +60,7 @@ public class ClockBlock extends Block implements EntityBlock {
         if (!active || level.isClientSide) {
             return;
         }
-        for (Direction direction : Direction.values()) {
+        for (Direction direction : DIRECTIONS) {
             BlockPos pos = tile.getBlockPos().relative(direction);
             BlockState blockState = level.getBlockState(pos);
             Block block = blockState.getBlock();

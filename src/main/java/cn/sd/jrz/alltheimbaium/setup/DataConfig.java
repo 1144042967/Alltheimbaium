@@ -16,9 +16,12 @@ import java.util.function.Supplier;
 public class DataConfig {
     private final ModConfigSpec.ConfigValue<List<? extends String>> productsConfig;
     private final Supplier<BlockEntityType<?>> entityTypeSupplier;
+    private List<ItemProduct> cachedProducts;
 
-    public DataConfig(ModConfigSpec.ConfigValue<List<? extends String>> productsConfig,
-                      Supplier<BlockEntityType<?>> entityTypeSupplier) {
+    public DataConfig(
+            ModConfigSpec.ConfigValue<List<? extends String>> productsConfig,
+            Supplier<BlockEntityType<?>> entityTypeSupplier
+    ) {
         this.productsConfig = productsConfig;
         this.entityTypeSupplier = entityTypeSupplier;
     }
@@ -27,8 +30,14 @@ public class DataConfig {
         return entityTypeSupplier.get();
     }
 
+    /**
+     * 获取解析后的产物列表，结果会被缓存
+     */
     public List<ItemProduct> getProductList() {
-        return parseProducts(productsConfig.get());
+        if (cachedProducts == null) {
+            cachedProducts = parseProducts(productsConfig.get());
+        }
+        return cachedProducts;
     }
 
     private static List<ItemProduct> parseProducts(List<? extends String> configList) {
