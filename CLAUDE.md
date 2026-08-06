@@ -189,6 +189,8 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - `isSpecial()` 返回 `true`，不出现在配方书中
 - 需要 3×3 合成台（2×2 背包合成格不适用）
 - 使用 `cachedResult` 字段在 `matches()` 和 `assemble()` 之间传递结果
+  - `matches()` 每次以本次网格为准：开头清空缓存，匹配成功才写入结果
+  - `assemble()`/`getResultItem()` 只读缓存、不清空——避免 Polymorph / FastWorkbench 等 mod 在一次合成流程中多次调用 `getResultItem()`/`assemble()` 时读到空结果（否则手工放置时结果槽会被错误覆盖为空）
 
 ### 9. BrewingCraftRecipe (酿造合成配方)
 

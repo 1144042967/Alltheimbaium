@@ -39,6 +39,8 @@ public class BrewingCraftRecipe extends CustomRecipe {
 
     @Override
     public boolean matches(@Nonnull CraftingContainer container, @Nonnull Level level) {
+        // 每次匹配都先清空缓存，以本次网格为准，避免旧结果残留被 assemble/getResultItem 读到
+        this.cachedResult = ItemStack.EMPTY;
         // 统计非空格子数量，必须恰好为 2
         ItemStack itemA = ItemStack.EMPTY;
         ItemStack itemB = ItemStack.EMPTY;
@@ -113,8 +115,11 @@ public class BrewingCraftRecipe extends CustomRecipe {
     @Nonnull
     @Override
     public ItemStack assemble(@Nonnull CraftingContainer container, @Nonnull RegistryAccess registryAccess) {
+        // 只读取 matches() 缓存的结果，不再清空。
+        // 原因：Polymorph / FastWorkbench 等 mod 会在一次合成流程中对本配方多次调用
+        // getResultItem()/assemble()，若这里清空缓存，后续 getResultItem() 会读到空物品，
+        // 导致手工放置时结果槽被错误覆盖为空。网格变化时 matches() 会重新计算并覆盖缓存。
         ItemStack result = this.cachedResult.copy();
-        this.cachedResult = ItemStack.EMPTY;
         return result;
     }
 
