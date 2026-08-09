@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.item;
 
 import cn.sd.jrz.alltheimbaium.setup.Config;
+import cn.sd.jrz.alltheimbaium.setup.CuriosHelper;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -82,7 +83,7 @@ public class TotemEventHandler {
         event.setCancellationResult(InteractionResult.SUCCESS);
     }
 
-    /** 在玩家物品栏中查找永恒图腾（主手 → 副手 → 盔甲 → 背包） */
+    /** 在玩家物品栏与 Curios 饰品槽中查找永恒图腾（主手 → 副手 → 盔甲 → 背包 → Curios） */
     private static ItemStack findTotem(Player player) {
         ItemStack mainHand = player.getMainHandItem();
         if (mainHand.is(Registration.ETERNAL_TOTEM.get())) {
@@ -102,7 +103,8 @@ public class TotemEventHandler {
                 return item;
             }
         }
-        return ItemStack.EMPTY;
+        // Curios 饰品槽（软依赖，未装时返回空）
+        return CuriosHelper.findCurioItem(player, Registration.ETERNAL_TOTEM.get());
     }
 
     /** 基础复活效果：清除效果、血量变为 1、获得 40 秒抗火 / 45 秒生命恢复 II / 5 秒伤害吸收 II */

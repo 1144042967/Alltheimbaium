@@ -88,7 +88,7 @@
   "block.alltheimbaium.farm_sugar_canes": "§aATI 甘蔗农场",
 
   "item.alltheimbaium.eternal_totem": "§6[§b✦ §dATI 永恒图腾 §b✦§6]",
-  "item.alltheimbaium.eternal_totem.description": "§7死亡时自动触发复活，§eALT+右键§7打开配置界面\n§e复活效果: §c血量变为1 §c清除状态效果\n§e获得: §c40秒抗火 §c45秒生命恢复II §c5秒伤害吸收II\n§e药水槽: §c27格药水，复活时逐个应用\n§e配置转化: §aGUI输入槽放终极化学品储罐，输出槽得创造化学品储罐\n§e右击转化: §a手持图腾右击终极化学品储罐，立即变为创造化学品储罐",
+  "item.alltheimbaium.eternal_totem.description": "§7死亡时自动触发复活，§eALT+右键§7打开配置界面\n§e复活效果: §c血量变为1 §c清除状态效果\n§e获得: §c40秒抗火 §c45秒生命恢复II §c5秒伤害吸收II\n§e药水槽: §c27格药水，复活时逐个应用\n§e配置转化: §aGUI输入槽放终极化学品储罐，输出槽得创造化学品储罐\n§e右击转化: §a手持图腾右击终极化学品储罐，立即变为创造化学品储罐\n§e饰品槽: §c可放入Curios的curio/charm槽，饰品槽中死亡同样生效",
   "screen.alltheimbaium.eternal_totem.title": "§6永恒图腾配置",
   "screen.alltheimbaium.eternal_totem.input": "终极化学品储罐",
   "screen.alltheimbaium.eternal_totem.output": "创造化学品储罐",

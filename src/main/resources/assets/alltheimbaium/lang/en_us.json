@@ -88,7 +88,7 @@
   "block.alltheimbaium.farm_sugar_canes": "§aATI Sugar Canes Farm",
 
   "item.alltheimbaium.eternal_totem": "§6[§b✦ §dEternal Totem §b✦§6]",
-  "item.alltheimbaium.eternal_totem.description": "§7Auto-revive on death, §eALT+Right-click§7 to open config\n§eRevive: §cHP becomes 1 §cclear all effects\n§eGrants: §c40s Fire Resistance §c45s Regen II §c5s Absorption II\n§ePotion Slots: §c27 potions, applied one by one on revive\n§eConfig Convert: §aPut an Ultimate Chemical Tank in input slot, get Creative Chemical Tank in output\n§eRight-click Convert: §aRight-click an Ultimate Chemical Tank with the totem to turn it into a Creative Chemical Tank",
+  "item.alltheimbaium.eternal_totem.description": "§7Auto-revive on death, §eALT+Right-click§7 to open config\n§eRevive: §cHP becomes 1 §cclear all effects\n§eGrants: §c40s Fire Resistance §c45s Regen II §c5s Absorption II\n§ePotion Slots: §c27 potions, applied one by one on revive\n§eConfig Convert: §aPut an Ultimate Chemical Tank in input slot, get Creative Chemical Tank in output\n§eRight-click Convert: §aRight-click an Ultimate Chemical Tank with the totem to turn it into a Creative Chemical Tank\n§eCurios: §cCan be worn in curio/charm slots, revive works while equipped",
   "screen.alltheimbaium.eternal_totem.title": "§6Eternal Totem Config",
   "screen.alltheimbaium.eternal_totem.input": "Ultimate Tank",
   "screen.alltheimbaium.eternal_totem.output": "Creative Tank",
