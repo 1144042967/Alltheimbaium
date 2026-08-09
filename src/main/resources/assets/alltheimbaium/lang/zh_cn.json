@@ -92,6 +92,14 @@
   "chat.alltheimbaium.eternal_totem.enabled": "§a永恒图腾已启用",
   "chat.alltheimbaium.eternal_totem.disabled": "§c永恒图腾已禁用",
 
+  "item.alltheimbaium.eternal_sword": "§6[§b✦ §dATI 永恒之剑 §b✦§6]",
+  "item.alltheimbaium.eternal_sword.description": "§7右键攻击距离内生物，§eALT+右键§7打开配置界面\n§e伤害: §c槽位中所有ID不同的带伤害物品伤害总和\n§e附魔: §c由附魔书叠加（同附魔仅取最高等级，多本最高等级直接相加）\n§e配置: §c击杀目标 §b/ §c攻击距离 §b/ §c27格物品槽\n§c无法附魔、无法锻造、无法作为合成材料",
+  "screen.alltheimbaium.eternal_sword.title": "§6永恒之剑配置",
+  "screen.alltheimbaium.eternal_sword.mode_hostile": "§e右击击杀: §c敌对生物",
+  "screen.alltheimbaium.eternal_sword.mode_all": "§e右击击杀: §c所有生物",
+  "screen.alltheimbaium.eternal_sword.range": "§e攻击距离: §e%s",
+  "screen.alltheimbaium.eternal_sword.slot_damage": "§e对剑伤害贡献: §a+%s",
+
   "item.alltheimbaium.potion_combine.single": "%s 混合药水",
   "item.alltheimbaium.potion_combine.double": "%s %s 混合药水",
   "item.alltheimbaium.potion_combine.single_splash": "%s 混合喷溅药水",

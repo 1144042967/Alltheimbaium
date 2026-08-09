@@ -92,6 +92,14 @@
   "chat.alltheimbaium.eternal_totem.enabled": "§aEternal Totem Enabled",
   "chat.alltheimbaium.eternal_totem.disabled": "§cEternal Totem Disabled",
 
+  "item.alltheimbaium.eternal_sword": "§6[§b✦ §dEternal Sword §b✦§6]",
+  "item.alltheimbaium.eternal_sword.description": "§7Right-click to attack mobs within range, §eALT+Right-click§7 to open config\n§eDamage: §cSum of all unique-ID damage items in slots\n§eEnchantments: §cCombined from books (keep max level, stack highest ones)\n§eConfig: §cTarget §b/ §cRange §b/ §c27 item slots\n§cCannot enchant, smith, or use as a crafting material",
+  "screen.alltheimbaium.eternal_sword.title": "§6Eternal Sword Config",
+  "screen.alltheimbaium.eternal_sword.mode_hostile": "§eKill: §cHostile Mobs",
+  "screen.alltheimbaium.eternal_sword.mode_all": "§eKill: §cAll Mobs",
+  "screen.alltheimbaium.eternal_sword.range": "§eRange: §e%s",
+  "screen.alltheimbaium.eternal_sword.slot_damage": "§eSword Damage Contribution: §a+%s",
+
   "item.alltheimbaium.potion_combine.single": "%s Mixed Potion",
   "item.alltheimbaium.potion_combine.double": "%s %s Mixed Potion",
   "item.alltheimbaium.potion_combine.single_splash": "%s Mixed Splash Potion",

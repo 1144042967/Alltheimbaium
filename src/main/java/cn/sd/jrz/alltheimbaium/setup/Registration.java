@@ -3,18 +3,21 @@ package cn.sd.jrz.alltheimbaium.setup;
 import cn.sd.jrz.alltheimbaium.Alltheimbaium;
 import cn.sd.jrz.alltheimbaium.block.*;
 import cn.sd.jrz.alltheimbaium.entity.*;
+import cn.sd.jrz.alltheimbaium.gui.EternalSwordMenu;
 import cn.sd.jrz.alltheimbaium.item.*;
 import cn.sd.jrz.alltheimbaium.recipe.BrewingCraftRecipe;
 import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
 import cn.sd.jrz.alltheimbaium.recipe.SmeltingCraftRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.PushReaction;
+import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -26,6 +29,7 @@ public class Registration {
     private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, Alltheimbaium.MODID);
     private static final DeferredRegister<BlockEntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, Alltheimbaium.MODID);
     private static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, Alltheimbaium.MODID);
+    private static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(ForgeRegistries.MENU_TYPES, Alltheimbaium.MODID);
     private static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, Alltheimbaium.MODID);
 
     public static void init(FMLJavaModLoadingContext context) {
@@ -33,6 +37,7 @@ public class Registration {
         ITEMS.register(context.getModEventBus());
         ENTITIES.register(context.getModEventBus());
         RECIPE_SERIALIZERS.register(context.getModEventBus());
+        MENUS.register(context.getModEventBus());
         CREATIVE_MODE_TABS.register(Alltheimbaium.MODID, () -> CreativeModeTab.builder()
                 .title(Component.translatable("itemGroup." + Alltheimbaium.MODID))
                 .icon(() -> new ItemStack(Registration.FARMLAND_ITEM.get()))
@@ -99,6 +104,7 @@ public class Registration {
                     output.accept(Registration.BLOCK_QUANTUM_ALLOY_X8.get());
                     output.accept(Registration.BLOCK_SKY_STEEL_X8.get());
                     output.accept(Registration.ETERNAL_TOTEM.get());
+                    output.accept(Registration.ETERNAL_SWORD.get());
                 })
                 .build()
         );
@@ -178,6 +184,11 @@ public class Registration {
     public static final RegistryObject<Item> BLOCK_QUANTUM_ALLOY_X8 = ITEMS.register("block_quantum_alloy_x8", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> BLOCK_SKY_STEEL_X8 = ITEMS.register("block_sky_steel_x8", () -> new Item(new Item.Properties()));
     public static final RegistryObject<EternalTotemItem> ETERNAL_TOTEM = ITEMS.register("eternal_totem", EternalTotemItem::new);
+    public static final RegistryObject<EternalSwordItem> ETERNAL_SWORD = ITEMS.register("eternal_sword", EternalSwordItem::new);
+
+    // 菜单类型
+    public static final RegistryObject<MenuType<EternalSwordMenu>> ETERNAL_SWORD_MENU =
+            MENUS.register("eternal_sword", () -> IForgeMenuType.create((id, inv, data) -> new EternalSwordMenu(id, inv)));
 
     // 配方序列化器
     public static final RegistryObject<RecipeSerializer<SmeltingCraftRecipe>> SMELTING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("smelting_craft", () -> SmeltingCraftRecipe.SERIALIZER);
