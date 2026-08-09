@@ -9,6 +9,7 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -26,6 +27,8 @@ public class EternalSwordMenu extends AbstractContainerMenu {
     private final SimpleContainer swordInv = new SimpleContainer(EternalSwordItem.INVENTORY_SIZE);
     /** 服务端持有剑引用；客户端为 null */
     private final ItemStack sword;
+    /** 服务端玩家引用（用于锁定主手剑）；客户端为 null */
+    private final Player player;
     /** 模式数据槽：0=敌对生物，1=所有生物 */
     private final DataSlot killAllSlot;
     /** 距离数据槽：8 / 16 / 24 / 32 */
@@ -40,6 +43,7 @@ public class EternalSwordMenu extends AbstractContainerMenu {
     public EternalSwordMenu(int id, Inventory inv, Player player, ItemStack sword) {
         super(Registration.ETERNAL_SWORD_MENU.get(), id);
         this.sword = sword;
+        this.player = player;
         // 服务端从剑 NBT 加载 27 格槽位
         if (sword != null && !sword.isEmpty()) {
             EternalSwordItem.loadInventory(sword, swordInv);
@@ -51,9 +55,9 @@ public class EternalSwordMenu extends AbstractContainerMenu {
                 saveInventory();
             }
         });
-        // 27 个剑槽（顶部 3 行 9 列）
+        // 27 个剑槽（顶部 3 行 9 列），禁止放入永恒之剑
         for (int i = 0; i < EternalSwordItem.INVENTORY_SIZE; i++) {
-            addSlot(new Slot(swordInv, i, 8 + (i % 9) * 18, 18 + (i / 9) * 18));
+            addSlot(new SwordSlot(swordInv, i, 8 + (i % 9) * 18, 18 + (i / 9) * 18));
         }
         // 玩家背包（3 行）
         for (int row = 0; row < 3; row++) {
@@ -110,6 +114,41 @@ public class EternalSwordMenu extends AbstractContainerMenu {
         saveInventory();
     }
 
+    /** 拦截所有鼠标/键盘点击：任何涉及打开之剑的操作（拿起、放下、shift、数字键交换）都会被拒绝 */
+    @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        if (sword != null && !sword.isEmpty() && this.player != null
+                && wouldMoveSword(slotId, button, clickType, player)) {
+            return;
+        }
+        super.clicked(slotId, button, clickType, player);
+    }
+
+    /** 本次点击是否会移动打开的剑：拖拽中的剑、点击的槽位是剑、或数字键交换目标含剑 */
+    private boolean wouldMoveSword(int slotId, int button, ClickType clickType, Player player) {
+        if (!this.getCarried().isEmpty() && isSword(this.getCarried())) return true;
+        if (slotId >= 0 && slotId < this.slots.size()) {
+            Slot slot = this.slots.get(slotId);
+            if (slot != null && isSword(slot.getItem())) return true;
+        }
+        // 数字键交换：button 是目标快捷栏（0-8），对应菜单槽 27+27+button
+        if (clickType == ClickType.SWAP) {
+            int hotbarSlot = 2 * EternalSwordItem.INVENTORY_SIZE + 9 + button;
+            if (hotbarSlot >= 0 && hotbarSlot < this.slots.size()) {
+                Slot hb = this.slots.get(hotbarSlot);
+                if (hb != null && isSword(hb.getItem())) return true;
+            }
+        }
+        return false;
+    }
+
+    /** 判断物品是否为「打开的这把剑」：引用一致或内容完全一致 */
+    private boolean isSword(ItemStack stack) {
+        if (stack == null || stack.isEmpty() || sword == null || sword.isEmpty()) return false;
+        if (!stack.is(Registration.ETERNAL_SWORD.get())) return false;
+        return stack == sword || ItemStack.isSameItemSameTags(stack, sword);
+    }
+
     /** 保存 27 格槽位到剑 NBT 并重新计算伤害与附魔 */
     private void saveInventory() {
         if (sword == null || sword.isEmpty()) return;
@@ -145,6 +184,20 @@ public class EternalSwordMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return true;
+        // 剑不在主手/副手（被移动、掉落或移除）时关闭配置界面
+        if (sword == null || sword.isEmpty()) return true;
+        return isSword(player.getMainHandItem()) || isSword(player.getOffhandItem());
+    }
+
+    /** 剑槽：禁止放入任何永恒之剑 */
+    private static class SwordSlot extends Slot {
+        SwordSlot(Container container, int index, int x, int y) {
+            super(container, index, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return !stack.is(Registration.ETERNAL_SWORD.get());
+        }
     }
 }
