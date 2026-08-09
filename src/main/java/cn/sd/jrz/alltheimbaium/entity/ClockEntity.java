@@ -1,6 +1,6 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
-import cn.sd.jrz.alltheimbaium.block.AlltheimbaiumFarmlandBlock;
+import cn.sd.jrz.alltheimbaium.block.FarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.ClockBlock;
 import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.BlockPos;
@@ -54,7 +54,7 @@ public class ClockEntity extends BlockEntity {
             if (level instanceof ServerLevel && block.isRandomlyTicking(blockState)) {
                 blockState.randomTick((ServerLevel) level, pos, level.getRandom());
             }
-            if (block instanceof ClockBlock || block instanceof AlltheimbaiumFarmlandBlock) {
+            if (block instanceof ClockBlock || block instanceof FarmlandBlock) {
                 continue;
             }
             if (!(block instanceof EntityBlock entityBlock)) {

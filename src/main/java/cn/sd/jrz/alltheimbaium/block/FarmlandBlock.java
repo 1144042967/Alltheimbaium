@@ -30,8 +30,8 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.FarmBlock implements EntityBlock {
-    private static final Logger log = LoggerFactory.getLogger(AlltheimbaiumFarmlandBlock.class);
+public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock implements EntityBlock {
+    private static final Logger log = LoggerFactory.getLogger(FarmlandBlock.class);
 
     // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
     static int tickInterval;
@@ -46,7 +46,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
         bonemealInterval = Config.FARMLAND_BONEMEAL_INTERVAL.get();
     }
 
-    public AlltheimbaiumFarmlandBlock() {
+    public FarmlandBlock() {
         super(Properties.copy(Blocks.FARMLAND));
     }
 
@@ -67,7 +67,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
             try {
                 tick(l, tile);
             } catch (Throwable e) {
-                log.error("AlltheimbaiumFarmlandBlock.getTicker error", e);
+                log.error("FarmlandBlock.getTicker error", e);
             }
         };
     }
@@ -107,7 +107,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
             int age = crop.getAge(state);
             int maxAge = crop.getMaxAge();
             if (age < maxAge) {
-                int growthAmount = AlltheimbaiumFarmlandBlock.growthAmount;
+                int growthAmount = FarmlandBlock.growthAmount;
                 int newAge;
                 if (growthAmount == -1) {
                     newAge = maxAge;
@@ -132,7 +132,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
                 level.setBlock(pos, state.setValue(MOISTURE, 7), 2);
             }
         } catch (Throwable e) {
-            log.error("AlltheimbaiumFarmlandBlock.randomTick error", e);
+            log.error("FarmlandBlock.randomTick error", e);
         }
     }
 
@@ -141,7 +141,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
         try {
             entity.causeFallDamage(fallDistance, 1.0F, level.damageSources().fall());
         } catch (Throwable e) {
-            log.error("AlltheimbaiumFarmlandBlock.fallOn error", e);
+            log.error("FarmlandBlock.fallOn error", e);
         }
     }
 
@@ -152,7 +152,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
             var type = plantable.getPlantType(level, pos.relative(facing));
             return type == PlantType.CROP || plant.getBlock() instanceof StemBlock;
         } catch (Throwable e) {
-            log.error("AlltheimbaiumFarmlandBlock.canSustainPlant error", e);
+            log.error("FarmlandBlock.canSustainPlant error", e);
         }
         return super.canSustainPlant(state, level, pos, facing, plantable);
     }
@@ -162,7 +162,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
         try {
             return state.getValue(MOISTURE) > 0;
         } catch (Throwable e) {
-            log.error("AlltheimbaiumFarmlandBlock.isFertile error", e);
+            log.error("FarmlandBlock.isFertile error", e);
         }
         return super.isFertile(state, level, pos);
     }
@@ -175,7 +175,7 @@ public class AlltheimbaiumFarmlandBlock extends net.minecraft.world.level.block.
             drops.add(new ItemStack(this));
             return drops;
         } catch (Throwable e) {
-            log.error("AlltheimbaiumFarmlandBlock.getDrops error", e);
+            log.error("FarmlandBlock.getDrops error", e);
         }
         return super.getDrops(state, builder);
     }

@@ -112,7 +112,7 @@ public class Registration {
 
     // 方块
 
-    public static final RegistryObject<AlltheimbaiumFarmlandBlock> FARMLAND_BLOCK = BLOCKS.register("farmland", AlltheimbaiumFarmlandBlock::new);
+    public static final RegistryObject<FarmlandBlock> FARMLAND_BLOCK = BLOCKS.register("farmland", FarmlandBlock::new);
     public static final RegistryObject<ClockBlock> CLOCK_BLOCK = BLOCKS.register("clock", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_ENTITY::get, 2));
     public static final RegistryObject<ClockBlock> CLOCK_X4_BLOCK = BLOCKS.register("clock_x4", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_X4_ENTITY::get, 4));
     public static final RegistryObject<ClockBlock> CLOCK_X16_BLOCK = BLOCKS.register("clock_x16", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_X16_ENTITY::get, 16));

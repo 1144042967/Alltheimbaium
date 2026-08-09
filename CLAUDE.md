@@ -40,7 +40,7 @@
 src/main/java/cn/sd/jrz/alltheimbaium/
 ├── Alltheimbaium.java          # 主 mod 类 (@Mod)
 ├── block/                       # 方块类
-│   ├── AlltheimbaiumFarmlandBlock.java  # ATI 耕地
+│   ├── FarmlandBlock.java  # ATI 耕地
 │   ├── ClockBlock.java                  # 时钟加速方块
 │   ├── FarmBlock.java                   # 农场方块
 │   ├── LiquidFountainBlock.java         # 液体无限制造机
@@ -85,7 +85,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 ## 功能模块
 
-### 1. ATI 耕地 (`AlltheimbaiumFarmlandBlock`)
+### 1. ATI 耕地 (`FarmlandBlock`)
 
 继承 `net.minecraft.world.level.block.FarmBlock`，实现 `EntityBlock`。
 
@@ -103,7 +103,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - 4 个等级: x2, x4, x16, x256
 - 右击切换开关状态，全局生效（所有时钟共享同一个 `active` 状态）
 - `ClockEntity.tick()`: 遍历6个面，对邻接的 `EntityBlock` 额外调用 ticker `(speedMultiplier - 1)` 次
-- 跳过 `ClockBlock` 和 `AlltheimbaiumFarmlandBlock` （避免无限循环/过度加速）
+- 跳过 `ClockBlock` 和 `FarmlandBlock` （避免无限循环/过度加速）
 - 对 `randomTick` 方块额外调用 `randomTick()`
 
 ### 3. 存储方块制造机 (`StorageFountainBlock` / `StorageFountainEntity`)

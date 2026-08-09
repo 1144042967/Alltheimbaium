@@ -1,6 +1,6 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
-import cn.sd.jrz.alltheimbaium.block.AlltheimbaiumFarmlandBlock;
+import cn.sd.jrz.alltheimbaium.block.FarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.FarmBlock;
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
@@ -268,7 +268,7 @@ public class Config {
     @SubscribeEvent
     public static void onConfigLoad(ModConfigEvent.Loading event) {
         if (event.getConfig().getSpec() == SERVER_CONFIG) {
-            AlltheimbaiumFarmlandBlock.loadConfig();
+            FarmlandBlock.loadConfig();
             ClockEntity.loadConfig();
             EternalTotemItem.loadConfig();
             TotemEventHandler.loadConfig();
