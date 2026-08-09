@@ -21,11 +21,13 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.ForgeRegistries;
 
+/**
+ * 永恒图腾事件处理：
+ * - 死亡时触发复活（基础效果 + 药水槽效果）
+ * - 右键 Mekanism 终极化学品储罐升级为创造化学品储罐（保留原功能）
+ */
 @Mod.EventBusSubscriber(modid = "alltheimbaium")
 public class TotemEventHandler {
-
-    private static final ResourceLocation ULTIMATE_CHEMICAL_TANK = ResourceLocation.fromNamespaceAndPath("mekanism", "ultimate_chemical_tank");
-    private static final ResourceLocation CREATIVE_CHEMICAL_TANK = ResourceLocation.fromNamespaceAndPath("mekanism", "creative_chemical_tank");
 
     // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
     private static boolean tankConversion;
@@ -38,9 +40,12 @@ public class TotemEventHandler {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer player && !event.isCanceled()) {
-            if (hasEternalTotem(player) && EternalTotemItem.enabled) {
+            if (!findTotem(player).isEmpty() && EternalTotemItem.enabled) {
                 event.setCanceled(true);
+                // 基础复活效果
                 applyTotemEffects(player);
+                // 基础效果之后，再逐个应用药水槽位中药水的效果
+                applyPotionEffects(player);
             }
         }
     }
@@ -60,7 +65,7 @@ public class TotemEventHandler {
         BlockPos pos = event.getPos();
         BlockState state = level.getBlockState(pos);
         ResourceLocation blockId = ForgeRegistries.BLOCKS.getKey(state.getBlock());
-        if (blockId == null || !blockId.equals(ULTIMATE_CHEMICAL_TANK)) {
+        if (blockId == null || !blockId.equals(EternalTotemItem.ULTIMATE_CHEMICAL_TANK)) {
             return;
         }
         if (level.isClientSide) {
@@ -68,7 +73,7 @@ public class TotemEventHandler {
             event.setCancellationResult(InteractionResult.SUCCESS);
             return;
         }
-        Block creativeTank = ForgeRegistries.BLOCKS.getValue(CREATIVE_CHEMICAL_TANK);
+        Block creativeTank = ForgeRegistries.BLOCKS.getValue(EternalTotemItem.CREATIVE_CHEMICAL_TANK);
         if (creativeTank == null) {
             return;
         }
@@ -77,49 +82,46 @@ public class TotemEventHandler {
         event.setCancellationResult(InteractionResult.SUCCESS);
     }
 
-    private static boolean hasEternalTotem(Player player) {
+    /** 在玩家物品栏中查找永恒图腾（主手 → 副手 → 盔甲 → 背包） */
+    private static ItemStack findTotem(Player player) {
         ItemStack mainHand = player.getMainHandItem();
-        ItemStack offHand = player.getOffhandItem();
-
         if (mainHand.is(Registration.ETERNAL_TOTEM.get())) {
-            return true;
+            return mainHand;
         }
+        ItemStack offHand = player.getOffhandItem();
         if (offHand.is(Registration.ETERNAL_TOTEM.get())) {
-            return true;
+            return offHand;
         }
-
         for (ItemStack armor : player.getInventory().armor) {
             if (armor.is(Registration.ETERNAL_TOTEM.get())) {
-                return true;
+                return armor;
             }
         }
-
         for (ItemStack item : player.getInventory().items) {
             if (item.is(Registration.ETERNAL_TOTEM.get())) {
-                return true;
+                return item;
             }
         }
-
-        return false;
+        return ItemStack.EMPTY;
     }
 
+    /** 基础复活效果：清除效果、血量变为 1、获得 40 秒抗火 / 45 秒生命恢复 II / 5 秒伤害吸收 II */
     private static void applyTotemEffects(Player player) {
         player.removeAllEffects();
+        player.setHealth(1F);
 
-        player.setHealth(player.getMaxHealth());
-
-        player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 1200, 3));
-
-        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 1200, 2));
-
-        player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 1200, 0));
-
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 1200, 1));
-
-        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 1200, 1));
-
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 1200, 1));
+        player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 800, 0));   // 40秒 抗火
+        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 900, 1));      // 45秒 生命恢复 II
+        player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 1));        // 5秒 伤害吸收 II
 
         player.level().broadcastEntityEvent(player, (byte) 35);
+    }
+
+    /** 基础效果之后，逐个应用图腾 27 格药水槽位中药水的效果 */
+    private static void applyPotionEffects(Player player) {
+        ItemStack totem = findTotem(player);
+        if (!totem.isEmpty()) {
+            EternalTotemItem.applyPotionEffects(player, totem);
+        }
     }
 }

@@ -15,7 +15,9 @@ public class ClientHandler {
 
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(() ->
-                MenuScreens.register(Registration.ETERNAL_SWORD_MENU.get(), EternalSwordScreen::new));
+        event.enqueueWork(() -> {
+            MenuScreens.register(Registration.ETERNAL_SWORD_MENU.get(), EternalSwordScreen::new);
+            MenuScreens.register(Registration.ETERNAL_TOTEM_MENU.get(), EternalTotemScreen::new);
+        });
     }
 }

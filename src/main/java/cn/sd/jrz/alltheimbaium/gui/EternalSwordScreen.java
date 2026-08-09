@@ -49,8 +49,7 @@ public class EternalSwordScreen extends AbstractContainerScreen<EternalSwordMenu
         int y = this.topPos;
         // 模式切换按钮：0=敌对生物，1=所有生物（位于剑槽 3 行与玩家背包之间）
         this.modeButton = this.addRenderableWidget(
-                Button.builder(Component.literal(""), b -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, 0)
-                        )
+                Button.builder(Component.literal(""), b -> this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, 0))
                         .bounds(x + 8, y + 76, 160, 20)
                         .build());
         // 攻击距离按钮：4 个

@@ -138,7 +138,7 @@ public class Config {
         builder.comment("永恒图腾设置").push("eternal_totem");
         ETERNAL_TOTEM_DEFAULT_ENABLED = builder
                 .comment("永恒图腾的初始开关状态。true=启用，false=禁用")
-                .define("default_enabled", false);
+                .define("default_enabled", true);
         ETERNAL_TOTEM_TANK_CONVERSION = builder
                 .comment("是否允许永恒图腾右键 Mekanism 终极化学品储罐升级为创造化学品储罐")
                 .define("tank_conversion", true);

@@ -44,7 +44,7 @@ import java.util.*;
  * - 无耐久条、基础攻击伤害为 0
  * - 右击对范围内生物造成「槽位中所有 ID 不同的带伤害物品伤害总和」的伤害
  * - ALT+右击打开配置界面（击杀模式 / 攻击距离 / 27 格物品槽位）
- * - 剑附魔来自槽位中的附魔书：同一附魔仅保留最高等级，多个最高等级直接相加
+ * - 剑附魔来自槽位中的附魔书：附魔书等级直接叠加
  * - 禁止附魔台 / 铁砧附魔；对 Draconic-Evolution 混沌守卫可突破免伤限制
  */
 public class EternalSwordItem extends SwordItem {
@@ -274,31 +274,16 @@ public class EternalSwordItem extends SwordItem {
     }
 
     /**
-     * 剑附魔 = 所有附魔书中的附魔。
-     * 同一附魔仅保留最高等级；有多个附魔书带该最高等级时直接相加。
-     * 例如：锋利V ×2 + 锋利III → 锋利X
+     * 剑附魔 = 所有附魔书的附魔等级直接相加（任何等级附魔都可以叠加）。
+     * 例如：锋利V + 锋利III + 锋利I → 锋利IX
      */
     public static Map<Enchantment, Integer> calcEnchantments(List<ItemStack> stacks) {
-        Map<Enchantment, int[]> stat = new HashMap<>();
+        Map<Enchantment, Integer> result = new HashMap<>();
         for (ItemStack s : stacks) {
             if (s == null || s.isEmpty() || !s.is(Items.ENCHANTED_BOOK)) continue;
             for (Map.Entry<Enchantment, Integer> e : EnchantmentHelper.getEnchantments(s).entrySet()) {
-                Enchantment ench = e.getKey();
-                int level = e.getValue();
-                int[] cur = stat.get(ench);
-                if (cur == null) {
-                    stat.put(ench, new int[]{level, 1});
-                } else if (level > cur[0]) {
-                    cur[0] = level;
-                    cur[1] = 1;
-                } else if (level == cur[0]) {
-                    cur[1]++;
-                }
+                result.merge(e.getKey(), e.getValue(), Integer::sum);
             }
-        }
-        Map<Enchantment, Integer> result = new HashMap<>();
-        for (Map.Entry<Enchantment, int[]> e : stat.entrySet()) {
-            result.put(e.getKey(), e.getValue()[0] * e.getValue()[1]);
         }
         return result;
     }

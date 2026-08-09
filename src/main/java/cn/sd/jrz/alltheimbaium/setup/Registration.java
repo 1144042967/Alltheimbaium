@@ -4,6 +4,7 @@ import cn.sd.jrz.alltheimbaium.Alltheimbaium;
 import cn.sd.jrz.alltheimbaium.block.*;
 import cn.sd.jrz.alltheimbaium.entity.*;
 import cn.sd.jrz.alltheimbaium.gui.EternalSwordMenu;
+import cn.sd.jrz.alltheimbaium.gui.EternalTotemMenu;
 import cn.sd.jrz.alltheimbaium.item.*;
 import cn.sd.jrz.alltheimbaium.recipe.BrewingCraftRecipe;
 import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
@@ -189,6 +190,8 @@ public class Registration {
     // 菜单类型
     public static final RegistryObject<MenuType<EternalSwordMenu>> ETERNAL_SWORD_MENU =
             MENUS.register("eternal_sword", () -> IForgeMenuType.create((id, inv, data) -> new EternalSwordMenu(id, inv)));
+    public static final RegistryObject<MenuType<EternalTotemMenu>> ETERNAL_TOTEM_MENU =
+            MENUS.register("eternal_totem", () -> IForgeMenuType.create((id, inv, data) -> new EternalTotemMenu(id, inv)));
 
     // 配方序列化器
     public static final RegistryObject<RecipeSerializer<SmeltingCraftRecipe>> SMELTING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("smelting_craft", () -> SmeltingCraftRecipe.SERIALIZER);

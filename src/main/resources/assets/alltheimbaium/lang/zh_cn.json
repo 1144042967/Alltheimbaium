@@ -88,12 +88,15 @@
   "block.alltheimbaium.farm_sugar_canes": "§aATI 甘蔗农场",
 
   "item.alltheimbaium.eternal_totem": "§6[§b✦ §dATI 永恒图腾 §b✦§6]",
-  "item.alltheimbaium.eternal_totem.description": "§7死亡时自动触发，永不损坏\n§e效果恢复: §c满生命值 §c8格护盾 §c强力再生\n§e额外增益: §c防火 §e减伤80% §b速度提升 §f攻击增强\n§e化学品储罐: §a右键终极化学品储罐升级为创造化学品储罐\n§7右键图腾可切换开关，默认关闭",
+  "item.alltheimbaium.eternal_totem.description": "§7死亡时自动触发复活，§eALT+右键§7打开配置界面\n§e复活效果: §c血量变为1 §c清除状态效果\n§e获得: §c40秒抗火 §c45秒生命恢复II §c5秒伤害吸收II\n§e药水槽: §c27格药水，复活时逐个应用\n§e配置转化: §aGUI输入槽放终极化学品储罐，输出槽得创造化学品储罐\n§e右击转化: §a手持图腾右击终极化学品储罐，立即变为创造化学品储罐",
+  "screen.alltheimbaium.eternal_totem.title": "§6永恒图腾配置",
+  "screen.alltheimbaium.eternal_totem.input": "终极化学品储罐",
+  "screen.alltheimbaium.eternal_totem.output": "创造化学品储罐",
   "chat.alltheimbaium.eternal_totem.enabled": "§a永恒图腾已启用",
   "chat.alltheimbaium.eternal_totem.disabled": "§c永恒图腾已禁用",
 
   "item.alltheimbaium.eternal_sword": "§6[§b✦ §dATI 永恒之剑 §b✦§6]",
-  "item.alltheimbaium.eternal_sword.description": "§7右键攻击距离内生物，§eALT+右键§7打开配置界面\n§e伤害: §c槽位中所有ID不同的带伤害物品伤害总和\n§e附魔: §c由附魔书叠加（同附魔仅取最高等级，多本最高等级直接相加）\n§e配置: §c击杀目标 §b/ §c攻击距离 §b/ §c27格物品槽\n§c无法附魔、无法锻造、无法作为合成材料",
+  "item.alltheimbaium.eternal_sword.description": "§7右键攻击距离内生物，§eALT+右键§7打开配置界面\n§e伤害: §c槽位中所有ID不同的带伤害物品伤害总和\n§e附魔: §c由附魔书直接叠加（任何等级附魔都相加）\n§e配置: §c击杀目标 §b/ §c攻击距离 §b/ §c27格物品槽\n§c无法附魔、无法锻造、无法作为合成材料",
   "screen.alltheimbaium.eternal_sword.title": "§6永恒之剑配置",
   "screen.alltheimbaium.eternal_sword.mode_hostile": "§e右击击杀: §c敌对生物",
   "screen.alltheimbaium.eternal_sword.mode_all": "§e右击击杀: §c所有生物",

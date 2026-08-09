@@ -88,12 +88,15 @@
   "block.alltheimbaium.farm_sugar_canes": "§aATI Sugar Canes Farm",
 
   "item.alltheimbaium.eternal_totem": "§6[§b✦ §dEternal Totem §b✦§6]",
-  "item.alltheimbaium.eternal_totem.description": "§7Auto-triggers on death, never breaks\n§eRestores: §cFull HP §c8 Absorption Hearts §cStrong Regeneration\n§eBonus: §cFire Immunity §e80% Damage Reduction §bSpeed Boost §fAttack Boost\n§eChemical Tank: §aRight-click Ultimate Chemical Tank to upgrade to Creative Chemical Tank\n§7Right-click totem to toggle, disabled by default",
+  "item.alltheimbaium.eternal_totem.description": "§7Auto-revive on death, §eALT+Right-click§7 to open config\n§eRevive: §cHP becomes 1 §cclear all effects\n§eGrants: §c40s Fire Resistance §c45s Regen II §c5s Absorption II\n§ePotion Slots: §c27 potions, applied one by one on revive\n§eConfig Convert: §aPut an Ultimate Chemical Tank in input slot, get Creative Chemical Tank in output\n§eRight-click Convert: §aRight-click an Ultimate Chemical Tank with the totem to turn it into a Creative Chemical Tank",
+  "screen.alltheimbaium.eternal_totem.title": "§6Eternal Totem Config",
+  "screen.alltheimbaium.eternal_totem.input": "Ultimate Tank",
+  "screen.alltheimbaium.eternal_totem.output": "Creative Tank",
   "chat.alltheimbaium.eternal_totem.enabled": "§aEternal Totem Enabled",
   "chat.alltheimbaium.eternal_totem.disabled": "§cEternal Totem Disabled",
 
   "item.alltheimbaium.eternal_sword": "§6[§b✦ §dEternal Sword §b✦§6]",
-  "item.alltheimbaium.eternal_sword.description": "§7Right-click to attack mobs within range, §eALT+Right-click§7 to open config\n§eDamage: §cSum of all unique-ID damage items in slots\n§eEnchantments: §cCombined from books (keep max level, stack highest ones)\n§eConfig: §cTarget §b/ §cRange §b/ §c27 item slots\n§cCannot enchant, smith, or use as a crafting material",
+  "item.alltheimbaium.eternal_sword.description": "§7Right-click to attack mobs within range, §eALT+Right-click§7 to open config\n§eDamage: §cSum of all unique-ID damage items in slots\n§eEnchantments: §cBooks directly stack (all levels added together)\n§eConfig: §cTarget §b/ §cRange §b/ §c27 item slots\n§cCannot enchant, smith, or use as a crafting material",
   "screen.alltheimbaium.eternal_sword.title": "§6Eternal Sword Config",
   "screen.alltheimbaium.eternal_sword.mode_hostile": "§eKill: §cHostile Mobs",
   "screen.alltheimbaium.eternal_sword.mode_all": "§eKill: §cAll Mobs",

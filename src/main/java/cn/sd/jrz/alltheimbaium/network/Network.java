@@ -25,5 +25,9 @@ public class Network {
                 OpenEternalSwordGuiPacket::encode,
                 OpenEternalSwordGuiPacket::decode,
                 OpenEternalSwordGuiPacket::handle);
+        CHANNEL.registerMessage(1, OpenEternalTotemGuiPacket.class,
+                OpenEternalTotemGuiPacket::encode,
+                OpenEternalTotemGuiPacket::decode,
+                OpenEternalTotemGuiPacket::handle);
     }
 }
