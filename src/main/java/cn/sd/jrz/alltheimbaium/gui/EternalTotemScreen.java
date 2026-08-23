@@ -17,7 +17,9 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class EternalTotemScreen extends AbstractContainerScreen<EternalTotemMenu> {
 
-    /** 永恒图腾 GUI 背景纹理，176×222 */
+    /**
+     * 永恒图腾 GUI 背景纹理，176×222
+     */
     private static final ResourceLocation CONTAINER_BACKGROUND =
             ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/eternal_totem_gui.png");
 

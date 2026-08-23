@@ -35,7 +35,8 @@ public class LiquidFountainConnection implements IFluidHandler {
 
     @Override
     public int getTankCapacity(int i) {
-        return Integer.MAX_VALUE;
+        // 未无限时容量为配置阈值，无限后返回最大值
+        return isInfinity() ? Integer.MAX_VALUE : Tool.suitInt(LiquidFountainBlock.getMax());
     }
 
     @Override

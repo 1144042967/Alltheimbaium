@@ -1,6 +1,10 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "all": "alltheimbaium:block/liquid_fountain"
-  }
+	"parent": "minecraft:block/cube_bottom_top",
+	"render_type": "minecraft:cutout",
+	"textures": {
+		"top": "alltheimbaium:block/liquid_fountain_top",
+		"bottom": "alltheimbaium:block/liquid_fountain_btm",
+		"side": "alltheimbaium:block/liquid_fountain_side",
+		"particle": "alltheimbaium:block/liquid_fountain_side"
+	}
 }

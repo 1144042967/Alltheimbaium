@@ -24,12 +24,16 @@ public class CuriosHelper {
     private static Method findFirstCurio;   // ICuriosItemHandler.findFirstCurio(Item)
     private static Method slotStack;        // SlotResult.stack()
 
-    /** 是否已安装 Curios */
+    /**
+     * 是否已安装 Curios
+     */
     public static boolean isCuriosLoaded() {
         return ModList.get().isLoaded("curios");
     }
 
-    /** 在玩家 Curios 饰品槽中查找指定物品，返回第一个匹配的 ItemStack；未找到/未装 Curios 返回空栈 */
+    /**
+     * 在玩家 Curios 饰品槽中查找指定物品，返回第一个匹配的 ItemStack；未找到/未装 Curios 返回空栈
+     */
     public static ItemStack findCurioItem(Player player, Item item) {
         if (!isCuriosLoaded()) return ItemStack.EMPTY;
         initReflection();
@@ -51,7 +55,9 @@ public class CuriosHelper {
         }
     }
 
-    /** 初始化反射信息（只尝试一次），失败时禁用 Curios 联动 */
+    /**
+     * 初始化反射信息（只尝试一次），失败时禁用 Curios 联动
+     */
     private static void initReflection() {
         if (init) return;
         init = true;

@@ -1,7 +1,7 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
-import cn.sd.jrz.alltheimbaium.block.FarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.ClockBlock;
+import cn.sd.jrz.alltheimbaium.block.FarmlandBlock;
 import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -21,7 +21,9 @@ public class ClockEntity extends BlockEntity {
     private static boolean active = false;
     private final int speedMultiplier;
 
-    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用，设置时钟初始开关状态 */
+    /**
+     * 由 Config.onConfigLoad() 在配置文件加载完成后调用，设置时钟初始开关状态
+     */
     public static void loadConfig() {
         active = Config.CLOCK_DEFAULT_ACTIVE.get();
     }

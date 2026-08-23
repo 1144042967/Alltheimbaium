@@ -5,6 +5,7 @@ import cn.sd.jrz.alltheimbaium.block.*;
 import cn.sd.jrz.alltheimbaium.entity.*;
 import cn.sd.jrz.alltheimbaium.gui.EternalSwordMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalTotemMenu;
+import cn.sd.jrz.alltheimbaium.gui.LiquidFountainMenu;
 import cn.sd.jrz.alltheimbaium.item.*;
 import cn.sd.jrz.alltheimbaium.recipe.BrewingCraftRecipe;
 import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
@@ -15,9 +16,11 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.PushReaction;
+import net.minecraftforge.common.Tags;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
@@ -125,7 +128,13 @@ public class Registration {
     public static final RegistryObject<ClockBlock> CLOCK_X16_BLOCK = BLOCKS.register("clock_x16", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_X16_ENTITY::get, 16));
     public static final RegistryObject<ClockBlock> CLOCK_X256_BLOCK = BLOCKS.register("clock_x256", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_X256_ENTITY::get, 256));
     public static final RegistryObject<PlatformBlock> PLATFORM_BLOCK = BLOCKS.register("platform", () -> new PlatformBlock(BLOCK_PROPERTIES));
-    public static final RegistryObject<LiquidFountainBlock> LIQUID_FOUNTAIN_BLOCK = BLOCKS.register("liquid_fountain", () -> new LiquidFountainBlock(BLOCK_PROPERTIES));
+    // 液体机：玻璃罐体，复制玻璃方块属性（音效等）+ noOcclusion 使其不 cull 相邻方块的面，透过罐体能正常看到后面的地面/物品
+    public static final RegistryObject<LiquidFountainBlock> LIQUID_FOUNTAIN_BLOCK = BLOCKS.register("liquid_fountain", () -> new LiquidFountainBlock(
+            BlockBehaviour.Properties.copy(Blocks.GLASS)
+                    .mapColor(DyeColor.BLUE)
+                    .pushReaction(PushReaction.DESTROY)
+                    .strength(0.5f, 0.5f)
+                    .noOcclusion()));
     public static final RegistryObject<StorageFountainBlock> STORAGE_FOUNTAIN_BLOCK = BLOCKS.register("storage_fountain", () -> new StorageFountainBlock(BLOCK_PROPERTIES));
     public static final RegistryObject<FarmBlock> FARM_BAMBOO_BLOCK = BLOCKS.register("farm_bamboo", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_BAMBOO));
     public static final RegistryObject<FarmBlock> FARM_BEE_BLOCK = BLOCKS.register("farm_bee", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_BEE));
@@ -192,6 +201,8 @@ public class Registration {
             MENUS.register("eternal_sword", () -> IForgeMenuType.create((id, inv, data) -> new EternalSwordMenu(id, inv)));
     public static final RegistryObject<MenuType<EternalTotemMenu>> ETERNAL_TOTEM_MENU =
             MENUS.register("eternal_totem", () -> IForgeMenuType.create((id, inv, data) -> new EternalTotemMenu(id, inv)));
+    public static final RegistryObject<MenuType<LiquidFountainMenu>> LIQUID_FOUNTAIN_MENU =
+            MENUS.register("liquid_fountain", () -> IForgeMenuType.create((id, inv, data) -> new LiquidFountainMenu(id, inv, data.readBlockPos())));
 
     // 配方序列化器
     public static final RegistryObject<RecipeSerializer<SmeltingCraftRecipe>> SMELTING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("smelting_craft", () -> SmeltingCraftRecipe.SERIALIZER);

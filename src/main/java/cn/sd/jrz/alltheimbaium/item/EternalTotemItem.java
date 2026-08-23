@@ -39,18 +39,28 @@ public class EternalTotemItem extends Item {
     public static boolean enabled = false;
 
     // ==================== 常量 ====================
-    /** 药水槽位数量 */
+    /**
+     * 药水槽位数量
+     */
     public static final int POTION_INVENTORY_SIZE = 27;
-    /** 图腾 NBT 中药水槽位的键 */
+    /**
+     * 图腾 NBT 中药水槽位的键
+     */
     public static final String TAG_POTION_ITEMS = "potion_items";
-    /** Mekanism 终极化学品储罐 */
+    /**
+     * Mekanism 终极化学品储罐
+     */
     public static final ResourceLocation ULTIMATE_CHEMICAL_TANK =
             ResourceLocation.fromNamespaceAndPath("mekanism", "ultimate_chemical_tank");
-    /** Mekanism 创造化学品储罐 */
+    /**
+     * Mekanism 创造化学品储罐
+     */
     public static final ResourceLocation CREATIVE_CHEMICAL_TANK =
             ResourceLocation.fromNamespaceAndPath("mekanism", "creative_chemical_tank");
 
-    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用，设置永恒图腾初始开关状态 */
+    /**
+     * 由 Config.onConfigLoad() 在配置文件加载完成后调用，设置永恒图腾初始开关状态
+     */
     public static void loadConfig() {
         enabled = Config.ETERNAL_TOTEM_DEFAULT_ENABLED.get();
     }
@@ -85,7 +95,9 @@ public class EternalTotemItem extends Item {
 
     // ==================== 药水槽位 NBT ====================
 
-    /** 从图腾 NBT 加载 27 格药水槽位 */
+    /**
+     * 从图腾 NBT 加载 27 格药水槽位
+     */
     public static void loadPotionItems(ItemStack totem, SimpleContainer inv) {
         CompoundTag tag = totem.getTag();
         if (tag == null || !tag.contains(TAG_POTION_ITEMS)) return;
@@ -99,7 +111,9 @@ public class EternalTotemItem extends Item {
         }
     }
 
-    /** 保存 27 格药水槽位到图腾 NBT */
+    /**
+     * 保存 27 格药水槽位到图腾 NBT
+     */
     public static void savePotionItems(ItemStack totem, SimpleContainer inv) {
         if (totem == null || totem.isEmpty()) return;
         CompoundTag tag = totem.getOrCreateTag();
@@ -116,7 +130,9 @@ public class EternalTotemItem extends Item {
         tag.put(TAG_POTION_ITEMS, list);
     }
 
-    /** 读取图腾 27 格药水槽位中的非空物品 */
+    /**
+     * 读取图腾 27 格药水槽位中的非空物品
+     */
     public static List<ItemStack> getPotionItems(ItemStack totem) {
         List<ItemStack> list = new ArrayList<>();
         CompoundTag tag = totem.getTag();
@@ -131,7 +147,9 @@ public class EternalTotemItem extends Item {
         return list;
     }
 
-    /** 应用图腾 27 格药水槽位中药水的效果到玩家 */
+    /**
+     * 应用图腾 27 格药水槽位中药水的效果到玩家
+     */
     public static void applyPotionEffects(Player player, ItemStack totem) {
         for (ItemStack s : getPotionItems(totem)) {
             if (s.isEmpty()) continue;

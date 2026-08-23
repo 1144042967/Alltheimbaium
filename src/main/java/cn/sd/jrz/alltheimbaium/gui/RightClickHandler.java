@@ -33,7 +33,9 @@ public class RightClickHandler {
         }
     }
 
-    /** 是否按住 ALT 键（左右任一） */
+    /**
+     * 是否按住 ALT 键（左右任一）
+     */
     private static boolean isAltDown() {
         long window = Minecraft.getInstance().getWindow().getWindow();
         return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_ALT) == GLFW.GLFW_PRESS

@@ -44,7 +44,9 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     static List<? extends String> acceptedTags;
     static int maxItemTypes;
 
-    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    /**
+     * 由 Config.onConfigLoad() 在配置文件加载完成后调用
+     */
     public static void loadConfig() {
         carry = Config.STORAGE_FOUNTAIN_CARRY.get();
         growthIntervalSeconds = Config.STORAGE_FOUNTAIN_GROWTH_INTERVAL_SECONDS.get();
@@ -54,7 +56,10 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         maxItemTypes = Config.STORAGE_FOUNTAIN_MAX_ITEM_TYPES.get();
     }
 
-    public static long getCarry() { return carry; }
+    public static long getCarry() {
+        return carry;
+    }
+
     public final Direction[] directions = Direction.values();
 
     public StorageFountainBlock(Properties properties) {

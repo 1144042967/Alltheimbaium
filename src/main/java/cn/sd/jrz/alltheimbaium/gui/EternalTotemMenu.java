@@ -25,25 +25,39 @@ import net.minecraftforge.registries.ForgeRegistries;
  */
 public class EternalTotemMenu extends AbstractContainerMenu {
 
-    /** 输入槽（终极化学品储罐）在容器中的下标 */
+    /**
+     * 输入槽（终极化学品储罐）在容器中的下标
+     */
     private static final int INPUT_SLOT = EternalTotemItem.POTION_INVENTORY_SIZE;
-    /** 输出槽（创造化学品储罐）在容器中的下标 */
+    /**
+     * 输出槽（创造化学品储罐）在容器中的下标
+     */
     private static final int OUTPUT_SLOT = EternalTotemItem.POTION_INVENTORY_SIZE + 1;
-    /** 容器总大小：27 药水 + 输入 + 输出 */
+    /**
+     * 容器总大小：27 药水 + 输入 + 输出
+     */
     private static final int CONTAINER_SIZE = EternalTotemItem.POTION_INVENTORY_SIZE + 2;
 
     private final SimpleContainer container = new SimpleContainer(CONTAINER_SIZE);
-    /** 服务端持有图腾引用；客户端为 null */
+    /**
+     * 服务端持有图腾引用；客户端为 null
+     */
     private final ItemStack totem;
-    /** 服务端玩家引用；客户端为 null */
+    /**
+     * 服务端玩家引用；客户端为 null
+     */
     private final Player player;
 
-    /** 客户端构造 */
+    /**
+     * 客户端构造
+     */
     public EternalTotemMenu(int id, Inventory inv) {
         this(id, inv, null, null);
     }
 
-    /** 服务端构造 */
+    /**
+     * 服务端构造
+     */
     public EternalTotemMenu(int id, Inventory inv, Player player, ItemStack totem) {
         super(Registration.ETERNAL_TOTEM_MENU.get(), id);
         this.totem = totem;
@@ -78,7 +92,9 @@ public class EternalTotemMenu extends AbstractContainerMenu {
         }
     }
 
-    /** 输入槽放终极化学品储罐且输出槽为空时，转换为创造化学品储罐 */
+    /**
+     * 输入槽放终极化学品储罐且输出槽为空时，转换为创造化学品储罐
+     */
     private void processTankConversion() {
         ItemStack input = container.getItem(INPUT_SLOT);
         ItemStack output = container.getItem(OUTPUT_SLOT);
@@ -140,7 +156,9 @@ public class EternalTotemMenu extends AbstractContainerMenu {
         return itemstack;
     }
 
-    /** 拦截所有鼠标/键盘点击：任何涉及打开的图腾的操作（拿起、放下、shift、数字键交换）都会被拒绝 */
+    /**
+     * 拦截所有鼠标/键盘点击：任何涉及打开的图腾的操作（拿起、放下、shift、数字键交换）都会被拒绝
+     */
     @Override
     public void clicked(int slotId, int button, ClickType clickType, Player player) {
         if (totem != null && !totem.isEmpty() && this.player != null
@@ -150,7 +168,9 @@ public class EternalTotemMenu extends AbstractContainerMenu {
         super.clicked(slotId, button, clickType, player);
     }
 
-    /** 本次点击是否会移动打开的图腾：拖拽中的图腾，或点击的槽位/数字键目标槽是图腾 */
+    /**
+     * 本次点击是否会移动打开的图腾：拖拽中的图腾，或点击的槽位/数字键目标槽是图腾
+     */
     private boolean wouldMoveTotem(int slotId, int button, ClickType clickType, Player player) {
         if (!this.getCarried().isEmpty() && isTotem(this.getCarried())) return true;
         if (slotId >= 0 && slotId < this.slots.size()) {
@@ -169,7 +189,9 @@ public class EternalTotemMenu extends AbstractContainerMenu {
         return false;
     }
 
-    /** 判断物品是否为「打开的这只图腾」：引用一致或内容完全一致 */
+    /**
+     * 判断物品是否为「打开的这只图腾」：引用一致或内容完全一致
+     */
     private boolean isTotem(ItemStack stack) {
         if (stack == null || stack.isEmpty() || totem == null || totem.isEmpty()) return false;
         if (!stack.is(Registration.ETERNAL_TOTEM.get())) return false;
@@ -183,7 +205,9 @@ public class EternalTotemMenu extends AbstractContainerMenu {
         return isTotem(player.getMainHandItem()) || isTotem(player.getOffhandItem());
     }
 
-    /** 药水槽：只允许放药水类物品 */
+    /**
+     * 药水槽：只允许放药水类物品
+     */
     private static class PotionSlot extends Slot {
         PotionSlot(Container container, int index, int x, int y) {
             super(container, index, x, y);
@@ -195,7 +219,9 @@ public class EternalTotemMenu extends AbstractContainerMenu {
         }
     }
 
-    /** 输入槽：只允许放 Mekanism 终极化学品储罐 */
+    /**
+     * 输入槽：只允许放 Mekanism 终极化学品储罐
+     */
     private static class InputTankSlot extends Slot {
         InputTankSlot(Container container, int index, int x, int y) {
             super(container, index, x, y);
@@ -207,7 +233,9 @@ public class EternalTotemMenu extends AbstractContainerMenu {
         }
     }
 
-    /** 输出槽：只读，只能取出创造化学品储罐 */
+    /**
+     * 输出槽：只读，只能取出创造化学品储罐
+     */
     private static class OutputTankSlot extends Slot {
         OutputTankSlot(Container container, int index, int x, int y) {
             super(container, index, x, y);

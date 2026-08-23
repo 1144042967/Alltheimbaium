@@ -1,8 +1,8 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
 import cn.sd.jrz.alltheimbaium.connection.StorageFountainConnection;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Config;
+import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -31,7 +31,9 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
     // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
     static long initialOutput;
 
-    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    /**
+     * 由 Config.onConfigLoad() 在配置文件加载完成后调用
+     */
     public static void loadConfig() {
         initialOutput = Config.STORAGE_FOUNTAIN_INITIAL_OUTPUT.get();
     }

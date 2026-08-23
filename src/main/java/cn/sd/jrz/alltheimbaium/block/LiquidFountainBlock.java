@@ -3,11 +3,11 @@ package cn.sd.jrz.alltheimbaium.block;
 import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -16,18 +16,29 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidActionResult;
+import net.minecraftforge.fluids.FluidUtil;
 import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.network.NetworkHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 液体无限制造机方块。
+ * <p>
+ * 外观为流体储罐（内部液体由 {@link cn.sd.jrz.alltheimbaium.gui.LiquidFountainRenderer} 渲染）。
+ * 右键打开 GUI；手持空桶直接装一桶、手持带液容器直接倒入。
+ * 破坏时 + 槽 / - 槽中的物品掉落。
+ */
 public class LiquidFountainBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(LiquidFountainBlock.class);
 
@@ -47,6 +58,18 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
         return infiniteThreshold;
     }
 
+    /**
+     * 判断某个流体命名空间是否属于配置的 auto_infinite 列表（支持部分匹配）
+     */
+    public static boolean isAutoInfiniteMod(String namespace) {
+        for (String mod : autoInfiniteMods) {
+            if (namespace.contains(mod)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public LiquidFountainBlock(BlockBehaviour.Properties properties) {
         super(properties);
     }
@@ -61,58 +84,37 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
         return (l, p, s, tile) -> {
             try {
-                tick(l, tile);
+                if (!l.isClientSide && tile instanceof LiquidFountainEntity generator) {
+                    generator.serverTick();
+                }
             } catch (Throwable e) {
                 log.error("LiquidFountainBlock.getTicker error", e);
             }
         };
     }
 
-    private <T extends BlockEntity> void tick(Level level, T tile) {
-        if (level.isClientSide) {
-            return;
-        }
-        if (!(tile instanceof LiquidFountainEntity generator)) {
-            return;
-        }
-        // 检查命名空间，配置文件 auto_infinite_mods 列表中的 MOD 流体直接设为无限
-        if (generator.stack != FluidStack.EMPTY) {
-            String namespace = ForgeRegistries.FLUIDS.getKey(generator.stack.getFluid()).getNamespace();
-            for (String mod : autoInfiniteMods) {
-                if (namespace.contains(mod)) {
-                    generator.stack.setAmount(Integer.MAX_VALUE);
-                    break;
-                }
+    /**
+     * 破坏时，+ 槽与 - 槽中的物品掉落
+     */
+    @Override
+    public @Nonnull List<ItemStack> getDrops(@Nonnull BlockState state, @Nonnull LootParams.Builder builder) {
+        List<ItemStack> drops = new ArrayList<>(super.getDrops(state, builder));
+        if (builder.getOptionalParameter(LootContextParams.BLOCK_ENTITY) instanceof LiquidFountainEntity entity) {
+            ItemStack input = entity.inputSlot.getStackInSlot(0);
+            if (!input.isEmpty()) {
+                drops.add(input);
+            }
+            ItemStack output = entity.outputSlot.getStackInSlot(0);
+            if (!output.isEmpty()) {
+                drops.add(output);
             }
         }
-        if (generator.stack == FluidStack.EMPTY || generator.stack.getAmount() < LiquidFountainBlock.getMax()) {
-            if (generator.stack.getAmount() <= 0) {
-                generator.stack = FluidStack.EMPTY;
-            }
-            return;
-        }
-        generator.stack.setAmount(Integer.MAX_VALUE);
-        BlockPos blockPos = generator.getBlockPos();
-        //传输
-        for (Direction direction : Direction.values()) {
-            BlockEntity entity = level.getBlockEntity(blockPos.relative(direction));
-            if (entity == null) {
-                continue;
-            }
-            IFluidHandler handler = entity.getCapability(ForgeCapabilities.FLUID_HANDLER, direction.getOpposite()).resolve().orElse(null);
-            if (handler == null) {
-                continue;
-            }
-            FluidStack stack = generator.stack;
-            stack.setAmount(Integer.MAX_VALUE);
-            handler.fill(stack.copy(), IFluidHandler.FluidAction.EXECUTE);
-        }
-        generator.setChanged();
+        return drops;
     }
 
     @SuppressWarnings("deprecation")
     @Override
-    public @Nonnull InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+    public @Nonnull InteractionResult use(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         try {
             if (level.isClientSide) {
                 return InteractionResult.SUCCESS;
@@ -121,16 +123,26 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
             if (generator == null) {
                 return InteractionResult.FAIL;
             }
-            FluidStack stack = generator.stack;
-            if (stack == FluidStack.EMPTY) {
-                player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.empty"));
-                return InteractionResult.SUCCESS;
+            ItemStack held = player.getItemInHand(handIn);
+            IFluidHandler machine = generator.getCapability(ForgeCapabilities.FLUID_HANDLER).resolve().orElse(null);
+            if (machine != null && !held.isEmpty()) {
+                // 空桶/空容器：从机器装取液体
+                FluidActionResult filled = FluidUtil.tryFillContainer(held, machine, 1000, player, true);
+                if (filled.isSuccess()) {
+                    player.setItemInHand(handIn, filled.getResult());
+                    return InteractionResult.SUCCESS;
+                }
+                // 带液容器/桶：把液体倒入机器
+                FluidActionResult emptied = FluidUtil.tryEmptyContainer(held, machine, 1000, player, true);
+                if (emptied.isSuccess()) {
+                    player.setItemInHand(handIn, emptied.getResult());
+                    return InteractionResult.SUCCESS;
+                }
             }
-            if (stack.getAmount() < LiquidFountainBlock.getMax()) {
-                player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.current", stack.getDisplayName(), stack.getAmount(), LiquidFountainBlock.getMax()));
-                return InteractionResult.SUCCESS;
+            // 其他情况打开 GUI
+            if (player instanceof ServerPlayer serverPlayer) {
+                NetworkHooks.openScreen(serverPlayer, generator, pos);
             }
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.liquid.fountain.max", stack.getDisplayName()));
             return InteractionResult.SUCCESS;
         } catch (Throwable e) {
             log.error("LiquidFountainBlock.use error", e);

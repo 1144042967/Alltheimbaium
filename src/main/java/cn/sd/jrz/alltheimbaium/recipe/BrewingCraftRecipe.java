@@ -28,7 +28,9 @@ public class BrewingCraftRecipe extends CustomRecipe {
     public static final RecipeSerializer<BrewingCraftRecipe> SERIALIZER =
             new SimpleCraftingRecipeSerializer<>(BrewingCraftRecipe::new);
 
-    /** 由 {@link #matches} 计算并缓存，供 {@link #assemble} 消费。 */
+    /**
+     * 由 {@link #matches} 计算并缓存，供 {@link #assemble} 消费。
+     */
     private ItemStack cachedResult = ItemStack.EMPTY;
 
     public BrewingCraftRecipe(ResourceLocation id, CraftingBookCategory category) {

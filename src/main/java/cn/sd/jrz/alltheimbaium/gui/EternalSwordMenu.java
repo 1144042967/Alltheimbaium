@@ -23,23 +23,37 @@ import net.minecraft.world.item.ItemStack;
  */
 public class EternalSwordMenu extends AbstractContainerMenu {
 
-    /** 27 格剑槽 */
+    /**
+     * 27 格剑槽
+     */
     private final SimpleContainer swordInv = new SimpleContainer(EternalSwordItem.INVENTORY_SIZE);
-    /** 服务端持有剑引用；客户端为 null */
+    /**
+     * 服务端持有剑引用；客户端为 null
+     */
     private final ItemStack sword;
-    /** 服务端玩家引用（用于锁定主手剑）；客户端为 null */
+    /**
+     * 服务端玩家引用（用于锁定主手剑）；客户端为 null
+     */
     private final Player player;
-    /** 模式数据槽：0=敌对生物，1=所有生物 */
+    /**
+     * 模式数据槽：0=敌对生物，1=所有生物
+     */
     private final DataSlot killAllSlot;
-    /** 距离数据槽：8 / 16 / 24 / 32 */
+    /**
+     * 距离数据槽：8 / 16 / 24 / 32
+     */
     private final DataSlot rangeSlot;
 
-    /** 客户端构造 */
+    /**
+     * 客户端构造
+     */
     public EternalSwordMenu(int id, Inventory inv) {
         this(id, inv, null, null);
     }
 
-    /** 服务端构造 */
+    /**
+     * 服务端构造
+     */
     public EternalSwordMenu(int id, Inventory inv, Player player, ItemStack sword) {
         super(Registration.ETERNAL_SWORD_MENU.get(), id);
         this.sword = sword;
@@ -88,7 +102,9 @@ public class EternalSwordMenu extends AbstractContainerMenu {
         return rangeSlot.get();
     }
 
-    /** 按钮点击：0=切换击杀模式，1..4=设置攻击距离 8/16/24/32 */
+    /**
+     * 按钮点击：0=切换击杀模式，1..4=设置攻击距离 8/16/24/32
+     */
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (sword == null || sword.isEmpty()) return false;
@@ -114,7 +130,9 @@ public class EternalSwordMenu extends AbstractContainerMenu {
         saveInventory();
     }
 
-    /** 拦截所有鼠标/键盘点击：任何涉及打开之剑的操作（拿起、放下、shift、数字键交换）都会被拒绝 */
+    /**
+     * 拦截所有鼠标/键盘点击：任何涉及打开之剑的操作（拿起、放下、shift、数字键交换）都会被拒绝
+     */
     @Override
     public void clicked(int slotId, int button, ClickType clickType, Player player) {
         if (sword != null && !sword.isEmpty() && this.player != null
@@ -124,7 +142,9 @@ public class EternalSwordMenu extends AbstractContainerMenu {
         super.clicked(slotId, button, clickType, player);
     }
 
-    /** 本次点击是否会移动打开的剑：拖拽中的剑、点击的槽位是剑、或数字键交换目标含剑 */
+    /**
+     * 本次点击是否会移动打开的剑：拖拽中的剑、点击的槽位是剑、或数字键交换目标含剑
+     */
     private boolean wouldMoveSword(int slotId, int button, ClickType clickType, Player player) {
         if (!this.getCarried().isEmpty() && isSword(this.getCarried())) return true;
         if (slotId >= 0 && slotId < this.slots.size()) {
@@ -142,14 +162,18 @@ public class EternalSwordMenu extends AbstractContainerMenu {
         return false;
     }
 
-    /** 判断物品是否为「打开的这把剑」：引用一致或内容完全一致 */
+    /**
+     * 判断物品是否为「打开的这把剑」：引用一致或内容完全一致
+     */
     private boolean isSword(ItemStack stack) {
         if (stack == null || stack.isEmpty() || sword == null || sword.isEmpty()) return false;
         if (!stack.is(Registration.ETERNAL_SWORD.get())) return false;
         return stack == sword || ItemStack.isSameItemSameTags(stack, sword);
     }
 
-    /** 保存 27 格槽位到剑 NBT 并重新计算伤害与附魔 */
+    /**
+     * 保存 27 格槽位到剑 NBT 并重新计算伤害与附魔
+     */
     private void saveInventory() {
         if (sword == null || sword.isEmpty()) return;
         EternalSwordItem.saveInventory(sword, swordInv);
@@ -189,7 +213,9 @@ public class EternalSwordMenu extends AbstractContainerMenu {
         return isSword(player.getMainHandItem()) || isSword(player.getOffhandItem());
     }
 
-    /** 剑槽：禁止放入任何永恒之剑 */
+    /**
+     * 剑槽：禁止放入任何永恒之剑
+     */
     private static class SwordSlot extends Slot {
         SwordSlot(Container container, int index, int x, int y) {
             super(container, index, x, y);

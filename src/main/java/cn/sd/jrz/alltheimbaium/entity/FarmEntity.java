@@ -33,7 +33,9 @@ public class FarmEntity extends BlockEntity implements ICapabilityProvider {
     // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
     static long initialLevel;
 
-    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    /**
+     * 由 Config.onConfigLoad() 在配置文件加载完成后调用
+     */
     public static void loadConfig() {
         initialLevel = Config.FARM_INITIAL_LEVEL.get();
     }

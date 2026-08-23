@@ -32,10 +32,14 @@ import java.util.List;
  */
 public class SmeltingCraftRecipe extends CustomRecipe {
 
-    /** Indices of the 8 outer slots in a 3×3 crafting grid (all except center = 4). */
+    /**
+     * Indices of the 8 outer slots in a 3×3 crafting grid (all except center = 4).
+     */
     private static final int[] OUTER_SLOTS = {0, 1, 2, 3, 5, 6, 7, 8};
 
-    /** Furnace recipe types to check, in priority order (smelting first). */
+    /**
+     * Furnace recipe types to check, in priority order (smelting first).
+     */
     private static final List<RecipeType<? extends AbstractCookingRecipe>> FURNACE_TYPES = List.of(
             RecipeType.SMELTING,
             RecipeType.BLASTING,

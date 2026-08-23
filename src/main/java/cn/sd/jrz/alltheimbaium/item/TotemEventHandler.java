@@ -33,7 +33,9 @@ public class TotemEventHandler {
     // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
     private static boolean tankConversion;
 
-    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    /**
+     * 由 Config.onConfigLoad() 在配置文件加载完成后调用
+     */
     public static void loadConfig() {
         tankConversion = Config.ETERNAL_TOTEM_TANK_CONVERSION.get();
     }
@@ -83,7 +85,9 @@ public class TotemEventHandler {
         event.setCancellationResult(InteractionResult.SUCCESS);
     }
 
-    /** 在玩家物品栏与 Curios 饰品槽中查找永恒图腾（主手 → 副手 → 盔甲 → 背包 → Curios） */
+    /**
+     * 在玩家物品栏与 Curios 饰品槽中查找永恒图腾（主手 → 副手 → 盔甲 → 背包 → Curios）
+     */
     private static ItemStack findTotem(Player player) {
         ItemStack mainHand = player.getMainHandItem();
         if (mainHand.is(Registration.ETERNAL_TOTEM.get())) {
@@ -107,7 +111,9 @@ public class TotemEventHandler {
         return CuriosHelper.findCurioItem(player, Registration.ETERNAL_TOTEM.get());
     }
 
-    /** 基础复活效果：清除效果、血量变为 1、获得 40 秒抗火 / 45 秒生命恢复 II / 5 秒伤害吸收 II */
+    /**
+     * 基础复活效果：清除效果、血量变为 1、获得 40 秒抗火 / 45 秒生命恢复 II / 5 秒伤害吸收 II
+     */
     private static void applyTotemEffects(Player player) {
         player.removeAllEffects();
         player.setHealth(1F);
@@ -119,7 +125,9 @@ public class TotemEventHandler {
         player.level().broadcastEntityEvent(player, (byte) 35);
     }
 
-    /** 基础效果之后，逐个应用图腾 27 格药水槽位中药水的效果 */
+    /**
+     * 基础效果之后，逐个应用图腾 27 格药水槽位中药水的效果
+     */
     private static void applyPotionEffects(Player player) {
         ItemStack totem = findTotem(player);
         if (!totem.isEmpty()) {

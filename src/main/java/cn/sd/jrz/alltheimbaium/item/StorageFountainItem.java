@@ -31,7 +31,9 @@ public class StorageFountainItem extends BlockItem {
     static List<? extends String> acceptedMods;
     static List<? extends String> acceptedTags;
 
-    /** 由 Config.onConfigLoad() 在配置文件加载完成后调用 */
+    /**
+     * 由 Config.onConfigLoad() 在配置文件加载完成后调用
+     */
     public static void loadConfig() {
         acceptedMods = Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get();
         acceptedTags = Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get();

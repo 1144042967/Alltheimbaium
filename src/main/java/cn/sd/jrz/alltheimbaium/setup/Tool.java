@@ -120,7 +120,9 @@ public class Tool {
     private static Field guardianPartDragonField;
     private static boolean guardianInit;
 
-    /** 初始化混沌守卫反射信息（只尝试一次） */
+    /**
+     * 初始化混沌守卫反射信息（只尝试一次）
+     */
     private static void initGuardian() {
         if (guardianInit) return;
         guardianInit = true;
@@ -142,7 +144,9 @@ public class Tool {
         }
     }
 
-    /** 判断实体是否为混沌守卫（本体或部位），用于范围攻击目标筛选 */
+    /**
+     * 判断实体是否为混沌守卫（本体或部位），用于范围攻击目标筛选
+     */
     public static boolean isGuardian(Entity target) {
         initGuardian();
         if (guardianClass == null || target == null) return false;

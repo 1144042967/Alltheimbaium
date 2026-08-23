@@ -19,7 +19,9 @@ public class Network {
             PROTOCOL_VERSION::equals,
             PROTOCOL_VERSION::equals);
 
-    /** 注册所有数据包。须在 mod 构造阶段调用一次 */
+    /**
+     * 注册所有数据包。须在 mod 构造阶段调用一次
+     */
     public static void register() {
         CHANNEL.registerMessage(0, OpenEternalSwordGuiPacket.class,
                 OpenEternalSwordGuiPacket::encode,

@@ -6,7 +6,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.common.ForgeConfigSpec;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -24,9 +25,13 @@ public class DataConfig {
         this.entityTypeSupplier = entityTypeSupplier;
     }
 
-    public BlockEntityType<?> getType() { return entityTypeSupplier.get(); }
+    public BlockEntityType<?> getType() {
+        return entityTypeSupplier.get();
+    }
 
-    /** 获取产物列表（带缓存，首次调用时从配置解析，后续直接返回缓存）。 */
+    /**
+     * 获取产物列表（带缓存，首次调用时从配置解析，后续直接返回缓存）。
+     */
     public List<ItemProduct> getProductList() {
         if (cachedProducts == null) {
             cachedProducts = parseProducts(productsConfig.get());
@@ -34,7 +39,9 @@ public class DataConfig {
         return cachedProducts;
     }
 
-    /** 解析产物配置字符串列表，格式 "namespace:item:count" */
+    /**
+     * 解析产物配置字符串列表，格式 "namespace:item:count"
+     */
     private static List<ItemProduct> parseProducts(List<? extends String> configList) {
         List<ItemProduct> result = new ArrayList<>();
         for (String entry : configList) {
@@ -56,9 +63,10 @@ public class DataConfig {
 
     // ==================== 42 个农场的静态配置实例 ====================
     private static DataConfig create(ForgeConfigSpec.ConfigValue<List<? extends String>> products,
-                                       Supplier<BlockEntityType<?>> entityTypeSupplier) {
+                                     Supplier<BlockEntityType<?>> entityTypeSupplier) {
         return new DataConfig(products, entityTypeSupplier);
     }
+
     public static final DataConfig FARM_BAMBOO = create(Config.FARM_BAMBOO_PRODUCTS, () -> Registration.FARM_BAMBOO_ENTITY.get());
     public static final DataConfig FARM_BEE = create(Config.FARM_BEE_PRODUCTS, () -> Registration.FARM_BEE_ENTITY.get());
     public static final DataConfig FARM_BLAZE = create(Config.FARM_BLAZE_PRODUCTS, () -> Registration.FARM_BLAZE_ENTITY.get());

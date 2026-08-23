@@ -121,12 +121,19 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 ### 4. 液体无限制造机 (`LiquidFountainBlock` / `LiquidFountainEntity`)
 
-将有限流体变为无限。
+将有限流体变为无限。内部液体由 `LiquidFountainRenderer`（BER）按存量比例渲染。
 
-- 输入单一流体，达到 `10,000 * 1,000 = 10,000,000` mB 后变为无限
-- 只支持 1 种流体
-- 无限状态下每 tick 向六个面输出 `Integer.MAX_VALUE` mB
-- 提供 `IFluidHandler` capability
+- 输入单一流体，达到阈值（配置 `liquid_fountain.infinite_threshold`，默认 `10,000,000` mB = 1 万桶）后变为无限
+- 只支持 1 种流体；配置 `auto_infinite_mods` 中命名空间的流体输入后直接无限
+- **右键打开 GUI**（化学品储罐风格，`LiquidFountainMenu`/`LiquidFountainScreen`）：
+  - 左上 `+ 槽`：放液体桶/带液容器 → 液体输入机器；放空桶/空容器 → 从机器装液体；操作完毕的桶/容器移到下方 `- 槽`
+  - `- 槽` 只读，玩家/管道可取走
+  - 中间背景块上六个按键逐面控制主动输出开关（NBT 持久化）
+  - 右上进度条展示阈值进度，下方信息面板显示 `当前/阈值 mB 流体名` 与 `还需 X mB 达到无限`，无限后显示 `无限 流体名` / `流体已达到无限`
+- 无限状态下每 tick 向六个面（受开关控制）输出 `Integer.MAX_VALUE` mB
+- 手持空桶/带液容器右键可直接交互（`FluidUtil` 装取），否则打开 GUI
+- 提供 `IFluidHandler`（管道输入输出，未无限时可输入/输出存量，无限后只输出）与 `IItemHandler`（+ 槽可插入、- 槽可抽取）capability
+- 破坏时 + 槽 / - 槽中的物品掉落
 
 ### 5. 农场 (`FarmBlock` / `FarmEntity`)
 
@@ -255,7 +262,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 - **FarmEntity**: `level`(long), `output_array`(long[]), `save_array`(long[])
 - **StorageFountainEntity**: `output`(long), `save_stick`(ListTag: 每项含物品NBT + `Long_Count`)
-- **LiquidFountainEntity**: `fluid_id`(string), `fluid_amount`(int)
+- **LiquidFountainEntity**: `fluid_id`(string), `fluid_amount`(int), `transferDown/Up/North/South/West/East`(boolean), `inputSlot`(+槽), `outputSlot`(-槽)
 - 所有数值加载时经过 `Tool.suit()` 防负数处理
 
 ## Tool 工具方法
