@@ -3,6 +3,7 @@ package cn.sd.jrz.alltheimbaium.setup;
 import cn.sd.jrz.alltheimbaium.Alltheimbaium;
 import cn.sd.jrz.alltheimbaium.block.*;
 import cn.sd.jrz.alltheimbaium.entity.*;
+import cn.sd.jrz.alltheimbaium.gui.AutoFarmlandMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalSwordMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalTotemMenu;
 import cn.sd.jrz.alltheimbaium.gui.LiquidFountainMenu;
@@ -47,8 +48,11 @@ public class Registration {
                 .icon(() -> new ItemStack(Registration.FARMLAND_ITEM.get()))
                 .displayItems((parameters, output) -> {
                     output.accept(Registration.FARMLAND_ITEM.get());
+                    output.accept(Registration.AUTO_FARMLAND_ITEM.get());
                     output.accept(Registration.STORAGE_FOUNTAIN_ITEM.get());
                     output.accept(Registration.LIQUID_FOUNTAIN_ITEM.get());
+                    output.accept(Registration.ETERNAL_TOTEM.get());
+                    output.accept(Registration.ETERNAL_SWORD.get());
                     output.accept(Registration.CLOCK_ITEM.get());
                     output.accept(Registration.CLOCK_X4_ITEM.get());
                     output.accept(Registration.CLOCK_X16_ITEM.get());
@@ -107,8 +111,6 @@ public class Registration {
                     output.accept(Registration.BLOCK_SILICON_X8.get());
                     output.accept(Registration.BLOCK_QUANTUM_ALLOY_X8.get());
                     output.accept(Registration.BLOCK_SKY_STEEL_X8.get());
-                    output.accept(Registration.ETERNAL_TOTEM.get());
-                    output.accept(Registration.ETERNAL_SWORD.get());
                 })
                 .build()
         );
@@ -123,6 +125,11 @@ public class Registration {
     // 方块
 
     public static final RegistryObject<FarmlandBlock> FARMLAND_BLOCK = BLOCKS.register("farmland", FarmlandBlock::new);
+    public static final RegistryObject<AutoFarmlandBlock> AUTO_FARMLAND_BLOCK = BLOCKS.register("auto_farmland", () -> new AutoFarmlandBlock(
+            BlockBehaviour.Properties.of()
+                    .mapColor(DyeColor.BLUE)
+                    .pushReaction(PushReaction.DESTROY)
+                    .strength(0.5f, 0.5f)));
     public static final RegistryObject<ClockBlock> CLOCK_BLOCK = BLOCKS.register("clock", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_ENTITY::get, 2));
     public static final RegistryObject<ClockBlock> CLOCK_X4_BLOCK = BLOCKS.register("clock_x4", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_X4_ENTITY::get, 4));
     public static final RegistryObject<ClockBlock> CLOCK_X16_BLOCK = BLOCKS.register("clock_x16", () -> new ClockBlock(BLOCK_PROPERTIES, Registration.CLOCK_X16_ENTITY::get, 16));
@@ -177,7 +184,8 @@ public class Registration {
     public static final RegistryObject<FarmBlock> FARM_ZOMBIFIED_PIGLIN_BLOCK = BLOCKS.register("farm_zombified_piglin", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_ZOMBIFIED_PIGLIN));
 
     // 物品
-    public static final RegistryObject<BlockItem> FARMLAND_ITEM = ITEMS.register("farmland", () -> new BlockItem(FARMLAND_BLOCK.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> FARMLAND_ITEM = ITEMS.register("farmland", () -> new FarmlandItem(FARMLAND_BLOCK.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> AUTO_FARMLAND_ITEM = ITEMS.register("auto_farmland", () -> new AutoFarmlandItem(AUTO_FARMLAND_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<ClockItem> CLOCK_ITEM = ITEMS.register("clock", () -> new ClockItem(CLOCK_BLOCK.get(), "block.alltheimbaium.clock.description"));
     public static final RegistryObject<ClockItem> CLOCK_X4_ITEM = ITEMS.register("clock_x4", () -> new ClockItem(CLOCK_X4_BLOCK.get(), "block.alltheimbaium.clock_x4.description"));
     public static final RegistryObject<ClockItem> CLOCK_X16_ITEM = ITEMS.register("clock_x16", () -> new ClockItem(CLOCK_X16_BLOCK.get(), "block.alltheimbaium.clock_x16.description"));
@@ -203,6 +211,8 @@ public class Registration {
             MENUS.register("eternal_totem", () -> IForgeMenuType.create((id, inv, data) -> new EternalTotemMenu(id, inv)));
     public static final RegistryObject<MenuType<LiquidFountainMenu>> LIQUID_FOUNTAIN_MENU =
             MENUS.register("liquid_fountain", () -> IForgeMenuType.create((id, inv, data) -> new LiquidFountainMenu(id, inv, data.readBlockPos())));
+    public static final RegistryObject<MenuType<AutoFarmlandMenu>> AUTO_FARMLAND_MENU =
+            MENUS.register("auto_farmland", () -> IForgeMenuType.create((id, inv, data) -> new AutoFarmlandMenu(id, inv, data.readBlockPos())));
 
     // 配方序列化器
     public static final RegistryObject<RecipeSerializer<SmeltingCraftRecipe>> SMELTING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("smelting_craft", () -> SmeltingCraftRecipe.SERIALIZER);
@@ -251,6 +261,7 @@ public class Registration {
 
     // 实体
     public static final RegistryObject<BlockEntityType<CommonEntity>> FARMLAND_ENTITY = ENTITIES.register("farmland", () -> BlockEntityType.Builder.of((pos, state) -> new CommonEntity(pos, state, Registration.FARMLAND_ENTITY::get), FARMLAND_BLOCK.get()).build(null));
+    public static final RegistryObject<BlockEntityType<AutoFarmlandEntity>> AUTO_FARMLAND_ENTITY = ENTITIES.register("auto_farmland", () -> BlockEntityType.Builder.of(AutoFarmlandEntity::new, AUTO_FARMLAND_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<ClockEntity>> CLOCK_ENTITY = ENTITIES.register("clock", () -> BlockEntityType.Builder.of((pos, state) -> new ClockEntity(pos, state, Registration.CLOCK_ENTITY::get, 2), CLOCK_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<ClockEntity>> CLOCK_X4_ENTITY = ENTITIES.register("clock_x4", () -> BlockEntityType.Builder.of((pos, state) -> new ClockEntity(pos, state, Registration.CLOCK_X4_ENTITY::get, 4), CLOCK_X4_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<ClockEntity>> CLOCK_X16_ENTITY = ENTITIES.register("clock_x16", () -> BlockEntityType.Builder.of((pos, state) -> new ClockEntity(pos, state, Registration.CLOCK_X16_ENTITY::get, 16), CLOCK_X16_BLOCK.get()).build(null));

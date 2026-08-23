@@ -32,6 +32,12 @@
   "item.alltheimbaium.block_sky_steel_x8": "§bATI Sky Steel Block §fX8",
 
   "block.alltheimbaium.farmland": "§6ATI Farmland",
+  "block.alltheimbaium.auto_farmland": "§6ATI Auto Farmland",
+  "item.alltheimbaium.farmland.tooltip.1": "§7Crops planted on top will grow automatically",
+  "item.alltheimbaium.farmland.tooltip.2": "§7Never degrades into dirt",
+  "item.alltheimbaium.auto_farmland.tooltip.1": "§7Every tick matures and auto-harvests the crop above",
+  "item.alltheimbaium.auto_farmland.tooltip.2": "§7Harvesting consumes FE; items stored in the container",
+  "item.alltheimbaium.auto_farmland.tooltip.3": "§7Container extractable via pipes; right-click side/bottom to open GUI",
 
   "block.alltheimbaium.storage_fountain": "§9ATI Storage Block Fountain",
   "block.alltheimbaium.liquid_fountain": "§bATI Liquid Infinity Fountain",

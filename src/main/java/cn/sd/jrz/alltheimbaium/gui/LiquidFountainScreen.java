@@ -58,10 +58,6 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
         super(menu, playerInventory, title);
         this.imageWidth = 176;
         this.imageHeight = 192;
-        // 标题与物品栏标签放在左侧，右侧留给信息面板
-        this.titleLabelX = 8;
-        this.titleLabelY = 7;
-        this.inventoryLabelX = 8;
         this.inventoryLabelY = 100;
     }
 
@@ -111,7 +107,6 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         // 标题与物品栏标签（亮色 GUI 上用白色/灰色文字）
         guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFFFFF, false);
-        // guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, TEXT_COLOR, false);
         // 面板中部信息描述两行（单位缩写：mB / B / KB）；renderLabels 使用相对 GUI 的局部坐标
         boolean infinite = this.menu.isInfinity();
         Component fluidName = fluidName();

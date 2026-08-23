@@ -127,13 +127,7 @@ public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock imp
 
     @Override
     public void randomTick(@Nonnull BlockState state, @Nonnull ServerLevel level, @Nonnull BlockPos pos, @Nonnull RandomSource random) {
-        try {
-            if (state.getValue(MOISTURE) < 7) {
-                level.setBlock(pos, state.setValue(MOISTURE, 7), 2);
-            }
-        } catch (Throwable e) {
-            log.error("FarmlandBlock.randomTick error", e);
-        }
+        // 去掉湿润逻辑：不更新 MOISTURE，耕地始终保持状态、不会退化为泥土
     }
 
     @Override
@@ -148,6 +142,10 @@ public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock imp
     @Override
     public boolean canSustainPlant(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull Direction facing, @Nonnull IPlantable plantable) {
         try {
+            // 禁止树苗种在耕地上：树长大时原版机制会把耕地变回普通泥土
+            if (plantable instanceof SaplingBlock) {
+                return false;
+            }
             BlockState plant = plantable.getPlant(level, pos.relative(facing));
             var type = plantable.getPlantType(level, pos.relative(facing));
             return type == PlantType.CROP || plant.getBlock() instanceof StemBlock;
@@ -159,12 +157,8 @@ public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock imp
 
     @Override
     public boolean isFertile(BlockState state, BlockGetter level, BlockPos pos) {
-        try {
-            return state.getValue(MOISTURE) > 0;
-        } catch (Throwable e) {
-            log.error("FarmlandBlock.isFertile error", e);
-        }
-        return super.isFertile(state, level, pos);
+        // 去掉湿润判断：耕地始终肥沃
+        return true;
     }
 
     @SuppressWarnings("deprecation")

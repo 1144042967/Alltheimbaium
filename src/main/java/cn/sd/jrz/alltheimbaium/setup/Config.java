@@ -1,5 +1,6 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
+import cn.sd.jrz.alltheimbaium.block.AutoFarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.FarmBlock;
 import cn.sd.jrz.alltheimbaium.block.FarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
@@ -35,6 +36,7 @@ public class Config {
     public static ForgeConfigSpec.IntValue FARMLAND_GROWTH_AMOUNT;
     public static ForgeConfigSpec.BooleanValue FARMLAND_BONEMEAL_ENABLED;
     public static ForgeConfigSpec.IntValue FARMLAND_BONEMEAL_INTERVAL;
+    public static ForgeConfigSpec.IntValue AUTO_FARMLAND_HARVEST_COST;
 
     // ==================== 时钟方块 ====================
     public static ForgeConfigSpec.BooleanValue CLOCK_DEFAULT_ACTIVE;
@@ -125,6 +127,13 @@ public class Config {
         FARMLAND_BONEMEAL_INTERVAL = builder
                 .comment("每多少 tick 额外施放一次骨粉")
                 .defineInRange("bonemeal_interval", 1, 1, Integer.MAX_VALUE);
+        builder.pop();
+
+        // ---- ATI 自动耕地 ----
+        builder.comment("ATI 自动耕地设置").push("auto_farmland");
+        AUTO_FARMLAND_HARVEST_COST = builder
+                .comment("每次模拟收获消耗的 FE 能量")
+                .defineInRange("harvest_cost", 2000, 0, Integer.MAX_VALUE);
         builder.pop();
 
         // ---- 时钟方块 ----
@@ -269,6 +278,7 @@ public class Config {
     public static void onConfigLoad(ModConfigEvent.Loading event) {
         if (event.getConfig().getSpec() == SERVER_CONFIG) {
             FarmlandBlock.loadConfig();
+            AutoFarmlandBlock.loadConfig();
             ClockEntity.loadConfig();
             EternalTotemItem.loadConfig();
             TotemEventHandler.loadConfig();

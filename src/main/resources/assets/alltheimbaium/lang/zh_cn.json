@@ -32,6 +32,12 @@
   "item.alltheimbaium.block_sky_steel_x8": "§bATI 天空钢块 §fX8",
 
   "block.alltheimbaium.farmland": "§6ATI 耕地",
+  "block.alltheimbaium.auto_farmland": "§6ATI 自动耕地",
+  "item.alltheimbaium.farmland.tooltip.1": "§7上方种植的作物会自动生长",
+  "item.alltheimbaium.farmland.tooltip.2": "§7不会退化为泥土",
+  "item.alltheimbaium.auto_farmland.tooltip.1": "§7每 tick 自动催熟并收获上方作物",
+  "item.alltheimbaium.auto_farmland.tooltip.2": "§7收获消耗 FE 能量，收获物存入容器",
+  "item.alltheimbaium.auto_farmland.tooltip.3": "§7容器可用管道抽取；从侧面/底面右键打开 GUI",
 
   "block.alltheimbaium.storage_fountain": "§9ATI 存储方块制造机",
   "block.alltheimbaium.liquid_fountain": "§bATI 液体无限制造机",

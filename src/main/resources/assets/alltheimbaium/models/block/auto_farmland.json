@@ -1,10 +1,10 @@
 {
   "parent": "minecraft:block/block",
   "textures": {
-    "particle": "alltheimbaium:block/farmland_side",
-    "side": "alltheimbaium:block/farmland_side",
+    "particle": "alltheimbaium:block/farmland_auto_side",
+    "side": "alltheimbaium:block/farmland_auto_side",
     "top": "alltheimbaium:block/farmland_top",
-    "bottom": "alltheimbaium:block/farmland_btm"
+    "bottom": "alltheimbaium:block/farmland_auto_btm"
   },
   "elements": [
     {
