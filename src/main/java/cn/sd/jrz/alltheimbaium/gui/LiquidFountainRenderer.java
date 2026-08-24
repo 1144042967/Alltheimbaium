@@ -100,12 +100,10 @@ public class LiquidFountainRenderer implements BlockEntityRenderer<LiquidFountai
             quad(consumer, mat, face.vs, u0, u1, face.flipV ? v1 : v0, face.flipV ? v0 : v1,
                     face.nx, face.ny, face.nz, r, g, b, alpha, combinedLight, combinedOverlay);
         }
-        // 顶面（液面未满时才渲染，法线朝 +Y）
-        if (y1 < FULL_Y - 0.001F) {
-            quad(consumer, mat,
-                    new float[][]{{MIN, y1, MAX}, {MAX, y1, MAX}, {MAX, y1, MIN}, {MIN, y1, MIN}},
-                    u0, u1, v0, v1, 0, 1, 0, r, g, b, alpha, combinedLight, combinedOverlay);
-        }
+        // 顶面
+        quad(consumer, mat,
+                new float[][]{{MIN, y1, MAX}, {MAX, y1, MAX}, {MAX, y1, MIN}, {MIN, y1, MIN}},
+                u0, u1, v0, v1, 0, 1, 0, r, g, b, alpha, combinedLight, combinedOverlay);
     }
 
     /**
