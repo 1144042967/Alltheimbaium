@@ -35,6 +35,8 @@ public class LiquidFountainMenu extends AbstractContainerMenu {
     public static final int BUTTON_TRANSFER_SOUTH = 3;
     public static final int BUTTON_TRANSFER_WEST = 4;
     public static final int BUTTON_TRANSFER_EAST = 5;
+    /** "输出"总开关按钮 ID */
+    public static final int BUTTON_OUTPUT = 6;
 
     public final LiquidFountainEntity entity;
 
@@ -44,6 +46,8 @@ public class LiquidFountainMenu extends AbstractContainerMenu {
     private long clientMax;
     // 六面主动输出开关（客户端侧同步值），索引与 Direction.values() 顺序一致
     private final boolean[] clientTransfer = new boolean[6];
+    // 客户端同步的主动输出总开关（默认开启）
+    private boolean clientOutputEnabled = true;
 
     public LiquidFountainMenu(int id, Inventory playerInventory, BlockPos pos) {
         super(Registration.LIQUID_FOUNTAIN_MENU.get(), id);
@@ -67,6 +71,8 @@ public class LiquidFountainMenu extends AbstractContainerMenu {
             int idx = direction.ordinal();
             addDataSlot(makeDataSlot(() -> entity.isTransferEnabled(direction) ? 1 : 0, v -> clientTransfer[idx] = v != 0));
         }
+        // 主动输出总开关数据槽（客户端 GUI 按钮显示状态）
+        addDataSlot(makeDataSlot(() -> entity.isOutputEnabled() ? 1 : 0, v -> clientOutputEnabled = v != 0));
     }
 
     /**
@@ -109,8 +115,16 @@ public class LiquidFountainMenu extends AbstractContainerMenu {
         return clientTransfer[direction.ordinal()];
     }
 
+    /** 是否开启主动输出（总开关；客户端读同步值，服务端读实体） */
+    public boolean isOutputEnabled() {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+            return entity.isOutputEnabled();
+        }
+        return clientOutputEnabled;
+    }
+
     /**
-     * 处理 GUI 按钮点击（六面主动输出开关）
+     * 处理 GUI 按钮点击（"输出"总开关 + 六面主动输出开关）
      */
     @Override
     public boolean clickMenuButton(@Nonnull Player player, int id) {
@@ -124,6 +138,12 @@ public class LiquidFountainMenu extends AbstractContainerMenu {
             case BUTTON_TRANSFER_SOUTH -> entity.transferSouth = !entity.transferSouth;
             case BUTTON_TRANSFER_WEST -> entity.transferWest = !entity.transferWest;
             case BUTTON_TRANSFER_EAST -> entity.transferEast = !entity.transferEast;
+            case BUTTON_OUTPUT -> {
+                // 只有达到无限后才允许主动输出（GUI 按钮已禁用，此处兜底防客户端直接发包）
+                if (entity.isInfinity()) {
+                    entity.outputEnabled = !entity.outputEnabled;
+                }
+            }
             default -> {
                 return false;
             }

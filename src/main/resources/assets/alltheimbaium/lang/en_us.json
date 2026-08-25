@@ -20,6 +20,9 @@
   "screen.alltheimbaium.liquid_fountain.face.south": "South",
   "screen.alltheimbaium.liquid_fountain.face.west": "West",
   "screen.alltheimbaium.liquid_fountain.face.east": "East",
+  "screen.alltheimbaium.liquid_fountain.output": "Output",
+  "screen.alltheimbaium.liquid_fountain.output_note": "§7Active output only after infinite",
+  "screen.alltheimbaium.auto_farmland.output_down": "Output Down",
 
   "item.alltheimbaium.package_material_x1": "§7ATI Package Material §fX1",
   "item.alltheimbaium.package_material_x2": "§7ATI Package Material §fX2",

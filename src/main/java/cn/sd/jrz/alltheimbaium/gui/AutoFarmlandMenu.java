@@ -22,9 +22,13 @@ import java.util.function.IntSupplier;
  * 包含 27 个收获存储槽（3×9）与玩家背包，供玩家查看/取出收获物。
  */
 public class AutoFarmlandMenu extends AbstractContainerMenu {
+    /** "下方输出"按钮 ID */
+    public static final int BUTTON_OUTPUT_DOWN = 6;
     private final AutoFarmlandEntity entity;
     // 客户端同步的当前能量（服务端通过数据槽下发）
     private int clientEnergy;
+    // 客户端同步的向下输出开关（服务端通过数据槽下发，默认开启）
+    private boolean clientOutputToDown = true;
 
     public AutoFarmlandMenu(int id, Inventory playerInventory, BlockPos pos) {
         super(Registration.AUTO_FARMLAND_MENU.get(), id);
@@ -54,6 +58,31 @@ public class AutoFarmlandMenu extends AbstractContainerMenu {
         }
         // 能量同步（客户端 GUI 显示能量条）
         addDataSlot(makeDataSlot(() -> entity.energy.getEnergyStored(), v -> clientEnergy = v));
+        // 向下输出开关同步（客户端 GUI 按钮显示状态）
+        addDataSlot(makeDataSlot(() -> entity.isOutputToDown() ? 1 : 0, v -> clientOutputToDown = v != 0));
+    }
+
+    /** 当前是否开启向下输出（客户端读同步值，服务端读实体） */
+    public boolean isOutputToDown() {
+        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide ? entity.isOutputToDown() : clientOutputToDown;
+    }
+
+    /**
+     * 处理 GUI 按钮点击（"下方输出"开关）
+     */
+    @Override
+    public boolean clickMenuButton(@Nonnull Player player, int id) {
+        if (entity == null || player.level().isClientSide) {
+            return false;
+        }
+        switch (id) {
+            case BUTTON_OUTPUT_DOWN -> entity.outputToDown = !entity.outputToDown;
+            default -> {
+                return false;
+            }
+        }
+        entity.setChanged();
+        return true;
     }
 
     /**

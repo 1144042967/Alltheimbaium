@@ -168,6 +168,8 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
     public boolean transferSouth = true;
     public boolean transferWest = true;
     public boolean transferEast = true;
+    /** 主动输出总开关（默认开启；GUI 按钮切换，NBT 持久化），关闭后不执行任何主动输出 */
+    public boolean outputEnabled = true;
 
     // 上次已同步到客户端的液体指纹（避免每 tick 发送相同更新包）
     private int lastSyncAmount = -1;
@@ -218,8 +220,8 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
             }
             // 处理 + 槽（桶/容器双向操作）
             processInputSlot();
-            // 无限后向六个面主动输出（受开关控制）
-            if (isInfinity()) {
+            // 无限后向六个面主动输出（受总开关与逐面开关控制）
+            if (isInfinity() && outputEnabled) {
                 outputToSides();
             }
             // 只在液体指纹变化时触发客户端同步，避免每 tick 发包
@@ -427,6 +429,13 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
     }
 
     /**
+     * 是否开启主动输出（总开关）
+     */
+    public boolean isOutputEnabled() {
+        return outputEnabled;
+    }
+
+    /**
      * 指定面是否允许主动输出
      */
     public boolean isTransferEnabled(Direction direction) {
@@ -514,6 +523,7 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
             for (Direction direction : Direction.values()) {
                 nbt.putBoolean(TRANSFER_KEYS[direction.ordinal()], isTransferEnabled(direction));
             }
+            nbt.putBoolean("outputEnabled", outputEnabled);
             nbt.put("inputSlot", inputSlot.serializeNBT());
             nbt.put("outputSlot", outputSlot.serializeNBT());
         } catch (Throwable e) {
@@ -546,6 +556,9 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
                 if (nbt.contains(key, Tag.TAG_BYTE)) {
                     setTransferEnabled(direction, nbt.getBoolean(key));
                 }
+            }
+            if (nbt.contains("outputEnabled", Tag.TAG_BYTE)) {
+                outputEnabled = nbt.getBoolean("outputEnabled");
             }
             if (nbt.contains("inputSlot", Tag.TAG_COMPOUND)) {
                 inputSlot.deserializeNBT(nbt.getCompound("inputSlot"));

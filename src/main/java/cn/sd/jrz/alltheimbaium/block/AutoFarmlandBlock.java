@@ -101,6 +101,8 @@ public class AutoFarmlandBlock extends Block implements EntityBlock {
         if (!(tile instanceof AutoFarmlandEntity generator)) {
             return;
         }
+        // 向下输出：开启时把容器物品自动推入下方容器（不依赖上方是否有作物）
+        generator.pushDownToContainer();
         BlockPos cropPos = generator.getBlockPos().above();
         BlockState cropState = level.getBlockState(cropPos);
         if (!(cropState.getBlock() instanceof CropBlock crop)) {

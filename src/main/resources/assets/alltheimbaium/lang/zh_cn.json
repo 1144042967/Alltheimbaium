@@ -20,6 +20,9 @@
   "screen.alltheimbaium.liquid_fountain.face.south": "南",
   "screen.alltheimbaium.liquid_fountain.face.west": "西",
   "screen.alltheimbaium.liquid_fountain.face.east": "东",
+  "screen.alltheimbaium.liquid_fountain.output": "输出",
+  "screen.alltheimbaium.liquid_fountain.output_note": "§7只有达到无限后才允许主动输出",
+  "screen.alltheimbaium.auto_farmland.output_down": "下方输出",
 
   "item.alltheimbaium.package_material_x1": "§7ATI 打包材料 §fX1",
   "item.alltheimbaium.package_material_x2": "§7ATI 打包材料 §fX2",

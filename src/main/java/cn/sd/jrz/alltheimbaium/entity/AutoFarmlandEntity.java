@@ -14,6 +14,8 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
@@ -23,6 +25,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.energy.EnergyStorage;
 import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +71,8 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider, ICa
         }
     };
     private final LazyOptional<IEnergyStorage> energyOptional = LazyOptional.of(() -> energy);
+    /** 是否开启向下输出（默认开启；GUI 按钮切换，NBT 持久化），开启后每 tick 把容器物品自动推给下方方块 */
+    public boolean outputToDown = true;
 
     public AutoFarmlandEntity(BlockPos pos, BlockState state) {
         super(Registration.AUTO_FARMLAND_ENTITY.get(), pos, state);
@@ -99,12 +104,56 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider, ICa
         return new AutoFarmlandMenu(id, inv, worldPosition);
     }
 
+    /** 是否开启向下输出 */
+    public boolean isOutputToDown() {
+        return outputToDown;
+    }
+
+    /**
+     * 向下输出：开启时把存储容器中的物品自动推入下方方块的物品容器。
+     * <p>
+     * 由方块 ticker 每 tick 调用；下方无容器或容器满时跳过，容器可插入的物品即时转移。
+     */
+    public void pushDownToContainer() {
+        if (!outputToDown) {
+            return;
+        }
+        Level level = getLevel();
+        if (level == null || level.isClientSide) {
+            return;
+        }
+        try {
+            BlockEntity below = level.getBlockEntity(getBlockPos().below());
+            if (below == null) {
+                return;
+            }
+            IItemHandler handler = below.getCapability(ForgeCapabilities.ITEM_HANDLER, Direction.UP).resolve().orElse(null);
+            if (handler == null) {
+                return;
+            }
+            for (int i = 0; i < storage.getSlots(); i++) {
+                ItemStack stack = storage.getStackInSlot(i);
+                if (stack.isEmpty()) {
+                    continue;
+                }
+                // 尝试把整组插入下方容器，返回剩余；与插入前数量一致说明一个都没塞进去，跳过避免重复存档标记
+                ItemStack remain = ItemHandlerHelper.insertItemStacked(handler, stack, false);
+                if (remain.getCount() != stack.getCount()) {
+                    storage.setStackInSlot(i, remain);
+                }
+            }
+        } catch (Throwable e) {
+            log.error("AutoFarmlandEntity.pushDownToContainer error", e);
+        }
+    }
+
     @Override
     public void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
         try {
             nbt.put("storage", storage.serializeNBT());
             nbt.put("energy", energy.serializeNBT());
+            nbt.putBoolean("outputToDown", outputToDown);
         } catch (Throwable e) {
             log.error("AutoFarmlandEntity.saveAdditional error", e);
         }
@@ -119,6 +168,9 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider, ICa
             }
             if (nbt.contains("energy")) {
                 energy.deserializeNBT(nbt.get("energy"));
+            }
+            if (nbt.contains("outputToDown")) {
+                outputToDown = nbt.getBoolean("outputToDown");
             }
         } catch (Throwable e) {
             log.error("AutoFarmlandEntity.load error", e);

@@ -47,9 +47,15 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
     private static final int BTN_X3 = 127;
     private static final int BTN_Y1 = 62;
     private static final int BTN_Y2 = 78;
+    // "输出"总开关按钮（物品栏标签右侧靠右，绿=开 / 红=关）
+    private static final int OUTPUT_BTN_W = 38;
+    private static final int OUTPUT_BTN_H = 13;
+    private static final int OUTPUT_BTN_X = 176 - OUTPUT_BTN_W - 11;
+    private static final int OUTPUT_BTN_Y = 94;
 
     // 六个传输面开关按钮，索引与 Direction.values() 顺序一致
     private final StateButton[] faceButtons = new StateButton[6];
+    private StateButton outputButton;
     // 各面按钮位置（3 列 x 2 行），顺序与 Direction.values() 一致：下/上/北/南/西/东
     private static final int[] BTN_XS = {BTN_X1, BTN_X2, BTN_X3, BTN_X1, BTN_X2, BTN_X3};
     private static final int[] BTN_YS = {BTN_Y1, BTN_Y1, BTN_Y1, BTN_Y2, BTN_Y2, BTN_Y2};
@@ -75,6 +81,12 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
                     button -> sendButton(direction.ordinal()));
             this.addRenderableWidget(this.faceButtons[i]);
         }
+        // 主动输出总开关（物品栏标签右侧靠右）
+        this.outputButton = new StateButton(this.leftPos + OUTPUT_BTN_X, this.topPos + OUTPUT_BTN_Y, OUTPUT_BTN_W, OUTPUT_BTN_H,
+                this.menu.isOutputEnabled(),
+                Component.translatable("screen.alltheimbaium.liquid_fountain.output"),
+                button -> sendButton(LiquidFountainMenu.BUTTON_OUTPUT));
+        this.addRenderableWidget(this.outputButton);
     }
 
     /**
@@ -133,6 +145,10 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
         for (int i = 0; i < 6; i++) {
             this.faceButtons[i].setState(this.menu.isFaceEnabled(Direction.values()[i]));
         }
+        // 刷新主动输出总开关：只有达到无限后才允许开启（未无限时按钮禁用并强制显示关闭）
+        boolean infinite = this.menu.isInfinity();
+        this.outputButton.active = infinite;
+        this.outputButton.setState(infinite && this.menu.isOutputEnabled());
     }
 
     /**
@@ -230,6 +246,11 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
 
         @Override
         protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            // 禁用时灰色显示且不可点击（vanilla Button 在 active=false 时不响应点击）
+            if (!this.active) {
+                renderButton(guiGraphics, 0xFF666666);
+                return;
+            }
             renderButton(guiGraphics, this.state ? 0xFF00AA00 : 0xFFAA0000);
         }
     }

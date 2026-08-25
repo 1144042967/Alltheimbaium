@@ -35,6 +35,8 @@ public class LiquidFountainItem extends BlockItem {
     public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
         super.appendHoverText(stack, worldIn, tooltip, flagIn);
         try {
+            // 说明：只有达到无限后才允许主动输出
+            tooltip.add(Component.translatable("screen.alltheimbaium.liquid_fountain.output_note"));
             FluidStack fluidStack = FluidStack.EMPTY;
             if (stack.hasTag()) {
                 CompoundTag tag = stack.getTagElement("BlockEntityTag");
