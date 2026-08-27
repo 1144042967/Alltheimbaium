@@ -31,5 +31,6 @@ public class ClientHandler {
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(Registration.LIQUID_FOUNTAIN_ENTITY.get(), LiquidFountainRenderer::new);
+        event.registerBlockEntityRenderer(Registration.STORAGE_FOUNTAIN_ENTITY.get(), StorageFountainRenderer::new);
     }
 }

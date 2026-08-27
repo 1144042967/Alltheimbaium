@@ -119,6 +119,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - 六面输出按钮可逐面循环切换 11 个状态：随机 / 禁用 / 槽1~槽9（槽位状态显示对应物品图标）；"输出"按钮控制整体主动输出开关
 - 自动向六个面传输物品，支持管道抽取
 - 提供 `IItemHandler` capability（只读，不可插入）
+- **方块表面渲染**（`StorageFountainRenderer` BER）：在方块四个侧面按九宫格（3×3，左上开始）绘制已标记物品贴图，参考 auto-resource 方块机渲染器；已标记物品变化时通过 `sendBlockUpdated` 同步客户端刷新
 
 ### 4. 液体无限制造机 (`LiquidFountainBlock` / `LiquidFountainEntity`)
 

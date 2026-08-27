@@ -12,7 +12,11 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -171,6 +175,7 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
             }
             markerSlot.setStackInSlot(0, ItemStack.EMPTY);
             setChanged();
+            sendUpdatePacket();
             String name = single.getItem().getName(single).getString();
             sendMessageToNearbyPlayer(marked
                     ? "chat.alltheimbaium.storage_fountain.unmark"
@@ -340,6 +345,43 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
             }
         } catch (Throwable e) {
             log.error("StorageFountainEntity.load error", e);
+        }
+    }
+
+    // ==================== 客户端同步（供 BER 渲染已标记物品贴图） ====================
+
+    /**
+     * 区块加载/方块放置时同步全部数据（含已标记物品列表）到客户端
+     */
+    @Override
+    @Nonnull
+    public CompoundTag getUpdateTag() {
+        return this.saveWithoutMetadata();
+    }
+
+    @Override
+    public void handleUpdateTag(@Nonnull CompoundTag tag) {
+        this.load(tag);
+    }
+
+    @Override
+    @Nonnull
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
+        this.load(pkt.getTag());
+    }
+
+    /**
+     * 已标记物品列表变化时向附近客户端发送更新包（刷新方块表面的物品贴图渲染）
+     */
+    private void sendUpdatePacket() {
+        Level level = getLevel();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
 }
