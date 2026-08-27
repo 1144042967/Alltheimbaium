@@ -7,6 +7,7 @@ import cn.sd.jrz.alltheimbaium.gui.AutoFarmlandMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalSwordMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalTotemMenu;
 import cn.sd.jrz.alltheimbaium.gui.LiquidFountainMenu;
+import cn.sd.jrz.alltheimbaium.gui.StorageFountainMenu;
 import cn.sd.jrz.alltheimbaium.item.*;
 import cn.sd.jrz.alltheimbaium.recipe.BrewingCraftRecipe;
 import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
@@ -213,6 +214,8 @@ public class Registration {
             MENUS.register("liquid_fountain", () -> IForgeMenuType.create((id, inv, data) -> new LiquidFountainMenu(id, inv, data.readBlockPos())));
     public static final RegistryObject<MenuType<AutoFarmlandMenu>> AUTO_FARMLAND_MENU =
             MENUS.register("auto_farmland", () -> IForgeMenuType.create((id, inv, data) -> new AutoFarmlandMenu(id, inv, data.readBlockPos())));
+    public static final RegistryObject<MenuType<StorageFountainMenu>> STORAGE_FOUNTAIN_MENU =
+            MENUS.register("storage_fountain", () -> IForgeMenuType.create((id, inv, data) -> new StorageFountainMenu(id, inv, data.readBlockPos())));
 
     // 配方序列化器
     public static final RegistryObject<RecipeSerializer<SmeltingCraftRecipe>> SMELTING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("smelting_craft", () -> SmeltingCraftRecipe.SERIALIZER);

@@ -23,6 +23,16 @@
                   "op": "replace",
                   "source": "save_stick",
                   "target": "BlockEntityTag.save_stick"
+                },
+                {
+                  "op": "replace",
+                  "source": "directionState",
+                  "target": "BlockEntityTag.directionState"
+                },
+                {
+                  "op": "replace",
+                  "source": "outputEnabled",
+                  "target": "BlockEntityTag.outputEnabled"
                 }
               ],
               "source": "block_entity"

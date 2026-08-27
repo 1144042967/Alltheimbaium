@@ -82,6 +82,11 @@ public class StorageFountainItem extends BlockItem {
                 tooltip.add(Component.literal("§7MOD: §e" + mods));
                 tooltip.add(Component.literal("§7Tags: §e" + tags));
             }
+            // 使用说明
+            tooltip.add(Component.translatable("item.alltheimbaium.storage_fountain.tooltip.1"));
+            tooltip.add(Component.translatable("item.alltheimbaium.storage_fountain.tooltip.2"));
+            tooltip.add(Component.translatable("item.alltheimbaium.storage_fountain.tooltip.3"));
+            tooltip.add(Component.translatable("item.alltheimbaium.storage_fountain.tooltip.4"));
         } catch (Throwable e) {
             log.error("StorageFountainItem.appendHoverText error", e);
         }

@@ -6,7 +6,7 @@ import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -22,13 +22,12 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
+import net.minecraftforge.network.NetworkHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -58,6 +57,18 @@ public class StorageFountainBlock extends Block implements EntityBlock {
 
     public static long getCarry() {
         return carry;
+    }
+
+    public static long getGrowthIntervalSeconds() {
+        return growthIntervalSeconds;
+    }
+
+    public static long getStep() {
+        return growthStep;
+    }
+
+    public static int getMaxItemTypes() {
+        return maxItemTypes;
     }
 
     public final Direction[] directions = Direction.values();
@@ -91,45 +102,60 @@ public class StorageFountainBlock extends Block implements EntityBlock {
             return;
         }
         BlockPos blockPos = generator.getBlockPos();
-        //增加等级
+        // 增长等级
         generator.tickCount++;
         if (generator.tickCount >= 20L * growthIntervalSeconds) {
             generator.output += growthStep;
             generator.tickCount = 0;
         }
-        //增长数值
+        // 各已标记物品存量累加产量
         generator.blockList.replaceAll(aLong -> aLong + generator.output);
-        //传输
-        for (int i = 0; i < directions.length; i++) {
-            generator.findIndex = (generator.findIndex + 1) % directions.length;
-            Direction direction = directions[generator.findIndex];
-            BlockPos pos = blockPos.relative(direction);
-            BlockEntity entity = level.getBlockEntity(pos);
-            if (entity == null) {
-                continue;
+        // 主动输出（受总开关控制）
+        if (generator.outputEnabled) {
+            for (int i = 0; i < directions.length; i++) {
+                generator.findIndex = (generator.findIndex + 1) % directions.length;
+                Direction direction = directions[generator.findIndex];
+                if (generator.getDirectionState(direction) == StorageFountainEntity.STATE_DISABLED) {
+                    continue;
+                }
+                BlockPos pos = blockPos.relative(direction);
+                BlockEntity entity = level.getBlockEntity(pos);
+                if (entity == null) {
+                    continue;
+                }
+                IItemHandler handler = entity.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite()).resolve().orElse(null);
+                if (handler == null) {
+                    continue;
+                }
+                List<Integer> indexList = canTransport(generator, direction);
+                if (indexList.isEmpty()) {
+                    continue;
+                }
+                transport(generator, indexList, handler);
             }
-            IItemHandler handler = entity.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite()).resolve().orElse(null);
-            if (handler == null) {
-                continue;
-            }
-            List<Integer> indexList = canTransport(generator);
-            if (indexList.isEmpty()) {
-                break;
-            }
-            transport(generator, indexList, handler);
         }
         generator.setChanged();
     }
 
-    private List<Integer> canTransport(StorageFountainEntity generator) {
+    /**
+     * 计算指定面允许传输的物品索引：
+     * 随机 → 所有存量达标；槽 N → 仅该槽；禁用 → 空（调用方已跳过）
+     */
+    private List<Integer> canTransport(StorageFountainEntity generator, Direction direction) {
+        int state = generator.getDirectionState(direction);
         List<Long> blockList = generator.blockList;
         List<Integer> indexList = new ArrayList<>();
-        for (int i = 0; i < blockList.size(); i++) {
-            Long count = blockList.get(i);
-            if (count < StorageFountainBlock.getCarry()) {
-                continue;
+        if (state == StorageFountainEntity.STATE_RANDOM) {
+            for (int i = 0; i < blockList.size(); i++) {
+                if (blockList.get(i) >= carry) {
+                    indexList.add(i);
+                }
             }
-            indexList.add(i);
+        } else if (state >= StorageFountainEntity.STATE_SLOT_BASE) {
+            int idx = state - StorageFountainEntity.STATE_SLOT_BASE;
+            if (idx < blockList.size() && blockList.get(idx) >= carry) {
+                indexList.add(idx);
+            }
         }
         return indexList;
     }
@@ -148,7 +174,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     private void transport(StorageFountainEntity generator, int index, IItemHandler handler) {
         ItemStack stack = generator.itemList.get(index).copy();
         Long block = generator.blockList.get(index);
-        long maxOutputCount = block / StorageFountainBlock.getCarry();
+        long maxOutputCount = block / carry;
         stack.setCount(Tool.suitInt(maxOutputCount));
         ItemStack result = ItemHandlerHelper.insertItemStacked(handler, stack, false);
         int count = result.getCount();
@@ -158,47 +184,13 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         if (count > Tool.suitInt(maxOutputCount)) {
             count = Tool.suitInt(maxOutputCount);
         }
-        generator.blockList.set(index, block - (maxOutputCount - count) * StorageFountainBlock.getCarry());
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    public @Nonnull InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
-        try {
-            if (level.isClientSide) {
-                return InteractionResult.SUCCESS;
-            }
-            StorageFountainEntity generator = (StorageFountainEntity) level.getBlockEntity(pos);
-            if (generator == null) {
-                return InteractionResult.FAIL;
-            }
-            ItemStack stack = player.getMainHandItem();
-            if (stack.isEmpty()) {
-                // 空手 → 随机取出一个物品；如果无法取出，只打印内容
-                if (!takeRandomItem(player, generator)) {
-                    showMessage(player, generator);
-                }
-            } else if (takeSpecificItem(player, generator, stack)) {
-                // 主手物品在存储列表中 → 尝试取出；成功则不额外打印
-            } else if (isAcceptedItem(stack)) {
-                // 主手物品不在存储列表中，但在接受的 MOD/标签中 → 添加到生成列表
-                addOutputByBlock(generator, stack);
-                showMessage(player, generator);
-            } else {
-                // 主手物品不在存储列表中，也不在接受范围内 → 只打印内容
-                showMessage(player, generator);
-            }
-            return InteractionResult.SUCCESS;
-        } catch (Throwable e) {
-            log.error("StorageFountainBlock.use error", e);
-        }
-        return super.use(state, level, pos, player, handIn, hit);
+        generator.blockList.set(index, block - (maxOutputCount - count) * carry);
     }
 
     /**
      * 判断物品是否符合接受的 MOD 命名空间或标签
      */
-    private static boolean isAcceptedItem(ItemStack stack) {
+    public static boolean isAcceptedItem(ItemStack stack) {
         String namespace = BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
         for (String mod : acceptedMods) {
             if (namespace.contains(mod)) return true;
@@ -212,79 +204,25 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         });
     }
 
-    /**
-     * 从有库存的产物中随机给予玩家一个，成功返回 true
-     */
-    private boolean takeRandomItem(Player player, StorageFountainEntity generator) {
-        List<Integer> indexList = canTransport(generator);
-        if (indexList.isEmpty()) {
-            return false;
-        }
-        int index = indexList.get((int) (Math.random() * indexList.size()));
-        ItemStack stack = generator.itemList.get(index).copy();
-        stack.setCount(1);
-        Tool.takeItem(player, stack);
-        generator.blockList.set(index, generator.blockList.get(index) - StorageFountainBlock.getCarry());
-        return true;
-    }
-
-    /**
-     * 手持指定产物时给予对应的物品，成功返回 true
-     */
-    private static boolean takeSpecificItem(Player player, StorageFountainEntity generator, ItemStack stackInHand) {
-        ItemStack single = stackInHand.copy();
-        single.setCount(1);
-        List<ItemStack> stackList = generator.itemList;
-        List<Long> blockList = generator.blockList;
-        for (int i = 0; i < Math.min(stackList.size(), blockList.size()); i++) {
-            if (stackList.get(i).equals(single, true)) {
-                if (blockList.get(i) >= StorageFountainBlock.getCarry()) {
-                    Tool.takeItem(player, stackList.get(i).copy());
-                    blockList.set(i, blockList.get(i) - StorageFountainBlock.getCarry());
-                    return true;
-                }
-                return false;
+    @SuppressWarnings("deprecation")
+    @Override
+    public @Nonnull InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+        try {
+            if (level.isClientSide) {
+                return InteractionResult.SUCCESS;
             }
-        }
-        return false;
-    }
-
-    /**
-     * 将接受的物品添加到生成列表中
-     */
-    private static void addOutputByBlock(StorageFountainEntity generator, ItemStack stackInHand) {
-        // 已存在则跳过
-        for (ItemStack existing : generator.itemList) {
-            if (stackInHand.equals(existing, true)) {
-                return;
+            StorageFountainEntity generator = (StorageFountainEntity) level.getBlockEntity(pos);
+            if (generator == null) {
+                return InteractionResult.FAIL;
             }
+            // 右键打开 GUI
+            if (player instanceof ServerPlayer serverPlayer) {
+                NetworkHooks.openScreen(serverPlayer, generator, pos);
+            }
+            return InteractionResult.SUCCESS;
+        } catch (Throwable e) {
+            log.error("StorageFountainBlock.use error", e);
         }
-        if (generator.itemList.size() >= maxItemTypes) {
-            return;
-        }
-        ItemStack single = stackInHand.copy();
-        single.setCount(1);
-        generator.itemList.add(single);
-        generator.blockList.add(0L);
-        Tool.sort(generator.itemList, generator.blockList);
-    }
-
-    private void showMessage(Player player, StorageFountainEntity generator) {
-        long output = generator.output;
-        long tickCount = generator.tickCount;
-        List<ItemStack> stackList = generator.itemList;
-        List<Long> blockList = generator.blockList;
-        BigDecimal outputPerTick = new BigDecimal(output).divide(new BigDecimal(StorageFountainBlock.getCarry()), 3, RoundingMode.HALF_UP);
-        player.sendSystemMessage(Component.translatable("screen.alltheimbaium.fountain.description", outputPerTick, 100D * tickCount / 20 / 20));
-        for (int i = 0; i < Math.min(stackList.size(), blockList.size()); i++) {
-            ItemStack item = stackList.get(i);
-            Long block = blockList.get(i);
-            String name = item.getItem().getName(item).getString();
-            BigDecimal save = new BigDecimal(block).divide(new BigDecimal(StorageFountainBlock.getCarry()), 3, RoundingMode.HALF_UP);
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.fountain.current", name, save));
-        }
-        if (stackList.isEmpty()) {
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.fountain.empty"));
-        }
+        return super.use(state, level, pos, player, handIn, hit);
     }
 }

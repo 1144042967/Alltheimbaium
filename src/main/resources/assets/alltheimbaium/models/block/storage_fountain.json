@@ -1,6 +1,9 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/cube_bottom_top",
   "textures": {
-    "all": "alltheimbaium:block/storage_fountain"
+    "top": "alltheimbaium:block/storage_fountain_top",
+    "bottom": "alltheimbaium:block/storage_fountain_btm",
+    "side": "alltheimbaium:block/storage_fountain_side",
+    "particle": "alltheimbaium:block/storage_fountain_side"
   }
 }

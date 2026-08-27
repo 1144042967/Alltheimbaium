@@ -108,15 +108,16 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 ### 3. 存储方块制造机 (`StorageFountainBlock` / `StorageFountainEntity`)
 
-记录并无限复制物品（类似创造抽屉）。
+记录并无限复制物品（类似创造抽屉），右键打开 GUI（`StorageFountainMenu`/`StorageFountainScreen`）。
 
-- 手持带有 `forge:ores`/`forge:storage_blocks`/`forge:ingots` 等标签的物品右击注册
-- 也支持 `modern_industrialization`/`extended_industrialization` 命名空间的物品
-- 最多存储 9 种不同物品
-- 每 20 秒 (`20 * 20 ticks`) 产出速度 +5
-- 使用 `CARRY = 1000` 作为内部计数器进位阈值
+- **标记槽**（黑色信息面板右下角）：放入支持的物品 → 标记该物品类型并复制；放入已标记物品 → 取消标记并清空存量
+- 物品必须带 `forge:ores`/`forge:storage_blocks`/`forge:ingots` 等标签，或是 `modern_industrialization`/`extended_industrialization` 命名空间物品
+- 最多存储 9 种不同物品，对应 GUI 中 9 个已标记物品槽
+- 每 20 秒 (`20 * 20 ticks`) 产出速度 +5；使用 `CARRY = 1000` 作为内部计数器进位阈值
+- GUI 黑色信息面板四行：第一行增长进度条、第二行增长百分比、第三行下次增长数值、第四行产量
+- 9 个已标记物品槽支持单击提取 1 个、Shift 提取 1 组、空格+单击提取到背包满；槽位左下角以 AE2 风格缩写显示存量（如 1.1K、2.1M）
+- 六面输出按钮可逐面循环切换 11 个状态：随机 / 禁用 / 槽1~槽9（槽位状态显示对应物品图标）；"输出"按钮控制整体主动输出开关
 - 自动向六个面传输物品，支持管道抽取
-- 可手持同种方块叠加等级和已记录物品
 - 提供 `IItemHandler` capability（只读，不可插入）
 
 ### 4. 液体无限制造机 (`LiquidFountainBlock` / `LiquidFountainEntity`)
@@ -261,7 +262,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 各 Entity 通过 `saveAdditional`/`load` 持久化数据:
 
 - **FarmEntity**: `level`(long), `output_array`(long[]), `save_array`(long[])
-- **StorageFountainEntity**: `output`(long), `save_stick`(ListTag: 每项含物品NBT + `Long_Count`)
+- **StorageFountainEntity**: `output`(long), `save_stick`(ListTag: 每项含物品NBT + `Long_Count`), `directionState`(int[6]: 每面 0~10 对应 随机/禁用/槽1~槽9), `outputEnabled`(boolean), `markerSlot`(CompoundTag)
 - **LiquidFountainEntity**: `fluid_id`(string), `fluid_amount`(int), `transferDown/Up/North/South/West/East`(boolean), `inputSlot`(+槽), `outputSlot`(-槽)
 - 所有数值加载时经过 `Tool.suit()` 防负数处理
 
