@@ -35,27 +35,29 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     // 增长进度条（黑色背景区域第一行）
     private static final int PROGRESS_X = 10;
     private static final int PROGRESS_Y = 21;
-    private static final int PROGRESS_W = 152;
+    private static final int PROGRESS_W = 156;
     private static final int PROGRESS_H = 4;
     // 信息文字行（第二/三/四行）
     private static final int INFO_X = 10;
     private static final int INFO_Y = 30;
-    private static final int INFO_LINE = 10;
+    private static final int INFO_LINE = 12;
 
     // 六面状态按钮（2 行 x 3 列）
     private static final int BTN_W = 48;
     private static final int BTN_H = 16;
-    private static final int[] BTN_XS = {14, 66, 118};
-    private static final int[] BTN_YS = {96, 114};
+    private static final int[] BTN_XS = {8, 64, 120};
+    private static final int[] BTN_YS = {93, 114};
     // "输出"总开关按钮（左下物品栏标签右侧靠右）
-    private static final int OUTPUT_BTN_W = 44;
+    private static final int OUTPUT_BTN_W = 48;
     private static final int OUTPUT_BTN_H = 13;
-    private static final int OUTPUT_BTN_X = 176 - OUTPUT_BTN_W - 11;
-    private static final int OUTPUT_BTN_Y = 134;
+    private static final int OUTPUT_BTN_X = 176 - OUTPUT_BTN_W - 8;
+    private static final int OUTPUT_BTN_Y = 135;
 
     // 已标记物品槽左下角数量文字偏移
-    private static final int COUNT_X = 1;
-    private static final int COUNT_Y = 8;
+    private static final int COUNT_X = 0;
+    private static final int COUNT_Y = 12;
+    /** AE2 风格数量文字缩放（0.5 倍小字体，绘制在槽位左下角且位于图标之上） */
+    private static final float COUNT_SCALE = 0.5F;
 
     private final FaceButton[] faceButtons = new FaceButton[6];
     private StateButton outputButton;
@@ -158,16 +160,24 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
         // 标题与物品栏标签：亮色背景上用深色文字
         guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, false);
         guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
-        // 黑色信息面板上的四行信息（局部坐标）
+        // 黑色信息面板上的四行信息（局部坐标）：产量/下次增长均以 /tick 为单位。
+        // 下次增长 = 下次要增长的数值（增量），不是增长后的值。
+        long output = this.menu.getOutput();
+        long step = this.menu.getStep();
+        double carry = StorageFountainBlock.getCarry();
+        double currentRate = output / carry;
+        double nextIncrease = step / carry;
         guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.storage_fountain.growth", growthPercent()), INFO_X, INFO_Y, TEXT_COLOR, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.storage_fountain.next", this.menu.getStep()), INFO_X, INFO_Y + INFO_LINE, TEXT_COLOR, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.storage_fountain.output_rate", formatRate()), INFO_X, INFO_Y + INFO_LINE * 2, TEXT_COLOR, false);
+        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.storage_fountain.next", formatRate(nextIncrease)), INFO_X, INFO_Y + INFO_LINE, TEXT_COLOR, false);
+        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.storage_fountain.output_rate", formatRate(currentRate)), INFO_X, INFO_Y + INFO_LINE * 2, TEXT_COLOR, false);
     }
 
     @Override
     public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
-        // 已标记物品槽左下角数量（AE2 风格缩写，绘制在物品图标之上）
+        // 先刷新已绘制的内容（物品图标已通过 renderItem 内部 flush 到屏幕），
+        // 确保随后绘制的数量文字位于物品图标之上
+        guiGraphics.flush();
         drawSlotCounts(guiGraphics);
         // 刷新开关状态
         this.outputButton.setState(this.menu.isOutputEnabled());
@@ -176,11 +186,13 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     }
 
     /**
-     * 绘制 9 个已标记物品槽左下角的存量数量（AE2 风格缩写，如 1.1K、2.1M）
+     * 绘制 9 个已标记物品槽左下角的存量数量（AE2 风格缩写，如 1.1K、2.1M）。
+     * 参考 AE2 的显示方式：缩小字体（0.5 倍）。
+     * 深度层级：物品 z≈250 < 数量文字 z=300 < tooltip 背景 z=400，
+     * 因此数量文字盖在物品之上，又位于 tooltip 背景之下（tooltip 显示时背景可覆盖它）。
      */
     private void drawSlotCounts(GuiGraphics guiGraphics) {
         for (int i = 0; i < 9; i++) {
-            Slot slot = this.menu.slots.get(1 + i);
             long units = this.menu.getMarkedCount(i);
             if (units <= 0) {
                 continue;
@@ -189,7 +201,16 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
             if (items <= 0) {
                 continue;
             }
-            guiGraphics.drawString(this.font, formatCount(items), this.leftPos + slot.x + COUNT_X, this.topPos + slot.y + COUNT_Y, 0xFFFFFF, true);
+            String text = formatCount(items);
+            Slot slot = this.menu.slots.get(1 + i);
+            int x = this.leftPos + slot.x + COUNT_X;
+            int y = this.topPos + slot.y + COUNT_Y;
+            guiGraphics.pose().pushPose();
+            // 缩放 XY 实现小字体（坐标相应放大绘制）
+            guiGraphics.pose().translate(0, 0, 300);
+            guiGraphics.pose().scale(COUNT_SCALE, COUNT_SCALE, 1.0F);
+            guiGraphics.drawString(this.font, text, (int) (x / COUNT_SCALE), (int) (y / COUNT_SCALE), 0xFFFFFF, true);
+            guiGraphics.pose().popPose();
         }
     }
 
@@ -203,21 +224,28 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     }
 
     /**
-     * 产量（每个已标记物品每秒产出的物品数），大数值用单位缩写
+     * 产量/下次增长格式化（单位：物品/每 tick），小数值保留更多精度，大数值用单位缩写
      */
-    private String formatRate() {
-        long output = this.menu.getOutput();
-        double itemsPerSecond = output * 20.0 / StorageFountainBlock.getCarry();
-        if (itemsPerSecond < 1000) {
-            return String.format("%.2f", itemsPerSecond);
+    private static String formatRate(double itemsPerTick) {
+        if (itemsPerTick < 10) {
+            return String.format("%.3f", itemsPerTick);
         }
-        if (itemsPerSecond < 1_000_000) {
-            return String.format("%.1fK", itemsPerSecond / 1000.0);
+        if (itemsPerTick < 100) {
+            return String.format("%.2f", itemsPerTick);
         }
-        if (itemsPerSecond < 1_000_000_000) {
-            return String.format("%.1fM", itemsPerSecond / 1_000_000.0);
+        if (itemsPerTick < 1000) {
+            return String.format("%.1f", itemsPerTick);
         }
-        return String.format("%.1fG", itemsPerSecond / 1_000_000_000.0);
+        if (itemsPerTick < 1_000_000) {
+            return String.format("%.1fK", itemsPerTick / 1000.0);
+        }
+        if (itemsPerTick < 1_000_000_000) {
+            return String.format("%.1fM", itemsPerTick / 1_000_000.0);
+        }
+        if (itemsPerTick < 1_000_000_000_000L) {
+            return String.format("%.1fG", itemsPerTick / 1_000_000_000.0);
+        }
+        return String.format("%.1fT", itemsPerTick / 1_000_000_000_000.0);
     }
 
     /**
@@ -271,13 +299,24 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
             }
             renderButton(guiGraphics, color);
             if (state >= StorageFountainEntity.STATE_SLOT_BASE) {
-                // 槽位状态：绘制对应物品图标 + 槽号
+                // 槽位状态：绘制对应物品图标 + 槽号（图标与文字整体居中，避免偏左）
                 int slot = state - StorageFountainEntity.STATE_SLOT_BASE;
                 ItemStack icon = StorageFountainScreen.this.menu.getMarkedStack(slot);
+                String text = dirName + "·" + (slot + 1);
                 if (!icon.isEmpty()) {
-                    guiGraphics.renderItem(icon, this.getX() + 2, this.getY() + 1);
+                    int gap = 2;
+                    int textWidth = StorageFountainScreen.this.font.width(text);
+                    int totalWidth = 16 + gap + textWidth;
+                    int startX = this.getX() + (BTN_W - totalWidth) / 2;
+                    if (startX < this.getX() + 2) {
+                        startX = this.getX() + 2;
+                    }
+                    guiGraphics.renderItem(icon, startX, this.getY() + 1);
+                    guiGraphics.drawString(StorageFountainScreen.this.font, text, startX + 16 + gap, this.getY() + 4, 0xFFFFFFFF, true);
+                } else {
+                    // 对应槽位未标记（无图标）：文字居中显示
+                    guiGraphics.drawCenteredString(StorageFountainScreen.this.font, text, this.getX() + BTN_W / 2, this.getY() + 4, 0xFFFFFFFF);
                 }
-                guiGraphics.drawString(StorageFountainScreen.this.font, dirName + "·" + (slot + 1), this.getX() + 20, this.getY() + 4, 0xFFFFFFFF, true);
             } else {
                 String stateText = state == StorageFountainEntity.STATE_RANDOM
                         ? Component.translatable("screen.alltheimbaium.storage_fountain.random").getString()
