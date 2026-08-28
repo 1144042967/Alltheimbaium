@@ -2,7 +2,7 @@ package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.ClockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -14,27 +14,23 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraftforge.network.NetworkHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.function.Supplier;
 
 public class ClockBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(ClockBlock.class);
-    private final Supplier<BlockEntityType<?>> entityTypeSupplier;
-    private final int speedMultiplier;
 
-    public ClockBlock(Properties properties, Supplier<BlockEntityType<?>> entityTypeSupplier, int speedMultiplier) {
+    public ClockBlock(Properties properties) {
         super(properties);
-        this.entityTypeSupplier = entityTypeSupplier;
-        this.speedMultiplier = speedMultiplier;
     }
 
     @Override
     public BlockEntity newBlockEntity(@Nonnull BlockPos pos, @Nonnull BlockState state) {
-        return new ClockEntity(pos, state, entityTypeSupplier, speedMultiplier);
+        return new ClockEntity(pos, state);
     }
 
     @Nullable
@@ -70,9 +66,10 @@ public class ClockBlock extends Block implements EntityBlock {
             if (clock == null) {
                 return InteractionResult.FAIL;
             }
-            boolean isActive = clock.isActive();
-            clock.setActive(!isActive);
-            player.sendSystemMessage(Component.translatable("screen.alltheimbaium.clock." + (isActive ? "disabled" : "enabled"), clock.getSpeedMultiplier()));
+            // 右键打开配置 GUI
+            if (player instanceof ServerPlayer serverPlayer) {
+                NetworkHooks.openScreen(serverPlayer, clock, pos);
+            }
             return InteractionResult.SUCCESS;
         } catch (Throwable e) {
             log.error("ClockBlock.use error", e);

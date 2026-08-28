@@ -139,8 +139,8 @@ public class Config {
         // ---- 时钟方块 ----
         builder.comment("时钟方块设置").push("clock");
         CLOCK_DEFAULT_ACTIVE = builder
-                .comment("进入游戏后时钟的初始开关状态。true=启用，false=禁用")
-                .define("default_active", false);
+                .comment("进入游戏后所有时钟的全局开关初始状态。true=启用，false=禁用")
+                .define("default_active", true);
         builder.pop();
 
         // ---- 永恒图腾 ----

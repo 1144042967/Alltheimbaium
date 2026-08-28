@@ -98,13 +98,18 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 ### 2. 时钟方块 (`ClockBlock` / `ClockEntity`)
 
-加速相邻方块 tick 的方块，类似加速火把。
+加速相邻方块 tick 的方块，类似加速火把。单个方块，速度在 GUI 中可调。
 
-- 4 个等级: x2, x4, x16, x256
-- 右击切换开关状态，全局生效（所有时钟共享同一个 `active` 状态）
-- `ClockEntity.tick()`: 遍历6个面，对邻接的 `EntityBlock` 额外调用 ticker `(speedMultiplier - 1)` 次
+- 使用顶/边/底三面贴图（`clock_top`/`clock_side`/`clock_btm`）
+- 右击打开配置 GUI（`ClockMenu`/`ClockScreen`，纯配置界面，无物品栏）：
+  - **全局开关**：所有时钟共享，初始值来自配置 `clock.default_active`（默认开），每次进游戏重新加载，不持久化
+  - **单独开关**：当前时钟总开关（NBT 持久化）
+  - **六方向开关**：逐面控制是否对相邻方块生效，按钮显示该方向实际相邻方块的物品图标（有方块时只显示图标居中、无方块时显示方向名）（NBT 持久化）
+  - **速度调节**：2~1024 共 10 档快速选择按钮（NBT 持久化）
+- `ClockEntity.tick()`: 全局/单独开关均开启时，遍历6个面，对方向开关开启且邻接的 `EntityBlock` 额外调用 ticker `(speed - 1)` 次
 - 跳过 `ClockBlock` 和 `FarmlandBlock` （避免无限循环/过度加速）
 - 对 `randomTick` 方块额外调用 `randomTick()`
+- `ClockRenderer`（BER）：在方块四周侧面居中渲染当前倍速数值（`Font.drawInBatch`）
 
 ### 3. 存储方块制造机 (`StorageFountainBlock` / `StorageFountainEntity`)
 
@@ -265,6 +270,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - **FarmEntity**: `level`(long), `output_array`(long[]), `save_array`(long[])
 - **StorageFountainEntity**: `output`(long), `save_stick`(ListTag: 每项含物品NBT + `Long_Count`), `directionState`(int[6]: 每面 0~10 对应 随机/禁用/槽1~槽9), `outputEnabled`(boolean), `markerSlot`(CompoundTag)
 - **LiquidFountainEntity**: `fluid_id`(string), `fluid_amount`(int), `transferDown/Up/North/South/West/East`(boolean), `inputSlot`(+槽), `outputSlot`(-槽)
+- **ClockEntity**: `enabled`(boolean), `directionEnabled`(int[6]), `speed`(int)
 - 所有数值加载时经过 `Tool.suit()` 防负数处理
 
 ## Tool 工具方法

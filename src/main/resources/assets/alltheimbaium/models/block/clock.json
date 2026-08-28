@@ -1,6 +1,8 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/cube_bottom_top",
   "textures": {
-    "all": "alltheimbaium:block/clock"
+    "top": "alltheimbaium:block/clock_top",
+    "side": "alltheimbaium:block/clock_side",
+    "bottom": "alltheimbaium:block/clock_btm"
   }
 }
