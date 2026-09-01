@@ -7,7 +7,7 @@
 - **Mod ID**: `alltheimbaium`
 - **Group**: `cn.sd.jrz`
 - **Minecraft 版本**: `1.20.1`
-- **Forge 版本**: `47.4.2`
+- **Forge 版本**: `47.2.20`
 - **Java 版本**: `17`
 - **Mappings**: `official` (Mojang)
 - **许可证**: `GNU LGPL v3`
@@ -288,7 +288,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 ## 依赖
 
-- **Forge** 1.20.1-47.4.2 (唯一硬依赖)
+- **Forge** 1.20.1-47.2.20 (唯一硬依赖)
 - 可选联动 (通过标签/配方):
   - AE2 (Applied Energistics 2)
   - Mekanism (通用机械)

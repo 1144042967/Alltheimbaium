@@ -24,7 +24,7 @@ import javax.annotation.Nonnull;
  */
 @OnlyIn(Dist.CLIENT)
 public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/clock_gui.png");
+    private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/clock_gui.png");
 
     // 顶部两个开关按钮
     private static final int SWITCH_W = 78;

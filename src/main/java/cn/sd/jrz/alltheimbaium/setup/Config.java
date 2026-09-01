@@ -15,9 +15,9 @@ import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 import java.util.List;
 
@@ -266,7 +266,7 @@ public class Config {
     /**
      * 注册配置文件。必须在 Registration.init() 之前调用。
      */
-    public static void init(FMLJavaModLoadingContext context) {
+    public static void init(ModLoadingContext context) {
         context.registerConfig(ModConfig.Type.SERVER, SERVER_CONFIG);
     }
 

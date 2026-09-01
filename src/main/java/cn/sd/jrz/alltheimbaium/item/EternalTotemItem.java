@@ -51,12 +51,12 @@ public class EternalTotemItem extends Item {
      * Mekanism 终极化学品储罐
      */
     public static final ResourceLocation ULTIMATE_CHEMICAL_TANK =
-            ResourceLocation.fromNamespaceAndPath("mekanism", "ultimate_chemical_tank");
+            new ResourceLocation("mekanism", "ultimate_chemical_tank");
     /**
      * Mekanism 创造化学品储罐
      */
     public static final ResourceLocation CREATIVE_CHEMICAL_TANK =
-            ResourceLocation.fromNamespaceAndPath("mekanism", "creative_chemical_tank");
+            new ResourceLocation("mekanism", "creative_chemical_tank");
 
     /**
      * 由 Config.onConfigLoad() 在配置文件加载完成后调用，设置永恒图腾初始开关状态

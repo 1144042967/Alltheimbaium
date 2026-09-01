@@ -47,7 +47,7 @@ public class DataConfig {
         for (String entry : configList) {
             String[] parts = entry.split(":");
             if (parts.length >= 3) {
-                ResourceLocation id = ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]);
+                ResourceLocation id = new ResourceLocation(parts[0], parts[1]);
                 Item item = BuiltInRegistries.ITEM.get(id);
                 if (item != null) {
                     try {

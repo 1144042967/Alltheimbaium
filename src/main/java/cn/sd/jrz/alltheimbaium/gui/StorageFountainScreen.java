@@ -28,7 +28,7 @@ import javax.annotation.Nonnull;
  */
 @OnlyIn(Dist.CLIENT)
 public class StorageFountainScreen extends AbstractContainerScreen<StorageFountainMenu> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/storage_fountain_gui.png");
+    private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/storage_fountain_gui.png");
     /** 黑色信息面板上的浅色文字 */
     private static final int TEXT_COLOR = 0xC6C6C6;
 

@@ -11,7 +11,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 public class Network {
 
     private static final String PROTOCOL_VERSION = "1";
-    private static final ResourceLocation CHANNEL_NAME = ResourceLocation.fromNamespaceAndPath(Alltheimbaium.MODID, "main");
+    private static final ResourceLocation CHANNEL_NAME = new ResourceLocation(Alltheimbaium.MODID, "main");
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             CHANNEL_NAME,

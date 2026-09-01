@@ -25,7 +25,7 @@ import javax.annotation.Nonnull;
  */
 @OnlyIn(Dist.CLIENT)
 public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountainMenu> {
-    private static final ResourceLocation TEXTURE_BASE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/liquid_fountain_gui.png");
+    private static final ResourceLocation TEXTURE_BASE = new ResourceLocation("alltheimbaium", "textures/gui/liquid_fountain_gui.png");
     private static final int TEXT_COLOR = 0xC6C6C6;
 
     // 右侧面板/进度条/信息（面板 x=39~168, y=17~56）
