@@ -5,6 +5,7 @@ import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -104,6 +105,24 @@ public class ClockMenu extends AbstractContainerMenu {
         //noinspection deprecation
         Item item = BuiltInRegistries.BLOCK.byId(id).asItem();
         return item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
+    }
+
+    /**
+     * 指定方向实际相邻方块的显示名（无方块时返回空文本），供 GUI tooltip 使用
+     */
+    @Nonnull
+    public Component getNeighborName(Direction direction) {
+        int id;
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+            id = entity.getNeighborBlockId(direction);
+        } else {
+            id = clientNeighborBlockId[direction.ordinal()];
+        }
+        if (id <= 0) {
+            return Component.empty();
+        }
+        //noinspection deprecation
+        return BuiltInRegistries.BLOCK.byId(id).getName();
     }
 
     // ==================== 按钮处理 ====================

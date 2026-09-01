@@ -19,7 +19,7 @@ import javax.annotation.Nonnull;
 public class AutoFarmlandScreen extends AbstractContainerScreen<AutoFarmlandMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/auto_farmland_gui.png");
     // "下方输出"开关按钮（物品栏标签右侧靠右，绿=开 / 红=关）
-    private static final int OUTPUT_BTN_W = 52;
+    private static final int OUTPUT_BTN_W = 66;
     private static final int OUTPUT_BTN_H = 10;
     private static final int OUTPUT_BTN_X = 176 - OUTPUT_BTN_W - 8;
     private static final int OUTPUT_BTN_Y = 72;

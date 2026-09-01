@@ -8,6 +8,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.api.distmarker.Dist;
@@ -15,6 +20,10 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fluids.FluidStack;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 液体无限制造机 GUI（新材质 GUI，176 宽亮色主题）。
@@ -54,7 +63,7 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
     private static final int OUTPUT_BTN_Y = 94;
 
     // 六个传输面开关按钮，索引与 Direction.values() 顺序一致
-    private final StateButton[] faceButtons = new StateButton[6];
+    private final FaceButton[] faceButtons = new FaceButton[6];
     private StateButton outputButton;
     // 各面按钮位置（3 列 x 2 行），顺序与 Direction.values() 一致：下/上/北/南/西/东
     private static final int[] BTN_XS = {BTN_X1, BTN_X2, BTN_X3, BTN_X1, BTN_X2, BTN_X3};
@@ -75,9 +84,7 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
         // Direction.values() 顺序与 Menu.BUTTON_TRANSFER_* 一致，直接用作按钮 id
         for (int i = 0; i < 6; i++) {
             Direction direction = Direction.values()[i];
-            this.faceButtons[i] = new StateButton(this.leftPos + BTN_XS[i], this.topPos + BTN_YS[i], BTN_W, BTN_H,
-                    this.menu.isFaceEnabled(direction),
-                    Component.translatable("screen.alltheimbaium.liquid_fountain.face." + direction.getName()),
+            this.faceButtons[i] = new FaceButton(this.leftPos + BTN_XS[i], this.topPos + BTN_YS[i], direction,
                     button -> sendButton(direction.ordinal()));
             this.addRenderableWidget(this.faceButtons[i]);
         }
@@ -139,6 +146,15 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
     @Override
     public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
+        // 渲染六面按钮 tooltip（按钮显示相邻方块贴图时提示输出目的/输出方向）
+        for (FaceButton faceButton : this.faceButtons) {
+            if (faceButton.isHovered()) {
+                List<Component> lines = faceButton.buildTooltip();
+                if (lines != null) {
+                    guiGraphics.renderTooltip(this.font, lines, Optional.empty(), mouseX, mouseY);
+                }
+            }
+        }
         // 渲染鼠标悬浮物品的信息提示窗
         super.renderTooltip(guiGraphics, mouseX, mouseY);
         // 刷新各开关状态
@@ -226,6 +242,93 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
             return String.valueOf(whole);
         }
         return String.format("%.1f", value);
+    }
+
+    /**
+     * 获取指定方向相邻方块的物品图标（无方块或方块无对应物品时返回空）。
+     * 用于六面按钮显示"输出目的"贴图。
+     */
+    private ItemStack getNeighborIcon(Direction direction) {
+        Item item = getNeighborState(direction).getBlock().asItem();
+        return item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
+    }
+
+    /**
+     * 获取指定方向相邻方块的显示名（无方块时返回方块自身名，仅供有贴图时使用）
+     */
+    private Component getNeighborName(Direction direction) {
+        return getNeighborState(direction).getBlock().getName();
+    }
+
+    /**
+     * 获取指定方向相邻方块状态（客户端世界不可用/无机器时返回空气）
+     */
+    private BlockState getNeighborState(Direction direction) {
+        if (this.minecraft != null && this.minecraft.level != null && this.menu.entity != null) {
+            return this.minecraft.level.getBlockState(this.menu.entity.getBlockPos().relative(direction));
+        }
+        return Blocks.AIR.defaultBlockState();
+    }
+
+    /**
+     * 六面主动输出开关按钮：显示为 [相邻方向方块贴图 + 方向名]，无相邻方块时仅方向名居中。
+     * 有贴图时 hover 显示 tooltip（输出目的/输出方向）。
+     */
+    private class FaceButton extends SimpleButton {
+        private final Direction direction;
+        private boolean state;
+
+        FaceButton(int x, int y, Direction direction, OnPress onPress) {
+            super(x, y, BTN_W, BTN_H, Component.literal(""), onPress);
+            this.direction = direction;
+        }
+
+        void setState(boolean state) {
+            this.state = state;
+        }
+
+        @Override
+        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            if (!this.active) {
+                renderButton(guiGraphics, 0xFF666666);
+                return;
+            }
+            renderButton(guiGraphics, this.state ? 0xFF00AA00 : 0xFFAA0000);
+            ItemStack neighborIcon = LiquidFountainScreen.this.getNeighborIcon(this.direction);
+            String dirName = Component.translatable("screen.alltheimbaium.liquid_fountain.face." + this.direction.getName()).getString();
+            if (!neighborIcon.isEmpty()) {
+                // 有贴图：缩放到按钮内部（高 13 的按钮放 12px 贴图）并居中，不显示方向文字
+                int scaled = 13;
+                float scale = scaled / 16.0F;
+                int x = this.getX() + (this.getWidth() - scaled) / 2;
+                int y = this.getY() + (this.getHeight() - scaled) / 2;
+                guiGraphics.pose().pushPose();
+                guiGraphics.pose().translate(x, y, 0);
+                guiGraphics.pose().scale(scale, scale, 1.0F);
+                guiGraphics.renderItem(neighborIcon, 0, 0);
+                guiGraphics.pose().popPose();
+            } else {
+                // 无贴图：方向名居中
+                guiGraphics.drawCenteredString(LiquidFountainScreen.this.font, dirName, this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
+            }
+        }
+
+        /**
+         * 构建 hover tooltip：按钮显示相邻方块贴图时返回 [输出目的/输出方向]，否则返回 null
+         */
+        @Nullable
+        List<Component> buildTooltip() {
+            ItemStack neighborIcon = LiquidFountainScreen.this.getNeighborIcon(this.direction);
+            if (neighborIcon.isEmpty()) {
+                return null;
+            }
+            String dirName = Component.translatable("screen.alltheimbaium.liquid_fountain.face." + this.direction.getName()).getString();
+            List<Component> lines = new ArrayList<>();
+            lines.add(Component.translatable("screen.alltheimbaium.liquid_fountain.tooltip_target",
+                    LiquidFountainScreen.this.getNeighborName(this.direction)));
+            lines.add(Component.translatable("screen.alltheimbaium.liquid_fountain.tooltip_direction", dirName));
+            return lines;
+        }
     }
 
     /**

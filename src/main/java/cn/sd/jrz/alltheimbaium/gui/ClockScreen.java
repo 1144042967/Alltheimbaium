@@ -14,6 +14,10 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 加速时钟配置 GUI（纯配置界面，176 宽，无物品栏）。
@@ -110,6 +114,15 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
         for (int i = 0; i < ClockEntity.SPEEDS.length; i++) {
             this.speedButtons[i].setSelected(this.menu.getSpeed() == ClockEntity.SPEEDS[i]);
         }
+        // 渲染六方向按钮 tooltip（有相邻方块贴图时显示目标方块名称和方向）
+        for (DirectionButton directionButton : this.directionButtons) {
+            if (directionButton.isHovered()) {
+                List<Component> lines = directionButton.buildTooltip();
+                if (lines != null) {
+                    guiGraphics.renderTooltip(this.font, lines, Optional.empty(), mouseX, mouseY);
+                }
+            }
+        }
         super.renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
@@ -136,7 +149,7 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
             String stateText = Component.translatable(this.state
                     ? "screen.alltheimbaium.clock.enabled"
                     : "screen.alltheimbaium.clock.disabled").getString();
-            String label = Component.translatable("screen.alltheimbaium.clock." + this.key).getString() + "：" + stateText;
+            String label = Component.translatable("screen.alltheimbaium.clock." + this.key).getString() + ": " + stateText;
             guiGraphics.drawCenteredString(ClockScreen.this.font, label, this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
         }
     }
@@ -168,6 +181,22 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
                 String dirName = Component.translatable("screen.alltheimbaium.clock.face." + this.direction.getName()).getString();
                 guiGraphics.drawCenteredString(ClockScreen.this.font, dirName, this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
             }
+        }
+
+        /**
+         * 构建 hover tooltip：按钮显示相邻方块贴图时返回 [目标方块名称/方向]，否则返回 null
+         */
+        @Nullable
+        List<Component> buildTooltip() {
+            if (ClockScreen.this.menu.getNeighborStack(this.direction).isEmpty()) {
+                return null;
+            }
+            String dirName = Component.translatable("screen.alltheimbaium.clock.face." + this.direction.getName()).getString();
+            List<Component> lines = new ArrayList<>();
+            lines.add(Component.translatable("screen.alltheimbaium.clock.tooltip_target",
+                    ClockScreen.this.menu.getNeighborName(this.direction)));
+            lines.add(Component.translatable("screen.alltheimbaium.clock.tooltip_direction", dirName));
+            return lines;
         }
     }
 

@@ -2,6 +2,7 @@ package cn.sd.jrz.alltheimbaium.gui;
 
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -11,12 +12,20 @@ import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 存储方块制造机 GUI（新材质 GUI，176 宽）。
@@ -181,6 +190,12 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
         drawSlotCounts(guiGraphics);
         // 刷新开关状态
         this.outputButton.setState(this.menu.isOutputEnabled());
+        // 渲染六面按钮 tooltip（始终显示完整的输出目的/输出方向/输出材料说明）
+        for (FaceButton faceButton : this.faceButtons) {
+            if (faceButton.isHovered()) {
+                guiGraphics.renderTooltip(this.font, faceButton.buildTooltip(), Optional.empty(), mouseX, mouseY);
+            }
+        }
         // 渲染鼠标悬浮物品的信息提示窗
         super.renderTooltip(guiGraphics, mouseX, mouseY);
     }
@@ -274,7 +289,55 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     }
 
     /**
-     * 六面输出状态按钮：槽位状态显示对应物品图标 + 槽号；随机/禁用显示文字；点击循环切换 11 个状态。
+     * 获取指定方向相邻方块的物品图标（无方块或方块无对应物品时返回空）。
+     * 用于六面按钮显示"输出目的"贴图。
+     */
+    private ItemStack getNeighborIcon(Direction direction) {
+        Item item = getNeighborState(direction).getBlock().asItem();
+        return item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
+    }
+
+    /**
+     * 获取指定方向相邻方块的显示名（无方块时返回方块自身名，仅供有贴图时使用）
+     */
+    private Component getNeighborName(Direction direction) {
+        return getNeighborState(direction).getBlock().getName();
+    }
+
+    /**
+     * 获取指定方向相邻方块状态（客户端世界不可用/无机器时返回空气）
+     */
+    private BlockState getNeighborState(Direction direction) {
+        if (this.minecraft != null && this.minecraft.level != null && this.menu.entity != null) {
+            return this.minecraft.level.getBlockState(this.menu.entity.getBlockPos().relative(direction));
+        }
+        return Blocks.AIR.defaultBlockState();
+    }
+
+    /**
+     * 非中文语言下用符号表示方向，保证按钮宽度可显示
+     */
+    private static String directionSymbol(Direction direction) {
+        return switch (direction) {
+            case DOWN -> "↓";
+            case UP -> "↑";
+            case NORTH -> "▲";
+            case SOUTH -> "▼";
+            case WEST -> "◀";
+            case EAST -> "▶";
+        };
+    }
+
+    /**
+     * 当前 GUI 语言是否为中文（中文使用文字，其他语言用符号）
+     */
+    private static boolean isChinese() {
+        return Minecraft.getInstance().getLanguageManager().getSelected().startsWith("zh");
+    }
+
+    /**
+     * 六面输出状态按钮：显示为 [相邻方块贴图+方向名] · [随机/禁用/槽位贴图+槽号]，
+     * 点击循环切换 11 个状态；按钮上有贴图时 hover 显示 tooltip（输出目的/输出方向/输出材料）。
      */
     private class FaceButton extends SimpleButton {
         private final Direction direction;
@@ -287,7 +350,6 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
         @Override
         protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
             int state = StorageFountainScreen.this.menu.getDirectionState(this.direction);
-            String dirName = Component.translatable("screen.alltheimbaium.storage_fountain.face." + this.direction.getName()).getString();
             // 背景色：禁用=红，随机=绿，槽位=蓝灰
             int color;
             if (state == StorageFountainEntity.STATE_DISABLED) {
@@ -298,31 +360,101 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
                 color = 0xFF3A3A6B;
             }
             renderButton(guiGraphics, color);
-            if (state >= StorageFountainEntity.STATE_SLOT_BASE) {
-                // 槽位状态：绘制对应物品图标 + 槽号（图标与文字整体居中，避免偏左）
-                int slot = state - StorageFountainEntity.STATE_SLOT_BASE;
-                ItemStack icon = StorageFountainScreen.this.menu.getMarkedStack(slot);
-                String text = dirName + "·" + (slot + 1);
-                if (!icon.isEmpty()) {
-                    int gap = 2;
-                    int textWidth = StorageFountainScreen.this.font.width(text);
-                    int totalWidth = 16 + gap + textWidth;
-                    int startX = this.getX() + (BTN_W - totalWidth) / 2;
-                    if (startX < this.getX() + 2) {
-                        startX = this.getX() + 2;
-                    }
-                    guiGraphics.renderItem(icon, startX, this.getY() + 1);
-                    guiGraphics.drawString(StorageFountainScreen.this.font, text, startX + 16 + gap, this.getY() + 4, 0xFFFFFFFF, true);
-                } else {
-                    // 对应槽位未标记（无图标）：文字居中显示
-                    guiGraphics.drawCenteredString(StorageFountainScreen.this.font, text, this.getX() + BTN_W / 2, this.getY() + 4, 0xFFFFFFFF);
-                }
-            } else {
-                String stateText = state == StorageFountainEntity.STATE_RANDOM
-                        ? Component.translatable("screen.alltheimbaium.storage_fountain.random").getString()
-                        : Component.translatable("screen.alltheimbaium.storage_fountain.disabled").getString();
-                guiGraphics.drawCenteredString(StorageFountainScreen.this.font, dirName + "·" + stateText, this.getX() + BTN_W / 2, this.getY() + 4, 0xFFFFFFFF);
+            // 内容 = [输出目的(相邻贴图/方向名)] ← [输出材料(槽位贴图/槽号 或 随机/禁用)]，
+            // 有贴图时省略对应文字（方向名/槽号），整体在按钮内左右居中
+            ItemStack neighborIcon = StorageFountainScreen.this.getNeighborIcon(this.direction);
+            // 中文用文字，其他语言用符号表示方向/随机/禁用，保证按钮宽度可显示
+            String dirName = Component.translatable("screen.alltheimbaium.storage_fountain.face." + this.direction.getName()).getString();
+            boolean isChinese = isChinese();
+            if (!isChinese) {
+                dirName = directionSymbol(this.direction);
             }
+            String stateText = null;
+            ItemStack slotIcon = ItemStack.EMPTY;
+            String slotText = null;
+            if (state >= StorageFountainEntity.STATE_SLOT_BASE) {
+                int slot = state - StorageFountainEntity.STATE_SLOT_BASE;
+                slotIcon = StorageFountainScreen.this.menu.getMarkedStack(slot);
+                if (slotIcon.isEmpty()) {
+                    // 对应槽位未标记（无贴图）时显示槽号兜底
+                    slotText = String.valueOf(slot + 1);
+                }
+            } else if (state == StorageFountainEntity.STATE_RANDOM) {
+                stateText = isChinese
+                        ? Component.translatable("screen.alltheimbaium.storage_fountain.random").getString()
+                        : "?";
+            } else {
+                stateText = isChinese
+                        ? Component.translatable("screen.alltheimbaium.storage_fountain.disabled").getString()
+                        : "×";
+            }
+            boolean hasTargetIcon = !neighborIcon.isEmpty();
+            boolean hasSlotIcon = !slotIcon.isEmpty();
+            String rightText = hasSlotIcon ? null : (slotText != null ? slotText : stateText);
+            // 计算内容总宽（贴图 16px；各元素间留 2px）
+            int contentW = 0;
+            contentW += hasTargetIcon ? 16 : StorageFountainScreen.this.font.width(dirName);
+            contentW += StorageFountainScreen.this.font.width("←") + 2;
+            contentW += hasSlotIcon ? 16 : StorageFountainScreen.this.font.width(rightText);
+            contentW += 2;
+            int x = this.getX() + Math.max(1, (BTN_W - contentW) / 2);
+            int iconY = this.getY();
+            int textY = this.getY() + 4;
+            // 左段：相邻方块贴图（有贴图时不显示方向名）
+            if (hasTargetIcon) {
+                guiGraphics.renderItem(neighborIcon, x, iconY);
+                x += 18;
+            } else {
+                guiGraphics.drawString(StorageFountainScreen.this.font, dirName, x, textY, 0xFFFFFFFF, true);
+                x += StorageFountainScreen.this.font.width(dirName) + 2;
+            }
+            // 左箭头：表示右段物品输出到左段目的
+            guiGraphics.drawString(StorageFountainScreen.this.font, "←", x, textY, 0xFFFFFFFF, true);
+            x += StorageFountainScreen.this.font.width("←") + 2;
+            // 右段：槽位贴图（有贴图时不显示槽号）或 随机/禁用
+            if (hasSlotIcon) {
+                guiGraphics.renderItem(slotIcon, x, iconY);
+            } else {
+                guiGraphics.drawString(StorageFountainScreen.this.font, rightText, x, textY, 0xFFFFFFFF, true);
+            }
+        }
+
+        /**
+         * 构建 hover tooltip：所有情况下都返回完整的 [输出目的/输出方向/输出材料] 三行说明
+         */
+        List<Component> buildTooltip() {
+            int state = StorageFountainScreen.this.menu.getDirectionState(this.direction);
+            ItemStack neighborIcon = StorageFountainScreen.this.getNeighborIcon(this.direction);
+            String dirName = Component.translatable("screen.alltheimbaium.storage_fountain.face." + this.direction.getName()).getString();
+            List<Component> lines = new ArrayList<>();
+            // 输出目的：相邻方块名，无相邻方块时提示无目标
+            if (!neighborIcon.isEmpty()) {
+                lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_target",
+                        StorageFountainScreen.this.getNeighborName(this.direction)));
+            } else {
+                lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_target",
+                        Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_no_target")));
+            }
+            // 输出方向
+            lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_direction", dirName));
+            // 输出材料：槽位物品名/槽号，随机，禁用
+            if (state >= StorageFountainEntity.STATE_SLOT_BASE) {
+                int slot = state - StorageFountainEntity.STATE_SLOT_BASE;
+                ItemStack materialIcon = StorageFountainScreen.this.menu.getMarkedStack(slot);
+                if (!materialIcon.isEmpty()) {
+                    lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_material", materialIcon.getHoverName()));
+                } else {
+                    lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_material",
+                            Component.translatable("screen.alltheimbaium.storage_fountain.slot_number", slot + 1)));
+                }
+            } else if (state == StorageFountainEntity.STATE_RANDOM) {
+                lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_material",
+                        Component.translatable("screen.alltheimbaium.storage_fountain.random")));
+            } else {
+                lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_material",
+                        Component.translatable("screen.alltheimbaium.storage_fountain.disabled")));
+            }
+            return lines;
         }
     }
 
