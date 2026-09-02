@@ -41,8 +41,25 @@ import java.util.List;
 
 public class StorageFountainEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(StorageFountainEntity.class);
-    private final LazyOptional<StorageFountainConnection> fecOptional = LazyOptional.of(() -> new StorageFountainConnection(this));
+    /** 六面 + 无方向(任意) 的对外能力缓存：索引 0~5 与 Direction.values() 顺序一致，索引 6 表示不限定方向 */
+    private final LazyOptional<StorageFountainConnection>[] fecOptionals = createDirectionalOptionals();
     public int findIndex = 0;
+
+    /**
+     * 为每个方向缓存一个能力实例（被动抽取会按该方向配置过滤物品），另缓存一个不限定方向的实例。
+     */
+    @SuppressWarnings("unchecked")
+    private LazyOptional<StorageFountainConnection>[] createDirectionalOptionals() {
+        LazyOptional<StorageFountainConnection>[] optionals = new LazyOptional[7];
+        Direction[] directions = Direction.values();
+        for (int i = 0; i < directions.length; i++) {
+            final Direction direction = directions[i];
+            optionals[i] = LazyOptional.of(() -> new StorageFountainConnection(this, direction));
+        }
+        // 无方向查询（部分管道/逻辑不传方向）时按随机全量处理
+        optionals[6] = LazyOptional.of(() -> new StorageFountainConnection(this, null));
+        return optionals;
+    }
 
     // ==================== 方向输出状态 ====================
     /** 随机：输出任意有存量的物品 */
@@ -295,7 +312,13 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
     @Nonnull
     public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
         try {
-            return capability == ForgeCapabilities.ITEM_HANDLER ? fecOptional.cast() : super.getCapability(capability, direction);
+            if (capability == ForgeCapabilities.ITEM_HANDLER) {
+                int idx = direction == null ? 6 : direction.ordinal();
+                if (idx >= 0 && idx < fecOptionals.length) {
+                    return fecOptionals[idx].cast();
+                }
+            }
+            return super.getCapability(capability, direction);
         } catch (Throwable e) {
             log.error("StorageFountainEntity.getCapability error", e);
         }

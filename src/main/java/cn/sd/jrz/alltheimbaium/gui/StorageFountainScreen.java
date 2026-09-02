@@ -196,6 +196,8 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
                 guiGraphics.renderTooltip(this.font, faceButton.buildTooltip(), Optional.empty(), mouseX, mouseY);
             }
         }
+        // 标记槽 hover 提示：槽内无物品时显示使用方法说明
+        renderMarkerSlotTooltip(guiGraphics, mouseX, mouseY);
         // 渲染鼠标悬浮物品的信息提示窗
         super.renderTooltip(guiGraphics, mouseX, mouseY);
     }
@@ -227,6 +229,20 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
             guiGraphics.drawString(this.font, text, (int) (x / COUNT_SCALE), (int) (y / COUNT_SCALE), 0xFFFFFF, true);
             guiGraphics.pose().popPose();
         }
+    }
+
+    /**
+     * 标记槽 hover 提示：鼠标悬浮在标记槽（槽内无物品，避免与物品自身提示冲突）时显示使用方法说明。
+     */
+    private void renderMarkerSlotTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        Slot markerSlot = this.menu.slots.get(0);
+        if (markerSlot.hasItem() || !this.isHovering(markerSlot.x, markerSlot.y, 16, 16, mouseX, mouseY)) {
+            return;
+        }
+        guiGraphics.renderTooltip(this.font, List.of(
+                Component.translatable("screen.alltheimbaium.storage_fountain.marker_tooltip.1"),
+                Component.translatable("screen.alltheimbaium.storage_fountain.marker_tooltip.2")
+        ), Optional.empty(), mouseX, mouseY);
     }
 
     /**

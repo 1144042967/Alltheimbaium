@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -155,6 +156,8 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
                 }
             }
         }
+        // + 输入槽 hover 提示：槽内无物品时显示容器使用方法说明
+        renderInputSlotTooltip(guiGraphics, mouseX, mouseY);
         // 渲染鼠标悬浮物品的信息提示窗
         super.renderTooltip(guiGraphics, mouseX, mouseY);
         // 刷新各开关状态
@@ -165,6 +168,20 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
         boolean infinite = this.menu.isInfinity();
         this.outputButton.active = infinite;
         this.outputButton.setState(infinite && this.menu.isOutputEnabled());
+    }
+
+    /**
+     * + 输入槽 hover 提示：鼠标悬浮在输入槽（槽内无物品，避免与容器自身提示冲突）时显示使用方法说明。
+     */
+    private void renderInputSlotTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        Slot inputSlot = this.menu.slots.get(0);
+        if (inputSlot.hasItem() || !this.isHovering(inputSlot.x, inputSlot.y, 16, 16, mouseX, mouseY)) {
+            return;
+        }
+        guiGraphics.renderTooltip(this.font, List.of(
+                Component.translatable("screen.alltheimbaium.liquid_fountain.input_tooltip.1"),
+                Component.translatable("screen.alltheimbaium.liquid_fountain.input_tooltip.2")
+        ), Optional.empty(), mouseX, mouseY);
     }
 
     /**
