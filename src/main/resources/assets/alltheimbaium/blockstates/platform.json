@@ -1,7 +1,10 @@
 {
   "variants": {
-    "": {
+    "disguised=false": {
       "model": "alltheimbaium:block/platform"
+    },
+    "disguised=true": {
+      "model": "alltheimbaium:block/platform_disguised"
     }
   }
 }

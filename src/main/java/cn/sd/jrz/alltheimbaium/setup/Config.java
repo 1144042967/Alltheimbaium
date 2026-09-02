@@ -4,6 +4,7 @@ import cn.sd.jrz.alltheimbaium.block.AutoFarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.FarmBlock;
 import cn.sd.jrz.alltheimbaium.block.FarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
+import cn.sd.jrz.alltheimbaium.block.PlatformBlock;
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.ClockEntity;
 import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
@@ -106,6 +107,12 @@ public class Config {
     public static ForgeConfigSpec.LongValue STORAGE_FOUNTAIN_INITIAL_OUTPUT;
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_MODS;
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_TAGS;
+
+    // ==================== 生成平台 ====================
+    /** 平台伪装全局开关（所有世界共用，由平台 GUI 切换并保存） */
+    public static ForgeConfigSpec.BooleanValue PLATFORM_DISGUISE_ENABLED;
+    /** 已加载的 SERVER 配置实例，运行时切换伪装后用于回写保存配置文件 */
+    public static ModConfig SERVER_MOD_CONFIG;
 
     // ==================== 配置规范 ====================
     public static ForgeConfigSpec SERVER_CONFIG;
@@ -260,6 +267,13 @@ public class Config {
                         o -> o instanceof String);
         builder.pop();
 
+        // ---- 生成平台 ----
+        builder.comment("生成平台设置").push("platform");
+        PLATFORM_DISGUISE_ENABLED = builder
+                .comment("平台伪装全局开关（所有世界共用）。开启后所有生成平台的上表面贴图显示为石砖；由平台 GUI 切换并保存，重进仍生效")
+                .define("disguise_enabled", false);
+        builder.pop();
+
         SERVER_CONFIG = builder.build();
     }
 
@@ -277,6 +291,8 @@ public class Config {
     @SubscribeEvent
     public static void onConfigLoad(ModConfigEvent.Loading event) {
         if (event.getConfig().getSpec() == SERVER_CONFIG) {
+            // 保存配置实例引用，供运行时回写（如平台伪装开关切换）
+            SERVER_MOD_CONFIG = event.getConfig();
             FarmlandBlock.loadConfig();
             AutoFarmlandBlock.loadConfig();
             ClockEntity.loadConfig();
@@ -285,6 +301,7 @@ public class Config {
             FarmBlock.loadConfig();
             FarmEntity.loadConfig();
             LiquidFountainBlock.loadConfig();
+            PlatformBlock.loadConfig();
             StorageFountainBlock.loadConfig();
             StorageFountainBlock.loadConfig();
             StorageFountainEntity.loadConfig();

@@ -24,6 +24,7 @@ public class ClientHandler {
             MenuScreens.register(Registration.AUTO_FARMLAND_MENU.get(), AutoFarmlandScreen::new);
             MenuScreens.register(Registration.STORAGE_FOUNTAIN_MENU.get(), StorageFountainScreen::new);
             MenuScreens.register(Registration.CLOCK_MENU.get(), ClockScreen::new);
+            MenuScreens.register(Registration.PLATFORM_MENU.get(), PlatformScreen::new);
             // 液体机镂空玻璃罐体：注册 cutout 渲染层（模型 JSON 的 render_type 兜底）
             ItemBlockRenderTypes.setRenderLayer(Registration.LIQUID_FOUNTAIN_BLOCK.get(), RenderType.cutout());
         });

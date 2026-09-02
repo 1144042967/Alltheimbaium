@@ -8,6 +8,7 @@ import cn.sd.jrz.alltheimbaium.gui.ClockMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalSwordMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalTotemMenu;
 import cn.sd.jrz.alltheimbaium.gui.LiquidFountainMenu;
+import cn.sd.jrz.alltheimbaium.gui.PlatformMenu;
 import cn.sd.jrz.alltheimbaium.gui.StorageFountainMenu;
 import cn.sd.jrz.alltheimbaium.item.*;
 import cn.sd.jrz.alltheimbaium.recipe.BrewingCraftRecipe;
@@ -210,6 +211,8 @@ public class Registration {
             MENUS.register("clock", () -> IForgeMenuType.create((id, inv, data) -> new ClockMenu(id, inv, data.readBlockPos())));
     public static final RegistryObject<MenuType<StorageFountainMenu>> STORAGE_FOUNTAIN_MENU =
             MENUS.register("storage_fountain", () -> IForgeMenuType.create((id, inv, data) -> new StorageFountainMenu(id, inv, data.readBlockPos())));
+    public static final RegistryObject<MenuType<PlatformMenu>> PLATFORM_MENU =
+            MENUS.register("platform", () -> IForgeMenuType.create((id, inv, data) -> new PlatformMenu(id, inv, data.readBlockPos())));
 
     // 配方序列化器
     public static final RegistryObject<RecipeSerializer<SmeltingCraftRecipe>> SMELTING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("smelting_craft", () -> SmeltingCraftRecipe.SERIALIZER);
