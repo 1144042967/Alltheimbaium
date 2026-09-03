@@ -10,6 +10,7 @@ import cn.sd.jrz.alltheimbaium.gui.EternalTotemMenu;
 import cn.sd.jrz.alltheimbaium.gui.LiquidFountainMenu;
 import cn.sd.jrz.alltheimbaium.gui.PlatformMenu;
 import cn.sd.jrz.alltheimbaium.gui.StorageFountainMenu;
+import cn.sd.jrz.alltheimbaium.gui.SupplyCrateMenu;
 import cn.sd.jrz.alltheimbaium.item.*;
 import cn.sd.jrz.alltheimbaium.recipe.BrewingCraftRecipe;
 import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
@@ -58,6 +59,7 @@ public class Registration {
                     output.accept(Registration.ETERNAL_SWORD.get());
                     output.accept(Registration.CLOCK_ITEM.get());
                     output.accept(Registration.PLATFORM_ITEM.get());
+                    output.accept(Registration.SUPPLY_CRATE_ITEM.get());//补给箱
 
                     output.accept(Registration.FARM_COBBLESTONE_ITEM.get());//圆石 1
                     output.accept(Registration.FARM_WOOD_ITEM.get());//树 1
@@ -132,6 +134,7 @@ public class Registration {
                     .strength(0.5f, 0.5f)));
     public static final RegistryObject<ClockBlock> CLOCK_BLOCK = BLOCKS.register("clock", () -> new ClockBlock(BLOCK_PROPERTIES));
     public static final RegistryObject<PlatformBlock> PLATFORM_BLOCK = BLOCKS.register("platform", () -> new PlatformBlock(BLOCK_PROPERTIES));
+    public static final RegistryObject<SupplyCrateBlock> SUPPLY_CRATE_BLOCK = BLOCKS.register("supply_crate", () -> new SupplyCrateBlock(BLOCK_PROPERTIES));
     // 液体机：玻璃罐体，复制玻璃方块属性（音效等）+ noOcclusion 使其不 cull 相邻方块的面，透过罐体能正常看到后面的地面/物品
     public static final RegistryObject<LiquidFountainBlock> LIQUID_FOUNTAIN_BLOCK = BLOCKS.register("liquid_fountain", () -> new LiquidFountainBlock(
             BlockBehaviour.Properties.copy(Blocks.GLASS)
@@ -185,6 +188,7 @@ public class Registration {
     public static final RegistryObject<BlockItem> AUTO_FARMLAND_ITEM = ITEMS.register("auto_farmland", () -> new AutoFarmlandItem(AUTO_FARMLAND_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<ClockItem> CLOCK_ITEM = ITEMS.register("clock", () -> new ClockItem(CLOCK_BLOCK.get(), "block.alltheimbaium.clock.description"));
     public static final RegistryObject<PlatformItem> PLATFORM_ITEM = ITEMS.register("platform", () -> new PlatformItem(PLATFORM_BLOCK.get()));
+    public static final RegistryObject<SupplyCrateItem> SUPPLY_CRATE_ITEM = ITEMS.register("supply_crate", () -> new SupplyCrateItem(SUPPLY_CRATE_BLOCK.get()));
     public static final RegistryObject<BlockItem> LIQUID_FOUNTAIN_ITEM = ITEMS.register("liquid_fountain", () -> new LiquidFountainItem(LIQUID_FOUNTAIN_BLOCK.get()));
     public static final RegistryObject<BlockItem> STORAGE_FOUNTAIN_ITEM = ITEMS.register("storage_fountain", () -> new StorageFountainItem(STORAGE_FOUNTAIN_BLOCK.get()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", () -> new Item(new Item.Properties()));
@@ -213,6 +217,8 @@ public class Registration {
             MENUS.register("storage_fountain", () -> IForgeMenuType.create((id, inv, data) -> new StorageFountainMenu(id, inv, data.readBlockPos())));
     public static final RegistryObject<MenuType<PlatformMenu>> PLATFORM_MENU =
             MENUS.register("platform", () -> IForgeMenuType.create((id, inv, data) -> new PlatformMenu(id, inv, data.readBlockPos())));
+    public static final RegistryObject<MenuType<SupplyCrateMenu>> SUPPLY_CRATE_MENU =
+            MENUS.register("supply_crate", () -> IForgeMenuType.create((id, inv, data) -> new SupplyCrateMenu(id, inv, data)));
 
     // 配方序列化器
     public static final RegistryObject<RecipeSerializer<SmeltingCraftRecipe>> SMELTING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("smelting_craft", () -> SmeltingCraftRecipe.SERIALIZER);

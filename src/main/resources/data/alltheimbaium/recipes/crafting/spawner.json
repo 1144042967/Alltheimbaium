@@ -3,7 +3,7 @@
   "group": "spawner",
   "key": {
     "A": {
-      "item": "minecraft:nether_start"
+      "item": "minecraft:nether_star"
     },
     "#": {
       "item": "minecraft:chain"

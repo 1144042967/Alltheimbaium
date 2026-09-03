@@ -114,6 +114,10 @@ public class Config {
     /** 已加载的 SERVER 配置实例，运行时切换伪装后用于回写保存配置文件 */
     public static ModConfig SERVER_MOD_CONFIG;
 
+    // ==================== ATI 补给箱 ====================
+    /** 补给箱随机物品黑名单（物品注册 ID），默认含基岩、末地传送门框架 */
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> SUPPLY_CRATE_BLACKLIST;
+
     // ==================== 配置规范 ====================
     public static ForgeConfigSpec SERVER_CONFIG;
 
@@ -274,6 +278,15 @@ public class Config {
                 .define("disguise_enabled", false);
         builder.pop();
 
+        // ---- ATI 补给箱 ----
+        builder.comment("ATI 补给箱设置").push("supply_crate");
+        SUPPLY_CRATE_BLACKLIST = builder
+                .comment("补给箱随机物品黑名单（物品注册 ID，如 minecraft:bedrock）。列出的物品不会被随机列出")
+                .defineList("blacklist",
+                        () -> List.of("minecraft:bedrock", "minecraft:end_portal_frame"),
+                        o -> o instanceof String);
+        builder.pop();
+
         SERVER_CONFIG = builder.build();
     }
 
@@ -302,6 +315,7 @@ public class Config {
             FarmEntity.loadConfig();
             LiquidFountainBlock.loadConfig();
             PlatformBlock.loadConfig();
+            SupplyRoll.loadConfig();
             StorageFountainBlock.loadConfig();
             StorageFountainBlock.loadConfig();
             StorageFountainEntity.loadConfig();
