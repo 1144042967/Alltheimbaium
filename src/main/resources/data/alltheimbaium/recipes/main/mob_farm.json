@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "mob_farm",
+  "key": {
+    "A": {
+      "item": "alltheimbaium:package_material_x3"
+    },
+    "B": {
+      "item": "minecraft:glass_bottle"
+    }
+  },
+  "pattern": [
+    "AAA",
+    "ABA",
+    "AAA"
+  ],
+  "result": {
+    "item": "alltheimbaium:mob_farm"
+  }
+}

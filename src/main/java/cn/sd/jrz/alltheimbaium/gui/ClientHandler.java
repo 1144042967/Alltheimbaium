@@ -26,8 +26,10 @@ public class ClientHandler {
             MenuScreens.register(Registration.CLOCK_MENU.get(), ClockScreen::new);
             MenuScreens.register(Registration.PLATFORM_MENU.get(), PlatformScreen::new);
             MenuScreens.register(Registration.SUPPLY_CRATE_MENU.get(), SupplyCrateScreen::new);
+            MenuScreens.register(Registration.MOB_FARM_MENU.get(), MobFarmScreen::new);
             // 液体机镂空玻璃罐体：注册 cutout 渲染层（模型 JSON 的 render_type 兜底）
             ItemBlockRenderTypes.setRenderLayer(Registration.LIQUID_FOUNTAIN_BLOCK.get(), RenderType.cutout());
+            ItemBlockRenderTypes.setRenderLayer(Registration.MOB_FARM_BLOCK.get(), RenderType.cutout());
         });
     }
 
@@ -36,5 +38,6 @@ public class ClientHandler {
         event.registerBlockEntityRenderer(Registration.LIQUID_FOUNTAIN_ENTITY.get(), LiquidFountainRenderer::new);
         event.registerBlockEntityRenderer(Registration.STORAGE_FOUNTAIN_ENTITY.get(), StorageFountainRenderer::new);
         event.registerBlockEntityRenderer(Registration.CLOCK_ENTITY.get(), ClockRenderer::new);
+        event.registerBlockEntityRenderer(Registration.MOB_FARM_ENTITY.get(), MobFarmRenderer::new);
     }
 }

@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "top": "alltheimbaium:block/mob_farm_top",
+    "bottom": "alltheimbaium:block/mob_farm_btm",
+    "side": "alltheimbaium:block/mob_farm_side",
+    "particle": "alltheimbaium:block/mob_farm_side"
+  }
+}

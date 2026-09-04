@@ -4,6 +4,7 @@ import cn.sd.jrz.alltheimbaium.block.AutoFarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.FarmBlock;
 import cn.sd.jrz.alltheimbaium.block.FarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
+import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.block.PlatformBlock;
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.ClockEntity;
@@ -107,6 +108,17 @@ public class Config {
     public static ForgeConfigSpec.LongValue STORAGE_FOUNTAIN_INITIAL_OUTPUT;
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_MODS;
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_TAGS;
+
+    // ==================== 生物农场 ====================
+    public static ForgeConfigSpec.IntValue MOB_FARM_LEVEL_UP_INTERVAL_SECONDS;
+    public static ForgeConfigSpec.LongValue MOB_FARM_CARRY;
+    public static ForgeConfigSpec.LongValue MOB_FARM_INITIAL_LEVEL;
+    public static ForgeConfigSpec.LongValue MOB_FARM_MAX_LEVEL;
+    public static ForgeConfigSpec.IntValue MOB_FARM_CAPTURE_RADIUS;
+    public static ForgeConfigSpec.IntValue MOB_FARM_MAX_PRODUCTS;
+    public static ForgeConfigSpec.IntValue MOB_FARM_SAMPLE_KILLS;
+    public static ForgeConfigSpec.IntValue MOB_FARM_USE_INTERVAL_TICKS;
+    public static ForgeConfigSpec.IntValue MOB_FARM_SHEAR_REGROW_SECONDS;
 
     // ==================== 生成平台 ====================
     /** 平台伪装全局开关（所有世界共用，由平台 GUI 切换并保存） */
@@ -271,6 +283,37 @@ public class Config {
                         o -> o instanceof String);
         builder.pop();
 
+        // ---- 生物农场 ----
+        builder.comment("生物农场设置").push("mob_farm");
+        MOB_FARM_LEVEL_UP_INTERVAL_SECONDS = builder
+                .comment("等级增长间隔（秒）")
+                .defineInRange("level_up_interval_seconds", 20, 1, Integer.MAX_VALUE);
+        MOB_FARM_CARRY = builder
+                .comment("进位阈值。权重累计至此进位为一件完整物品")
+                .defineInRange("carry", 10000L, 1L, Long.MAX_VALUE);
+        MOB_FARM_INITIAL_LEVEL = builder
+                .comment("初始等级")
+                .defineInRange("initial_level", 1L, 1L, Long.MAX_VALUE);
+        MOB_FARM_MAX_LEVEL = builder
+                .comment("最大等级（达到后不再升级）")
+                .defineInRange("max_level", Long.MAX_VALUE, 1L, Long.MAX_VALUE);
+        MOB_FARM_CAPTURE_RADIUS = builder
+                .comment("空罐右键捕捉生物的半径（格）")
+                .defineInRange("capture_radius", 5, 1, 64);
+        MOB_FARM_MAX_PRODUCTS = builder
+                .comment("最多产物行数 / 输出槽数（≤27）")
+                .defineInRange("max_products", 27, 1, 27);
+        MOB_FARM_SAMPLE_KILLS = builder
+                .comment("击杀掉落采样次数（收容时估算权重用，越大越稳定）")
+                .defineInRange("sample_kills", 2000, 10, 100000);
+        MOB_FARM_USE_INTERVAL_TICKS = builder
+                .comment("使用槽自动模拟右击的间隔（tick）")
+                .defineInRange("use_interval_ticks", 20, 1, Integer.MAX_VALUE);
+        MOB_FARM_SHEAR_REGROW_SECONDS = builder
+                .comment("羊/哞菇被剪后长回毛所需秒数")
+                .defineInRange("shear_regrow_seconds", 30, 1, Integer.MAX_VALUE);
+        builder.pop();
+
         // ---- 生成平台 ----
         builder.comment("生成平台设置").push("platform");
         PLATFORM_DISGUISE_ENABLED = builder
@@ -320,6 +363,7 @@ public class Config {
             StorageFountainBlock.loadConfig();
             StorageFountainEntity.loadConfig();
             StorageFountainItem.loadConfig();
+            MobFarmBlock.loadConfig();
             PotionCombineRecipe.loadConfig();
         }
     }

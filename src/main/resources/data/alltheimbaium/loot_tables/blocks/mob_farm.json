@@ -1,0 +1,68 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "function": "minecraft:copy_name",
+              "source": "block_entity"
+            },
+            {
+              "function": "minecraft:copy_nbt",
+              "ops": [
+                {
+                  "op": "replace",
+                  "source": "entityTag",
+                  "target": "BlockEntityTag.entityTag"
+                },
+                {
+                  "op": "replace",
+                  "source": "level",
+                  "target": "BlockEntityTag.level"
+                },
+                {
+                  "op": "replace",
+                  "source": "tickCount",
+                  "target": "BlockEntityTag.tickCount"
+                },
+                {
+                  "op": "replace",
+                  "source": "rows",
+                  "target": "BlockEntityTag.rows"
+                },
+                {
+                  "op": "replace",
+                  "source": "directionState",
+                  "target": "BlockEntityTag.directionState"
+                },
+                {
+                  "op": "replace",
+                  "source": "outputEnabled",
+                  "target": "BlockEntityTag.outputEnabled"
+                },
+                {
+                  "op": "replace",
+                  "source": "markerSlot",
+                  "target": "BlockEntityTag.markerSlot"
+                },
+                {
+                  "op": "replace",
+                  "source": "useSlot",
+                  "target": "BlockEntityTag.useSlot"
+                }
+              ],
+              "source": "block_entity"
+            }
+          ],
+          "name": "alltheimbaium:mob_farm"
+        }
+      ],
+      "name": "mob_farm",
+      "rolls": 1.0
+    }
+  ]
+}
