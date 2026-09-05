@@ -92,6 +92,8 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
         public long stock;
         public long weight;
         public long acc;
+        /** 由使用槽产出的行（权重记刷怪蛋速度，仅用于展示/排序，不参与被动累计，避免双倍产出） */
+        public boolean fromTool = false;
 
         public Row(@Nonnull Item item, long weight) {
             this.item = item;
@@ -108,8 +110,8 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
     /** 客户端懒加载渲染实体缓存（不属于世界） */
     @Nullable
     public Entity cachedEntity;
-    /** 使用槽冷却节拍 */
-    private int useCooldown = 0;
+    /** 载入含收容生物但无产物表时，首个服务端 tick 需要补建产物表 */
+    private boolean needRebuild = false;
 
     /** 六面 + 无方向能力缓存（同 StorageFountainEntity） */
     @SuppressWarnings("unchecked")
@@ -129,7 +131,6 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
     public MobFarmEntity(BlockPos pos, BlockState state) {
         super(Registration.MOB_FARM_ENTITY.get(), pos, state);
         this.level = Math.max(1, MobFarmBlock.getInitialLevel());
-        this.useCooldown = MobFarmBlock.getUseIntervalTicks();
     }
 
     // ==================== 收容生物查询 ====================
@@ -234,33 +235,6 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
             sendUpdatePacket();
         } catch (Throwable e) {
             log.error("MobFarmEntity.captureByType error", e);
-        }
-    }
-
-    /**
-     * 清空收容物，保留等级与存量。方向指向的越界槽复位为随机。
-     */
-    public void clearContained() {
-        try {
-            entityTag = null;
-            cachedEntity = null;
-            useCooldown = MobFarmBlock.getUseIntervalTicks();
-            // 清掉各行的权重，避免残留产物表（存量行保留，仍可取出/输出）
-            for (Row row : rows) {
-                row.weight = 0;
-                row.acc = 0;
-            }
-            cleanEmptyRows();
-            // 指向不存在行的方向状态复位为随机，防止错指
-            for (int i = 0; i < directionState.length; i++) {
-                if (directionState[i] >= STATE_SLOT_BASE + rows.size()) {
-                    directionState[i] = STATE_RANDOM;
-                }
-            }
-            setChanged();
-            sendUpdatePacket();
-        } catch (Throwable e) {
-            log.error("MobFarmEntity.clearContained error", e);
         }
     }
 
@@ -480,6 +454,50 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
         return rows.get(index).weight;
     }
 
+    /** 指定行的展示模式：0=被动产物行，1=使用槽正在产出的工具行，2=使用槽工具行但当前不产出 */
+    public int getRowMode(int index) {
+        try {
+            if (index < 0 || index >= rows.size()) {
+                return 0;
+            }
+            Row row = rows.get(index);
+            if (!row.fromTool) {
+                return 0;
+            }
+            ItemStack tool = specialSlot.getStackInSlot(0);
+            EntityType<?> type = getContainedType();
+            if (type == null || tool.isEmpty() || entityTag == null) {
+                return 2;
+            }
+            Item prod = MobFarmInteraction.produceItem(type, entityTag, tool);
+            return prod == row.item ? 1 : 2;
+        } catch (Throwable e) {
+            log.error("MobFarmEntity.getRowMode error", e);
+        }
+        return 0;
+    }
+
+    /** 使用槽全局状态：0=未收容/无工具需求，1=缺少使用工具，2=使用工具不符，3=正常 */
+    public int getToolStatus() {
+        try {
+            if (!hasContained()) {
+                return 0;
+            }
+            ItemStack tool = specialSlot.getStackInSlot(0);
+            if (tool.isEmpty()) {
+                return 1;
+            }
+            EntityType<?> type = getContainedType();
+            if (type == null || entityTag == null) {
+                return 0;
+            }
+            return MobFarmInteraction.produceItem(type, entityTag, tool) != null ? 3 : 2;
+        } catch (Throwable e) {
+            log.error("MobFarmEntity.getToolStatus error", e);
+        }
+        return 0;
+    }
+
     /** 指定行索引的物品（供连接抽取） */
     @Nullable
     public Item getProductItem(int index) {
@@ -536,25 +554,23 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
         setChanged();
     }
 
-    // ==================== 标记槽 / 使用槽 ====================
+    // ==================== 收容 / 使用 合一槽 ====================
 
-    public final ItemStackHandler markerSlot = new ItemStackHandler(1) {
+    /**
+     * 收容与使用合一槽：未收容时是"标记槽"（放入刷怪蛋/特征掉落物即收容该生物，处理完清空）；
+     * 已收容后是"使用槽"（放入对收容物右击能产出掉落物的物品，由机器自动模拟使用）。
+     * 每台机器只能收容一次：不允许取消收容、不允许再次收容。
+     */
+    public final ItemStackHandler specialSlot = new ItemStackHandler(1) {
         @Override
         public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
             if (stack.isEmpty()) {
                 return false;
             }
-            return resolveMarkerTarget(stack) != null;
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            return 1;
-        }
-
-        @Override
-        protected int getStackLimit(int slot, @Nonnull ItemStack stack) {
-            return 1;
+            if (hasContained()) {
+                return true; // 使用槽：任意物品
+            }
+            return resolveMarkerTarget(stack) != null; // 标记槽：刷怪蛋或特征掉落物
         }
 
         @Override
@@ -564,56 +580,43 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
                 return;
             }
             if (level.isClientSide) {
-                if (!markerSlot.getStackInSlot(0).isEmpty()) {
-                    markerSlot.setStackInSlot(0, ItemStack.EMPTY);
+                if (!hasContained() && !specialSlot.getStackInSlot(0).isEmpty()) {
+                    specialSlot.setStackInSlot(0, ItemStack.EMPTY);
                 }
                 return;
             }
-            processMarkerSlot();
-        }
-    };
-
-    public final ItemStackHandler useSlot = new ItemStackHandler(1) {
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
+            if (!hasContained()) {
+                processSpecialSlotMarker();
+            }
         }
     };
 
     /**
-     * 处理标记槽物品（服务端）：同生物→清空；否则收容/替换该生物。处理完清槽。
+     * 未收容时处理合一槽中的标记物品：收容对应生物，只收容一次，不允许取消/替换。
      */
-    private void processMarkerSlot() {
+    private void processSpecialSlotMarker() {
         Level level = getLevel();
         if (level == null || level.isClientSide) {
             return;
         }
         try {
-            ItemStack stack = markerSlot.getStackInSlot(0);
-            if (stack.isEmpty()) {
+            ItemStack stack = specialSlot.getStackInSlot(0);
+            if (stack.isEmpty() || hasContained()) {
                 return;
             }
             EntityType<?> target = resolveMarkerTarget(stack);
             if (target == null) {
-                markerSlot.setStackInSlot(0, ItemStack.EMPTY);
+                specialSlot.setStackInSlot(0, ItemStack.EMPTY);
                 return;
             }
-            EntityType<?> current = getContainedType();
-            boolean clearing = current != null && current == target;
-            if (clearing) {
-                clearContained();
-            } else {
-                captureByType(target);
-            }
-            markerSlot.setStackInSlot(0, ItemStack.EMPTY);
+            captureByType(target);
+            specialSlot.setStackInSlot(0, ItemStack.EMPTY);
             setChanged();
             sendUpdatePacket();
             String name = Component.translatable(target.getDescriptionId()).getString();
-            sendMessageToNearbyPlayer(clearing
-                    ? "chat.alltheimbaium.mob_farm.clear"
-                    : (current == null ? "chat.alltheimbaium.mob_farm.mark" : "chat.alltheimbaium.mob_farm.replace"), name);
+            sendMessageToNearbyPlayer("chat.alltheimbaium.mob_farm.mark", name);
         } catch (Throwable e) {
-            log.error("MobFarmEntity.processMarkerSlot error", e);
+            log.error("MobFarmEntity.processSpecialSlotMarker error", e);
         }
     }
 
@@ -638,10 +641,17 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
             }
             boolean contained = hasContained();
             long carry = MobFarmBlock.getCarry();
+            // 0) 放置/载入后首次 tick 若收容了生物但尚无产物表，则补建（手持收容后放下的情形）
+            if (needRebuild) {
+                needRebuild = false;
+                if (contained) {
+                    rebuildProducts();
+                }
+            }
             // 2) 被动确定性累计：每行 权重×等级
             if (contained) {
                 for (Row row : rows) {
-                    if (row.weight <= 0) {
+                    if (row.weight <= 0 || row.fromTool) {
                         continue;
                     }
                     row.acc = Tool.suit(row.acc + row.weight * this.level);
@@ -659,11 +669,32 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
                     regrowDone = MobFarmInteraction.tickRegrow(type, entityTag);
                 }
             }
-            // 4) 使用槽自动模拟右击
-            if (contained && !useSlot.getStackInSlot(0).isEmpty()) {
-                if (--useCooldown <= 0) {
-                    useCooldown = Math.max(1, MobFarmBlock.getUseIntervalTicks());
-                    tickUseSlot();
+            // 4) 使用槽：工具对收容物可产出的物品种，按"该生物刷怪蛋权重×等级"累计，攒够 carry 出 1 件，
+            //    速度与刷怪蛋完全一致；工具缺失/不符时该工具行自动停止（速度 0），也不消耗工具。
+            if (contained && entityTag != null) {
+                EntityType<?> t = getContainedType();
+                ItemStack tool = specialSlot.getStackInSlot(0);
+                if (t != null && !tool.isEmpty()) {
+                    Item prod = MobFarmInteraction.produceItem(t, entityTag, tool);
+                    if (prod != null) {
+                        Row r = findRow(prod);
+                        if (r == null) {
+                            if (rows.size() < MobFarmBlock.getMaxProducts()) {
+                                r = new Row(prod, Math.max(1L, spawnEggWeight()));
+                                r.fromTool = true;
+                                rows.add(r);
+                            }
+                        } else if (!r.fromTool) {
+                            r = null; // 该物品本身有被动产物行（如羊的羊毛），工具通道不重复生成
+                        }
+                        if (r != null) {
+                            r.acc = Tool.suit(r.acc + r.weight * this.level);
+                            if (r.acc >= carry) {
+                                r.stock = Tool.suit(r.stock + r.acc / carry);
+                                r.acc = r.acc % carry;
+                            }
+                        }
+                    }
                 }
             }
             // 5) 主动输出（受总开关控制）
@@ -679,51 +710,25 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
         }
     }
 
-    /** 用使用槽物品对收容物模拟右击一次（服务端） */
-    private void tickUseSlot() {
+    /**
+     * 当前收容生物刷怪蛋产物行的权重（作为使用槽产出的速度基准），默认 1
+     */
+    private long spawnEggWeight() {
         try {
-            Level level = getLevel();
-            if (level == null || level.isClientSide || entityTag == null) {
-                return;
-            }
             EntityType<?> type = getContainedType();
-            if (type == null) {
-                return;
-            }
-            ItemStack inSlot = useSlot.getStackInSlot(0);
-            if (inSlot.isEmpty()) {
-                return;
-            }
-            MobFarmInteraction.UseResult result = MobFarmInteraction.simulateUse(type, entityTag, inSlot);
-            boolean changed = false;
-            if (!result.isEmpty()) {
-                for (ItemStack stack : result.produced()) {
-                    addProduct(stack);
+            if (type != null) {
+                Item egg = MobFarmCatalog.spawnEggOf(type);
+                if (egg != null) {
+                    for (Row row : rows) {
+                        if (row.item == egg && row.weight > 0) {
+                            return row.weight;
+                        }
+                    }
                 }
-                changed = true;
             }
-            if (result.durabilityUsed() > 0 && inSlot.isDamageableItem()) {
-                int dmg = inSlot.getDamageValue() + result.durabilityUsed();
-                int max = inSlot.getMaxDamage();
-                if (max > 0 && dmg >= max) {
-                    inSlot.shrink(1);
-                } else {
-                    inSlot.setDamageValue(dmg);
-                }
-                changed = true;
-            }
-            if (result.consumeInput()) {
-                inSlot.shrink(1);
-                changed = true;
-            }
-            if (changed) {
-                useSlot.setStackInSlot(0, inSlot);
-                setChanged();
-                sendUpdatePacket();
-            }
-        } catch (Throwable e) {
-            log.error("MobFarmEntity.tickUseSlot error", e);
+        } catch (Throwable ignored) {
         }
+        return 1L;
     }
 
     /** 向相邻方块主动输出可输出行的整件物品 */
@@ -826,8 +831,7 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
     private static final String KEY_ROWS = "rows";
     private static final String KEY_DIR = "directionState";
     private static final String KEY_OUTPUT = "outputEnabled";
-    private static final String KEY_MARKER = "markerSlot";
-    private static final String KEY_USE = "useSlot";
+    private static final String KEY_SPECIAL = "specialSlot";
 
     @Override
     public void saveAdditional(@Nonnull CompoundTag nbt) {
@@ -841,8 +845,7 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
             nbt.put(KEY_ROWS, saveRows());
             nbt.putIntArray(KEY_DIR, directionState);
             nbt.putBoolean(KEY_OUTPUT, outputEnabled);
-            nbt.put(KEY_MARKER, markerSlot.serializeNBT());
-            nbt.put(KEY_USE, useSlot.serializeNBT());
+            nbt.put(KEY_SPECIAL, specialSlot.serializeNBT());
         } catch (Throwable e) {
             log.error("MobFarmEntity.saveAdditional error", e);
         }
@@ -872,12 +875,18 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
             if (nbt.contains(KEY_OUTPUT, Tag.TAG_BYTE)) {
                 outputEnabled = nbt.getBoolean(KEY_OUTPUT);
             }
-            if (nbt.contains(KEY_MARKER, Tag.TAG_COMPOUND)) {
-                markerSlot.deserializeNBT(nbt.getCompound(KEY_MARKER));
+            if (nbt.contains(KEY_SPECIAL, Tag.TAG_COMPOUND)) {
+                specialSlot.deserializeNBT(nbt.getCompound(KEY_SPECIAL));
             }
-            if (nbt.contains(KEY_USE, Tag.TAG_COMPOUND)) {
-                useSlot.deserializeNBT(nbt.getCompound(KEY_USE));
+            // 放置了含收容生物但尚无产物表的方块时，首个服务端 tick 补建产物表
+            boolean hasWeight = false;
+            for (Row row : rows) {
+                if (row.weight > 0) {
+                    hasWeight = true;
+                    break;
+                }
             }
+            needRebuild = hasContained() && !hasWeight;
         } catch (Throwable e) {
             log.error("MobFarmEntity.load error", e);
         }
@@ -890,6 +899,7 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
             new ItemStack(row.item, 1).save(c);
             c.putLong("Stock", row.stock);
             c.putLong("Weight", row.weight);
+            c.putBoolean("Tool", row.fromTool);
             list.add(c);
         }
         return list;
@@ -907,6 +917,7 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
                 Row row = new Row(stack.getItem(), 0);
                 row.stock = c.contains("Stock", Tag.TAG_LONG) ? Tool.suit(c.getLong("Stock")) : 0;
                 row.weight = c.contains("Weight", Tag.TAG_LONG) ? Tool.suit(c.getLong("Weight")) : 0;
+                row.fromTool = c.getBoolean("Tool");
                 rows.add(row);
             } catch (Throwable e) {
                 log.warn("MobFarmEntity.loadRows entry error", e);

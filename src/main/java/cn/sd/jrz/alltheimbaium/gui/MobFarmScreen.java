@@ -42,18 +42,18 @@ import java.util.Optional;
 @OnlyIn(Dist.CLIENT)
 public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/mob_farm_gui.png");
-    private static final int TEXT_COLOR = 0xFFFFFF;
     private static final int DARK_TEXT = 0x404040;
 
     // 六面状态按钮
     private static final int BTN_W = 48;
     private static final int BTN_H = 16;
     private static final int[] BTN_XS = {8, 64, 120};
-    private static final int[] BTN_YS = {108, 126};
-    // 输出/清空按钮
+    private static final int[] BTN_YS = {102, 123};
+    // 输出按钮：放在物品栏标签行右侧，右缘与物品栏最右侧(176-8)对齐
     private static final int TOOL_BTN_W = 48;
     private static final int TOOL_BTN_H = 12;
-    private static final int TOOL_BTN_Y = 148;
+    private static final int OUTPUT_BTN_X = 176 - TOOL_BTN_W - 8;
+    private static final int OUTPUT_BTN_Y = 145;
 
     // 信息/进度条（renderBg 屏幕坐标用这些常量 + leftPos/topPos）
     private static final int INFO_X = 8;
@@ -71,7 +71,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     public MobFarmScreen(MobFarmMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
-        this.imageHeight = 258;
+        this.imageHeight = 242;
         this.inventoryLabelY = this.imageHeight - 94;
     }
 
@@ -84,15 +84,11 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
                     button -> sendButton(MobFarmMenu.BUTTON_DIR_BASE + direction.ordinal()));
             this.addRenderableWidget(this.faceButtons[i]);
         }
-        this.outputButton = new StateButton(this.leftPos + 8, this.topPos + TOOL_BTN_Y, TOOL_BTN_W, TOOL_BTN_H,
+        this.outputButton = new StateButton(this.leftPos + OUTPUT_BTN_X, this.topPos + OUTPUT_BTN_Y, TOOL_BTN_W, TOOL_BTN_H,
                 this.menu.isOutputEnabled(),
                 Component.translatable("screen.alltheimbaium.mob_farm.output"),
                 button -> sendButton(MobFarmMenu.BUTTON_OUTPUT));
         this.addRenderableWidget(this.outputButton);
-        this.addRenderableWidget(new StateButton(this.leftPos + 120, this.topPos + TOOL_BTN_Y, TOOL_BTN_W, TOOL_BTN_H,
-                false,
-                Component.translatable("screen.alltheimbaium.mob_farm.clear"),
-                b -> sendButton(MobFarmMenu.BUTTON_CLEAR)));
     }
 
     private void sendButton(int id) {
@@ -156,8 +152,10 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, DARK_TEXT, false);
-        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, TEXT_COLOR, false);
+        // 标题：金色，无阴影；收容/等级描述：白字 + 黑阴影（同补给箱风格）
+        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFAA00, false);
+        // 物品栏标签：黑色、不加阴影
+        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x000000, false);
         // 收容生物
         int containedId = this.menu.getContainedEntityId();
         Component contained;
@@ -167,10 +165,10 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         } else {
             contained = Component.translatable("screen.alltheimbaium.mob_farm.empty");
         }
-        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.mob_farm.contained", contained), INFO_X, 14, TEXT_COLOR, false);
+        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.mob_farm.contained", contained), INFO_X, 14, 0xFFFFFF, true);
         // 等级 + 升级百分比
         guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.mob_farm.level_progress",
-                this.menu.getLevel(), growthPercent()), INFO_X, 24, TEXT_COLOR, false);
+                this.menu.getLevel(), growthPercent()), INFO_X, 24, 0xFFFFFF, true);
     }
 
     @Override
@@ -211,10 +209,23 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
                 int i = idx - MobFarmMenu.SLOT_PRODUCT_BASE;
                 long stock = this.menu.getProductStock(i);
                 long weight = this.menu.getProductWeight(i);
+                int mode = this.menu.getRowMode(i);
+                int toolStatus = this.menu.getToolStatus();
                 List<Component> lines = new ArrayList<>();
                 lines.add(slot.getItem().getHoverName().copy().withStyle(ChatFormatting.WHITE));
                 lines.add(Component.translatable("screen.alltheimbaium.mob_farm.count", stock));
-                if (weight > 0 && this.menu.getContainedEntityId() > 0) {
+                if (mode == 1) {
+                    // 使用槽正在产出该物品：标注来源 + 速度与刷怪蛋一致
+                    lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tool_from"));
+                    lines.add(Component.translatable("screen.alltheimbaium.mob_farm.rate",
+                            formatSpeed(Math.max(1, weight), this.menu.getLevel())));
+                } else if (mode == 2) {
+                    // 使用槽工具行但当前不产出（缺少工具/工具不符）：生成速度 0
+                    lines.add(Component.translatable(toolStatus == 1
+                            ? "screen.alltheimbaium.mob_farm.missing_tool"
+                            : "screen.alltheimbaium.mob_farm.wrong_tool"));
+                    lines.add(Component.translatable("screen.alltheimbaium.mob_farm.rate_zero"));
+                } else if (weight > 0 && this.menu.getContainedEntityId() > 0) {
                     lines.add(Component.translatable("screen.alltheimbaium.mob_farm.rate", formatSpeed(weight, this.menu.getLevel())));
                 } else if (weight <= 0) {
                     lines.add(Component.translatable("screen.alltheimbaium.mob_farm.manual"));
@@ -227,21 +238,17 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     }
 
     private void renderSpecialSlotTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        // 标记槽（空时）
-        Slot marker = this.menu.slots.get(MobFarmMenu.SLOT_MARKER);
-        if (!marker.hasItem() && this.isHovering(marker.x, marker.y, 16, 16, mouseX, mouseY)) {
+        // 收容/使用合一槽（槽空时按状态显示说明）
+        Slot special = this.menu.slots.get(MobFarmMenu.SLOT_SPECIAL);
+        if (!special.hasItem() && this.isHovering(special.x, special.y, 16, 16, mouseX, mouseY)) {
+            boolean contained = this.menu.getContainedEntityId() > 0;
             guiGraphics.renderTooltip(this.font, List.of(
-                    Component.translatable("screen.alltheimbaium.mob_farm.marker_tooltip.1"),
-                    Component.translatable("screen.alltheimbaium.mob_farm.marker_tooltip.2")
-            ), Optional.empty(), mouseX, mouseY);
-            return;
-        }
-        // 使用槽（空时）
-        Slot use = this.menu.slots.get(MobFarmMenu.SLOT_USE);
-        if (!use.hasItem() && this.isHovering(use.x, use.y, 16, 16, mouseX, mouseY)) {
-            guiGraphics.renderTooltip(this.font, List.of(
-                    Component.translatable("screen.alltheimbaium.mob_farm.use_tooltip.1"),
-                    Component.translatable("screen.alltheimbaium.mob_farm.use_tooltip.2")
+                    Component.translatable(contained
+                            ? "screen.alltheimbaium.mob_farm.use_tooltip.1"
+                            : "screen.alltheimbaium.mob_farm.marker_tooltip.1"),
+                    Component.translatable(contained
+                            ? "screen.alltheimbaium.mob_farm.use_tooltip.2"
+                            : "screen.alltheimbaium.mob_farm.marker_tooltip.2")
             ), Optional.empty(), mouseX, mouseY);
         }
     }

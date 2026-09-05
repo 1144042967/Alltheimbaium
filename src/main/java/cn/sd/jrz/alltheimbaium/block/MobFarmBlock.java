@@ -2,15 +2,10 @@ package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.MobFarmEntity;
 import cn.sd.jrz.alltheimbaium.setup.Config;
-import cn.sd.jrz.alltheimbaium.setup.KillLootEstimator;
-import cn.sd.jrz.alltheimbaium.setup.MobFarmCatalog;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -19,7 +14,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.network.NetworkHooks;
 import org.slf4j.Logger;
@@ -27,10 +21,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.List;
 
 /**
- * 生物农场方块（玻璃罐风格）。空罐右键捕捉附近有效生物；否则右键打开 GUI。
+ * 生物农场方块（玻璃罐风格）。收容在手持物品阶段完成；放置后的方块右键打开 GUI。
  */
 public class MobFarmBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(MobFarmBlock.class);
@@ -128,13 +121,7 @@ public class MobFarmBlock extends Block implements EntityBlock {
             if (!(level.getBlockEntity(pos) instanceof MobFarmEntity machine)) {
                 return InteractionResult.FAIL;
             }
-            // 空罐：尝试捕捉附近的生物
-            if (!machine.hasContained() && player instanceof ServerPlayer) {
-                if (tryCaptureNearby((ServerLevel) level, machine, player)) {
-                    return InteractionResult.SUCCESS;
-                }
-            }
-            // 否则打开 GUI
+            // 收容在手持物品阶段完成；放置后的方块右键一律打开 GUI
             if (player instanceof ServerPlayer serverPlayer) {
                 NetworkHooks.openScreen(serverPlayer, machine, pos);
             }
@@ -143,54 +130,5 @@ public class MobFarmBlock extends Block implements EntityBlock {
             log.error("MobFarmBlock.use error", e);
         }
         return super.use(state, level, pos, player, handIn, hit);
-    }
-
-    /**
-     * 空罐捕捉：范围内最近的有效生物（白名单，或采样有击杀掉落）。
-     *
-     * @return 是否捕捉成功
-     */
-    private boolean tryCaptureNearby(ServerLevel level, MobFarmEntity machine, Player player) {
-        try {
-            BlockPos pos = machine.getBlockPos();
-            int radius = Math.max(1, getCaptureRadius());
-            AABB box = new AABB(pos).inflate(radius);
-            List<LivingEntity> list = level.getEntitiesOfClass(LivingEntity.class, box,
-                    e -> e.isAlive()
-                            && !(e instanceof Player)
-                            && !e.isRemoved()
-                            && (MobFarmCatalog.isWhitelisted(e.getType())
-                            || KillLootEstimator.hasAnyDrop(level, e.getType())));
-            if (list.isEmpty()) {
-                return false;
-            }
-            double cx = pos.getX() + 0.5;
-            double cy = pos.getY() + 0.5;
-            double cz = pos.getZ() + 0.5;
-            LivingEntity nearest = null;
-            double best = Double.MAX_VALUE;
-            for (LivingEntity e : list) {
-                double d = e.distanceToSqr(cx, cy, cz);
-                if (d < best) {
-                    best = d;
-                    nearest = e;
-                }
-            }
-            if (nearest == null) {
-                return false;
-            }
-            String name = nearest.getName().getString();
-            if (machine.captureEntity(nearest)) {
-                nearest.discard();
-                if (player != null) {
-                    player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("chat.alltheimbaium.mob_farm.capture", name));
-                }
-                return true;
-            }
-            return false;
-        } catch (Throwable e) {
-            log.error("MobFarmBlock.tryCaptureNearby error", e);
-        }
-        return false;
     }
 }

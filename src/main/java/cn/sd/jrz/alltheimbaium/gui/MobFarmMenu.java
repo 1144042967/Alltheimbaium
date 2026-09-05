@@ -22,9 +22,9 @@ import java.util.function.IntSupplier;
 /**
  * 生物农场容器。
  * <p>
- * 槽位：0 = 标记槽（刷怪蛋/特征掉落物收容生物），1 = 使用槽（放物品自动模拟右击收容物），
- * 2~28 = 27 个产物行虚拟槽（单击提取），29~64 = 玩家背包。
- * 通过数据槽同步等级/进度、27 行物品 id+存量+权重、收容生物、六面状态与总开关。
+ * 槽位：0 = 收容/使用合一槽（未收容时放刷怪蛋/特征掉落物收容生物；已收容后放物品自动模拟右击），
+ * 1~27 = 产物行虚拟槽（单击提取），28~63 = 玩家背包。
+ * 数据槽同步等级/进度、收容生物、27 行物品 id+存量+权重、六面状态与总开关。
  */
 public class MobFarmMenu extends AbstractContainerMenu {
     public static final int MAX_PRODUCTS = 27;
@@ -35,13 +35,11 @@ public class MobFarmMenu extends AbstractContainerMenu {
     public static final int BUTTON_EXTRACT_STACK_BASE = 33;      // 33~59：shift 提取 1 组
     public static final int BUTTON_EXTRACT_ALL_BASE = 60;        // 60~86：空格 提取到背包满
     public static final int BUTTON_OUTPUT = 87;                  // 输出总开关
-    public static final int BUTTON_CLEAR = 88;                   // 清空收容物
 
     // 槽位号
-    public static final int SLOT_MARKER = 0;
-    public static final int SLOT_USE = 1;
-    public static final int SLOT_PRODUCT_BASE = 2;               // 2~28
-    public static final int SLOT_PLAYER_BASE = 29;               // 29~64
+    public static final int SLOT_SPECIAL = 0;                    // 收容/使用合一槽
+    public static final int SLOT_PRODUCT_BASE = 1;               // 1~27
+    public static final int SLOT_PLAYER_BASE = 28;               // 28~63
 
     public final MobFarmEntity entity;
 
@@ -49,6 +47,8 @@ public class MobFarmMenu extends AbstractContainerMenu {
     private final int[] clientItemIds = new int[MAX_PRODUCTS];
     private final long[] clientStocks = new long[MAX_PRODUCTS];
     private final long[] clientWeights = new long[MAX_PRODUCTS];
+    private final int[] clientRowModes = new int[MAX_PRODUCTS];
+    private int clientToolStatus;
     private long clientLevel;
     private int clientTickCount;
     private int clientContainedId;
@@ -60,20 +60,13 @@ public class MobFarmMenu extends AbstractContainerMenu {
         BlockEntity blockEntity = playerInventory.player.level().getBlockEntity(pos);
         this.entity = (MobFarmEntity) blockEntity;
 
-        // 0 标记槽（放入即处理并清空，不允许取出）
-        addSlot(new SlotItemHandler(entity.markerSlot, 0, 150, 6) {
-            @Override
-            public boolean mayPickup(@Nonnull Player player) {
-                return false;
-            }
-        });
-        // 1 使用槽
-        addSlot(new SlotItemHandler(entity.useSlot, 0, 150, 24));
-        // 2~28 产物行虚拟槽（3 行 × 9 列，单击/Shift/空格由 Screen 拦截发按钮）
+        // 0 收容/使用合一槽（对齐贴图右上角槽位）
+        addSlot(new SlotItemHandler(entity.specialSlot, 0, 152, 23));
+        // 1~27 产物行虚拟槽（3 行 × 9 列，单击/Shift/空格由 Screen 拦截发按钮）
         for (int i = 0; i < MAX_PRODUCTS; i++) {
             addSlot(new ProductSlot(i, 8 + (i % 9) * 18, 44 + (i / 9) * 18));
         }
-        // 29~64 玩家背包
+        // 28~63 玩家背包
         addPlayerInventory(playerInventory);
 
         // ===== 数据同步 =====
@@ -87,7 +80,9 @@ public class MobFarmMenu extends AbstractContainerMenu {
             addDataSlot(makeDataSlot(() -> hiWord(entity.getProductStock(idx)), v -> clientStocks[idx] = mergeLong(v, loWord(clientStocks[idx]))));
             addDataSlot(makeDataSlot(() -> loWord(entity.getProductStock(idx)), v -> clientStocks[idx] = mergeLong(hiWord(clientStocks[idx]), v)));
             addDataSlot(makeDataSlot(() -> (int) Math.min(Integer.MAX_VALUE, entity.getProductWeight(idx)), v -> clientWeights[idx] = v));
+            addDataSlot(makeDataSlot(() -> entity.getRowMode(idx), v -> clientRowModes[idx] = v));
         }
+        addDataSlot(makeDataSlot(entity::getToolStatus, v -> clientToolStatus = v));
         for (Direction direction : Direction.values()) {
             final int idx = direction.ordinal();
             addDataSlot(makeDataSlot(() -> entity.getDirectionState(direction), v -> clientDirectionState[idx] = v));
@@ -147,6 +142,22 @@ public class MobFarmMenu extends AbstractContainerMenu {
         return index >= 0 && index < MAX_PRODUCTS ? clientWeights[index] : 0;
     }
 
+    /** 产物行展示模式（0 被动 / 1 使用槽产出中 / 2 使用槽未产出） */
+    public int getRowMode(int index) {
+        if (serverSide()) {
+            return entity.getRowMode(index);
+        }
+        return index >= 0 && index < MAX_PRODUCTS ? clientRowModes[index] : 0;
+    }
+
+    /** 使用槽全局状态（0 无 / 1 缺少工具 / 2 工具不符 / 3 正常） */
+    public int getToolStatus() {
+        if (serverSide()) {
+            return entity.getToolStatus();
+        }
+        return clientToolStatus;
+    }
+
     // ==================== 按钮处理 ====================
 
     @Override
@@ -167,8 +178,6 @@ public class MobFarmMenu extends AbstractContainerMenu {
             extract(player, id - BUTTON_EXTRACT_ALL_BASE, Long.MAX_VALUE);
         } else if (id == BUTTON_OUTPUT) {
             entity.outputEnabled = !entity.outputEnabled;
-        } else if (id == BUTTON_CLEAR) {
-            entity.clearContained();
         } else {
             return false;
         }
@@ -199,7 +208,6 @@ public class MobFarmMenu extends AbstractContainerMenu {
             player.addItem(stack);
             int placed = (int) got - stack.getCount();
             if (placed < got) {
-                // 放不下的退回
                 entity.addProduct(stack.copy());
             }
             remaining -= placed;
@@ -219,13 +227,13 @@ public class MobFarmMenu extends AbstractContainerMenu {
     }
 
     /**
-     * 快速转移：产物虚拟槽不可取出；标记槽不可取出；使用槽可移向背包；背包可 Shift 放入标记槽/使用槽
+     * 快速转移：产物虚拟槽不可取出；合一槽可移向背包；背包可 Shift 放入合一槽
      */
     @Override
     @Nonnull
     public ItemStack quickMoveStack(@Nonnull Player player, int index) {
         try {
-            if (index < SLOT_MARKER || index > SLOT_PLAYER_BASE + 35) {
+            if (index < SLOT_SPECIAL || index > SLOT_PLAYER_BASE + 35) {
                 return ItemStack.EMPTY;
             }
             Slot slot = this.slots.get(index);
@@ -234,18 +242,18 @@ public class MobFarmMenu extends AbstractContainerMenu {
             }
             ItemStack stack = slot.getItem();
             ItemStack copy = stack.copy();
-            if (index == SLOT_USE) {
-                // 使用槽 → 背包
+            if (index == SLOT_SPECIAL) {
+                // 合一槽 → 背包
                 if (!this.moveItemStackTo(stack, SLOT_PLAYER_BASE, SLOT_PLAYER_BASE + 36, true)) {
                     return ItemStack.EMPTY;
                 }
             } else if (index >= SLOT_PLAYER_BASE) {
-                // 背包 → 先标记槽（仅标记物会被接受），再使用槽
-                if (!this.moveItemStackTo(stack, SLOT_MARKER, SLOT_USE + 1, false)) {
+                // 背包 → 合一槽（标记/使用语义由槽决定）
+                if (!this.moveItemStackTo(stack, SLOT_SPECIAL, SLOT_SPECIAL + 1, false)) {
                     return ItemStack.EMPTY;
                 }
             } else {
-                // 标记槽/产物行不可快速取出
+                // 产物虚拟槽不可快速取出
                 return ItemStack.EMPTY;
             }
             if (stack.isEmpty()) {
@@ -264,14 +272,16 @@ public class MobFarmMenu extends AbstractContainerMenu {
     }
 
     private void addPlayerInventory(Inventory playerInventory) {
-        int baseY = 176;
+        // 主物品栏 3 行与快捷栏坐标对齐 PS 贴图：160/178/196 + 218
+        int mainY = 160;
+        int hotbarY = 218;
         for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 9; ++j) {
-                this.addSlot(new Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, baseY + i * 18));
+                this.addSlot(new Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, mainY + i * 18));
             }
         }
         for (int i = 0; i < 9; ++i) {
-            this.addSlot(new Slot(playerInventory, i, 8 + i * 18, baseY + 3 * 18 + 2));
+            this.addSlot(new Slot(playerInventory, i, 8 + i * 18, hotbarY));
         }
     }
 

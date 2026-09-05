@@ -46,13 +46,8 @@
                 },
                 {
                   "op": "replace",
-                  "source": "markerSlot",
-                  "target": "BlockEntityTag.markerSlot"
-                },
-                {
-                  "op": "replace",
-                  "source": "useSlot",
-                  "target": "BlockEntityTag.useSlot"
+                  "source": "specialSlot",
+                  "target": "BlockEntityTag.specialSlot"
                 }
               ],
               "source": "block_entity"

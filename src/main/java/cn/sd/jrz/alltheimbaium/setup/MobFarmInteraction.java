@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -42,6 +43,46 @@ public final class MobFarmInteraction {
     }
 
     private static final UseResult EMPTY_RESULT = new UseResult(NOTHING, false, 0);
+
+    /**
+     * 该工具对当前收容物是否能产出物品（非破坏性判定，供 GUI 状态/生成速度判断）。
+     */
+    public static boolean isApplicableItem(@Nonnull EntityType<?> type, @Nonnull ItemStack useItem) {
+        return produceItem(type, null, useItem) != null;
+    }
+
+    /**
+     * 该工具对当前收容物会产出的物品种（非破坏性）；组合不适用返回 null。
+     */
+    @Nullable
+    public static Item produceItem(@Nonnull EntityType<?> type, @Nullable CompoundTag entityTag, @Nonnull ItemStack useItem) {
+        try {
+            Item item = useItem.getItem();
+            CompoundTag tag = entityTag == null ? new CompoundTag() : entityTag;
+            if (item == Items.SHEARS) {
+                if (type == EntityType.SHEEP) {
+                    return woolForSheep(tag);
+                }
+                if (type == EntityType.MOOSHROOM) {
+                    return mushroomForCow(tag);
+                }
+                return null;
+            }
+            if (item == Items.BUCKET && (type == EntityType.COW || type == EntityType.MOOSHROOM)) {
+                return Items.MILK_BUCKET;
+            }
+            if (item == Items.BOWL && type == EntityType.MOOSHROOM) {
+                return Items.MUSHROOM_STEW;
+            }
+            if (item == Items.GLASS_BOTTLE && type == EntityType.ENDER_DRAGON) {
+                return Items.DRAGON_BREATH;
+            }
+            return null;
+        } catch (Throwable e) {
+            log.error("MobFarmInteraction.produceItem error", e);
+        }
+        return null;
+    }
 
     /**
      * 模拟"用 useItem 右击收容物"一次（服务端）。

@@ -37,8 +37,8 @@ public class MobFarmRenderer implements BlockEntityRenderer<MobFarmEntity> {
                 scale /= size;
             }
             poseStack.pushPose();
-            // 居中 + 微微抬离罐底
-            poseStack.translate(0.5, 0.42, 0.5);
+            // 水平居中；把脚部落在罐底上方一点，让生物整体待在方块内部
+            poseStack.translate(0.5, 0.08, 0.5);
             poseStack.scale(scale, scale, scale);
             entity.setDeltaMovement(0, 0, 0);
             // 冻结插值，避免在罐内抖动
