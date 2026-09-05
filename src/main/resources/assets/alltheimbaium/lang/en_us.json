@@ -192,7 +192,7 @@
   "screen.alltheimbaium.supply_crate.help_max": "§7Source: every 30 min of playtime earns +1 supply point",
   "screen.alltheimbaium.supply_crate.help_achieve": "§7Source: each achievement earns +5 supply points",
   "screen.alltheimbaium.supply_crate.help_auto": "§7The offer list refreshes automatically every hour",
-  "block.alltheimbaium.mob_farm": "Mob Farm",
+  "block.alltheimbaium.mob_farm": "§6ATI Mob Farm",
   "screen.alltheimbaium.mob_farm.empty": "Empty",
   "screen.alltheimbaium.mob_farm.contained": "Contained: %s",
   "screen.alltheimbaium.mob_farm.level_progress": "Level %s  ·  Progress %s%%",

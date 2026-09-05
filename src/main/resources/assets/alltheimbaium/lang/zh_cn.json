@@ -192,7 +192,7 @@
   "screen.alltheimbaium.supply_crate.help_max": "§7补给点来源: 累计游玩每 30 分钟，获得补给点 +1",
   "screen.alltheimbaium.supply_crate.help_achieve": "§7补给点来源: 每完成一个成就，获得补给点 +5",
   "screen.alltheimbaium.supply_crate.help_auto": "§7每小时自动刷新一次兑换列表",
-  "block.alltheimbaium.mob_farm": "生物农场",
+  "block.alltheimbaium.mob_farm": "§6ATI 生物农场",
   "screen.alltheimbaium.mob_farm.empty": "未收容",
   "screen.alltheimbaium.mob_farm.contained": "收容: %s",
   "screen.alltheimbaium.mob_farm.level_progress": "等级 %s  ·  升级 %s%%",
