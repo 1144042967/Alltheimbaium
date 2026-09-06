@@ -9,6 +9,7 @@ import cn.sd.jrz.alltheimbaium.gui.EternalSwordMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalTotemMenu;
 import cn.sd.jrz.alltheimbaium.gui.LiquidFountainMenu;
 import cn.sd.jrz.alltheimbaium.gui.MobFarmMenu;
+import cn.sd.jrz.alltheimbaium.gui.ResourceFarmMenu;
 import cn.sd.jrz.alltheimbaium.gui.PlatformMenu;
 import cn.sd.jrz.alltheimbaium.gui.StorageFountainMenu;
 import cn.sd.jrz.alltheimbaium.gui.SupplyCrateMenu;
@@ -57,18 +58,13 @@ public class Registration {
                     output.accept(Registration.STORAGE_FOUNTAIN_ITEM.get());
                     output.accept(Registration.LIQUID_FOUNTAIN_ITEM.get());
                     output.accept(Registration.MOB_FARM_ITEM.get());//生物农场
+                    output.accept(Registration.RESOURCE_FARM_ITEM.get());//资源农场
                     output.accept(Registration.ETERNAL_TOTEM.get());
                     output.accept(Registration.ETERNAL_SWORD.get());
                     output.accept(Registration.CLOCK_ITEM.get());
                     output.accept(Registration.PLATFORM_ITEM.get());
                     output.accept(Registration.SUPPLY_CRATE_ITEM.get());//补给箱
 
-                    output.accept(Registration.FARM_COBBLESTONE_ITEM.get());//圆石 1
-                    output.accept(Registration.FARM_WOOD_ITEM.get());//树 1
-                    output.accept(Registration.FARM_BAMBOO_ITEM.get());//竹子 1
-                    output.accept(Registration.FARM_SUGAR_CANES_ITEM.get());//甘蔗 1
-                    output.accept(Registration.FARM_BONE_MEAL_ITEM.get());//骨粉 1
-                    output.accept(Registration.FARM_ICE_ITEM.get());//冰 1
 
 
 
@@ -119,12 +115,13 @@ public class Registration {
                     .pushReaction(PushReaction.DESTROY)
                     .strength(0.5f, 0.5f)
                     .noOcclusion()));
-    public static final RegistryObject<FarmBlock> FARM_BAMBOO_BLOCK = BLOCKS.register("farm_bamboo", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_BAMBOO));
-    public static final RegistryObject<FarmBlock> FARM_BONE_MEAL_BLOCK = BLOCKS.register("farm_bone_meal", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_BONE_MEAL));
-    public static final RegistryObject<FarmBlock> FARM_COBBLESTONE_BLOCK = BLOCKS.register("farm_cobblestone", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_COBBLESTONE));
-    public static final RegistryObject<FarmBlock> FARM_ICE_BLOCK = BLOCKS.register("farm_ice", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_ICE));
-    public static final RegistryObject<FarmBlock> FARM_SUGAR_CANES_BLOCK = BLOCKS.register("farm_sugar_canes", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_SUGAR_CANES));
-    public static final RegistryObject<FarmBlock> FARM_WOOD_BLOCK = BLOCKS.register("farm_wood", () -> new FarmBlock(BLOCK_PROPERTIES, DataConfig.FARM_WOOD));
+    // 通用资源农场：玻璃罐体风格
+    public static final RegistryObject<ResourceFarmBlock> RESOURCE_FARM_BLOCK = BLOCKS.register("resource_farm", () -> new ResourceFarmBlock(
+            BlockBehaviour.Properties.copy(Blocks.GLASS)
+                    .mapColor(DyeColor.GREEN)
+                    .pushReaction(PushReaction.DESTROY)
+                    .strength(0.5f, 0.5f)
+                    .noOcclusion()));
 
     // 物品
     public static final RegistryObject<BlockItem> FARMLAND_ITEM = ITEMS.register("farmland", () -> new FarmlandItem(FARMLAND_BLOCK.get(), new Item.Properties()));
@@ -135,6 +132,7 @@ public class Registration {
     public static final RegistryObject<BlockItem> LIQUID_FOUNTAIN_ITEM = ITEMS.register("liquid_fountain", () -> new LiquidFountainItem(LIQUID_FOUNTAIN_BLOCK.get()));
     public static final RegistryObject<BlockItem> STORAGE_FOUNTAIN_ITEM = ITEMS.register("storage_fountain", () -> new StorageFountainItem(STORAGE_FOUNTAIN_BLOCK.get()));
     public static final RegistryObject<BlockItem> MOB_FARM_ITEM = ITEMS.register("mob_farm", () -> new MobFarmItem(MOB_FARM_BLOCK.get()));
+    public static final RegistryObject<BlockItem> RESOURCE_FARM_ITEM = ITEMS.register("resource_farm", () -> new ResourceFarmItem(RESOURCE_FARM_BLOCK.get()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X2 = ITEMS.register("package_material_x2", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X3 = ITEMS.register("package_material_x3", () -> new Item(new Item.Properties()));
@@ -161,6 +159,8 @@ public class Registration {
             MENUS.register("storage_fountain", () -> IForgeMenuType.create((id, inv, data) -> new StorageFountainMenu(id, inv, data.readBlockPos())));
     public static final RegistryObject<MenuType<MobFarmMenu>> MOB_FARM_MENU =
             MENUS.register("mob_farm", () -> IForgeMenuType.create((id, inv, data) -> new MobFarmMenu(id, inv, data)));
+    public static final RegistryObject<MenuType<ResourceFarmMenu>> RESOURCE_FARM_MENU =
+            MENUS.register("resource_farm", () -> IForgeMenuType.create((id, inv, data) -> new ResourceFarmMenu(id, inv, data)));
     public static final RegistryObject<MenuType<PlatformMenu>> PLATFORM_MENU =
             MENUS.register("platform", () -> IForgeMenuType.create((id, inv, data) -> new PlatformMenu(id, inv, data.readBlockPos())));
     public static final RegistryObject<MenuType<SupplyCrateMenu>> SUPPLY_CRATE_MENU =
@@ -171,12 +171,6 @@ public class Registration {
     public static final RegistryObject<RecipeSerializer<BrewingCraftRecipe>> BREWING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("brewing_craft", () -> BrewingCraftRecipe.SERIALIZER);
     public static final RegistryObject<RecipeSerializer<PotionCombineRecipe>> POTION_COMBINE_SERIALIZER = RECIPE_SERIALIZERS.register("potion_combine", () -> PotionCombineRecipe.SERIALIZER);
 
-    public static final RegistryObject<FarmItem> FARM_BAMBOO_ITEM = ITEMS.register("farm_bamboo", () -> new FarmItem(FARM_BAMBOO_BLOCK.get(), DataConfig.FARM_BAMBOO));
-    public static final RegistryObject<FarmItem> FARM_BONE_MEAL_ITEM = ITEMS.register("farm_bone_meal", () -> new FarmItem(FARM_BONE_MEAL_BLOCK.get(), DataConfig.FARM_BONE_MEAL));
-    public static final RegistryObject<FarmItem> FARM_COBBLESTONE_ITEM = ITEMS.register("farm_cobblestone", () -> new FarmItem(FARM_COBBLESTONE_BLOCK.get(), DataConfig.FARM_COBBLESTONE));
-    public static final RegistryObject<FarmItem> FARM_ICE_ITEM = ITEMS.register("farm_ice", () -> new FarmItem(FARM_ICE_BLOCK.get(), DataConfig.FARM_ICE));
-    public static final RegistryObject<FarmItem> FARM_SUGAR_CANES_ITEM = ITEMS.register("farm_sugar_canes", () -> new FarmItem(FARM_SUGAR_CANES_BLOCK.get(), DataConfig.FARM_SUGAR_CANES));
-    public static final RegistryObject<FarmItem> FARM_WOOD_ITEM = ITEMS.register("farm_wood", () -> new FarmItem(FARM_WOOD_BLOCK.get(), DataConfig.FARM_WOOD));
 
     // 实体
     public static final RegistryObject<BlockEntityType<CommonEntity>> FARMLAND_ENTITY = ENTITIES.register("farmland", () -> BlockEntityType.Builder.of((pos, state) -> new CommonEntity(pos, state, Registration.FARMLAND_ENTITY::get), FARMLAND_BLOCK.get()).build(null));
@@ -185,10 +179,5 @@ public class Registration {
     public static final RegistryObject<BlockEntityType<LiquidFountainEntity>> LIQUID_FOUNTAIN_ENTITY = ENTITIES.register("liquid_fountain", () -> BlockEntityType.Builder.of(LiquidFountainEntity::new, LIQUID_FOUNTAIN_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<StorageFountainEntity>> STORAGE_FOUNTAIN_ENTITY = ENTITIES.register("storage_fountain", () -> BlockEntityType.Builder.of(StorageFountainEntity::new, STORAGE_FOUNTAIN_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<MobFarmEntity>> MOB_FARM_ENTITY = ENTITIES.register("mob_farm", () -> BlockEntityType.Builder.of(MobFarmEntity::new, MOB_FARM_BLOCK.get()).build(null));
-    public static final RegistryObject<BlockEntityType<FarmEntity>> FARM_BAMBOO_ENTITY = ENTITIES.register("farm_bamboo", () -> BlockEntityType.Builder.of((pos, state) -> new FarmEntity(pos, state, DataConfig.FARM_BAMBOO), FARM_BAMBOO_BLOCK.get()).build(null));
-    public static final RegistryObject<BlockEntityType<FarmEntity>> FARM_BONE_MEAL_ENTITY = ENTITIES.register("farm_bone_meal", () -> BlockEntityType.Builder.of((pos, state) -> new FarmEntity(pos, state, DataConfig.FARM_BONE_MEAL), FARM_BONE_MEAL_BLOCK.get()).build(null));
-    public static final RegistryObject<BlockEntityType<FarmEntity>> FARM_COBBLESTONE_ENTITY = ENTITIES.register("farm_cobblestone", () -> BlockEntityType.Builder.of((pos, state) -> new FarmEntity(pos, state, DataConfig.FARM_COBBLESTONE), FARM_COBBLESTONE_BLOCK.get()).build(null));
-    public static final RegistryObject<BlockEntityType<FarmEntity>> FARM_ICE_ENTITY = ENTITIES.register("farm_ice", () -> BlockEntityType.Builder.of((pos, state) -> new FarmEntity(pos, state, DataConfig.FARM_ICE), FARM_ICE_BLOCK.get()).build(null));
-    public static final RegistryObject<BlockEntityType<FarmEntity>> FARM_SUGAR_CANES_ENTITY = ENTITIES.register("farm_sugar_canes", () -> BlockEntityType.Builder.of((pos, state) -> new FarmEntity(pos, state, DataConfig.FARM_SUGAR_CANES), FARM_SUGAR_CANES_BLOCK.get()).build(null));
-    public static final RegistryObject<BlockEntityType<FarmEntity>> FARM_WOOD_ENTITY = ENTITIES.register("farm_wood", () -> BlockEntityType.Builder.of((pos, state) -> new FarmEntity(pos, state, DataConfig.FARM_WOOD), FARM_WOOD_BLOCK.get()).build(null));
+    public static final RegistryObject<BlockEntityType<ResourceFarmEntity>> RESOURCE_FARM_ENTITY = ENTITIES.register("resource_farm", () -> BlockEntityType.Builder.of(ResourceFarmEntity::new, RESOURCE_FARM_BLOCK.get()).build(null));
 }

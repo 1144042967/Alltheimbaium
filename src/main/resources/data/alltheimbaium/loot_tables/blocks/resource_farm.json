@@ -16,27 +16,42 @@
               "ops": [
                 {
                   "op": "replace",
+                  "source": "marker",
+                  "target": "BlockEntityTag.marker"
+                },
+                {
+                  "op": "replace",
                   "source": "level",
                   "target": "BlockEntityTag.level"
                 },
                 {
                   "op": "replace",
-                  "source": "output_array",
-                  "target": "BlockEntityTag.output_array"
+                  "source": "tickCount",
+                  "target": "BlockEntityTag.tickCount"
                 },
                 {
                   "op": "replace",
-                  "source": "save_array",
-                  "target": "BlockEntityTag.save_array"
+                  "source": "rows",
+                  "target": "BlockEntityTag.rows"
+                },
+                {
+                  "op": "replace",
+                  "source": "directionState",
+                  "target": "BlockEntityTag.directionState"
+                },
+                {
+                  "op": "replace",
+                  "source": "outputEnabled",
+                  "target": "BlockEntityTag.outputEnabled"
                 }
               ],
               "source": "block_entity"
             }
           ],
-          "name": "alltheimbaium:farm_cobblestone"
+          "name": "alltheimbaium:resource_farm"
         }
       ],
-      "name": "farm_cobblestone",
+      "name": "resource_farm",
       "rolls": 1.0
     }
   ]

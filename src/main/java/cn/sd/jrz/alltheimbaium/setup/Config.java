@@ -1,14 +1,12 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
 import cn.sd.jrz.alltheimbaium.block.AutoFarmlandBlock;
-import cn.sd.jrz.alltheimbaium.block.FarmBlock;
 import cn.sd.jrz.alltheimbaium.block.FarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
 import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.block.PlatformBlock;
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.ClockEntity;
-import cn.sd.jrz.alltheimbaium.entity.FarmEntity;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.item.EternalTotemItem;
 import cn.sd.jrz.alltheimbaium.item.StorageFountainItem;
@@ -47,19 +45,6 @@ public class Config {
     public static ForgeConfigSpec.BooleanValue ETERNAL_TOTEM_DEFAULT_ENABLED;
     public static ForgeConfigSpec.BooleanValue ETERNAL_TOTEM_TANK_CONVERSION;
 
-    // ==================== 农场 ====================
-    public static ForgeConfigSpec.IntValue FARM_LEVEL_UP_INTERVAL_SECONDS;
-    public static ForgeConfigSpec.LongValue FARM_CARRY;
-    public static ForgeConfigSpec.LongValue FARM_INITIAL_LEVEL;
-    public static ForgeConfigSpec.LongValue FARM_MAX_LEVEL;
-    // 每个农场的实体类型（用于战利品表查询）和配置产物
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_BAMBOO_PRODUCTS;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_BONE_MEAL_PRODUCTS;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_COBBLESTONE_PRODUCTS;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_ICE_PRODUCTS;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_SUGAR_CANES_PRODUCTS;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> FARM_WOOD_PRODUCTS;
-
     // ==================== 液体无限制造机 ====================
     public static ForgeConfigSpec.LongValue LIQUID_FOUNTAIN_INFINITE_THRESHOLD;
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> LIQUID_FOUNTAIN_AUTO_INFINITE_MODS;
@@ -96,6 +81,9 @@ public class Config {
     // ==================== ATI 补给箱 ====================
     /** 补给箱随机物品黑名单（物品注册 ID），默认含基岩、末地传送门框架 */
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> SUPPLY_CRATE_BLACKLIST;
+
+    // ==================== 通用资源农场 ====================
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> RESOURCE_WHITELIST;
 
     // ==================== 配置规范 ====================
     public static ForgeConfigSpec SERVER_CONFIG;
@@ -143,30 +131,6 @@ public class Config {
                 .define("tank_conversion", true);
         builder.pop();
 
-        // ---- 农场 ----
-        builder.comment("农场设置").push("farm");
-        FARM_LEVEL_UP_INTERVAL_SECONDS = builder
-                .comment("农场升级间隔（秒）")
-                .defineInRange("level_up_interval_seconds", 20, 1, Integer.MAX_VALUE);
-        FARM_CARRY = builder
-                .comment("进位阈值。产出累加至此值后进位为完整物品")
-                .defineInRange("carry", 10000L, 1L, Long.MAX_VALUE);
-        FARM_INITIAL_LEVEL = builder
-                .comment("农场初始等级")
-                .defineInRange("initial_level", 1L, 1L, Long.MAX_VALUE);
-        FARM_MAX_LEVEL = builder
-                .comment("农场最大等级（达到后不再升级）")
-                .defineInRange("max_level", Long.MAX_VALUE, 1L, Long.MAX_VALUE);
-
-        builder.comment("各农场产物配置，格式 item:count").push("products");
-        FARM_BAMBOO_PRODUCTS = builder.defineList("bamboo", () -> List.of("minecraft:bamboo:500"), o -> o instanceof String);
-        FARM_BONE_MEAL_PRODUCTS = builder.defineList("bone_meal", () -> List.of("minecraft:bone_meal:500"), o -> o instanceof String);
-        FARM_COBBLESTONE_PRODUCTS = builder.defineList("cobblestone", () -> List.of("minecraft:cobblestone:500"), o -> o instanceof String);
-        FARM_ICE_PRODUCTS = builder.defineList("ice", () -> List.of("minecraft:ice:500"), o -> o instanceof String);
-        FARM_SUGAR_CANES_PRODUCTS = builder.defineList("sugar_canes", () -> List.of("minecraft:sugar_cane:500"), o -> o instanceof String);
-        FARM_WOOD_PRODUCTS = builder.defineList("wood", () -> List.of("minecraft:oak_log:500", "minecraft:birch_log:50", "minecraft:spruce_log:50", "minecraft:jungle_log:50", "minecraft:acacia_log:50", "minecraft:dark_oak_log:50", "minecraft:mangrove_log:50", "minecraft:cherry_log:50", "minecraft:apple:10"), o -> o instanceof String);
-        builder.pop();
-        builder.pop();
 
         // ---- 液体无限制造机 ----
         builder.comment("液体无限制造机设置").push("liquid_fountain");
@@ -264,6 +228,13 @@ public class Config {
                         o -> o instanceof String);
         builder.pop();
 
+        // ---- 通用资源农场 ----
+        builder.comment("通用资源农场设置").push("resource_farm");
+        RESOURCE_WHITELIST = builder
+                .comment("资源白名单：每行 \"资源id=标记物token;…|物品id:权重;…\"。| 前为放入标记槽可标记该资源的标记物（物品id 或 tag:标签id），后为该资源的白名单产物（权重 500≈1件/s@Lv1）。旧专属资源农场删除后仍由本清单生效")
+                .defineList("whitelist", ResourceDefaultData::whitelist, o -> o instanceof String);
+        builder.pop();
+
         SERVER_CONFIG = builder.build();
     }
 
@@ -288,8 +259,6 @@ public class Config {
             ClockEntity.loadConfig();
             EternalTotemItem.loadConfig();
             TotemEventHandler.loadConfig();
-            FarmBlock.loadConfig();
-            FarmEntity.loadConfig();
             LiquidFountainBlock.loadConfig();
             PlatformBlock.loadConfig();
             SupplyRoll.loadConfig();
