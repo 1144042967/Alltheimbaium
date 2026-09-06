@@ -11,9 +11,9 @@
   "chat.alltheimbaium.eternal_totem.enabled": "§a永恒图腾已启用",
   "chat.alltheimbaium.storage_fountain.mark": "§a已标记: §e%s",
   "chat.alltheimbaium.storage_fountain.unmark": "§c已取消标记: §e%s",
-  "item.alltheimbaium.auto_farmland.tooltip.1": "§a每 tick 催熟上方作物并§e立即收获",
-  "item.alltheimbaium.auto_farmland.tooltip.2": "§a收获消耗 §eFE§a 能量，产物存入容器",
-  "item.alltheimbaium.auto_farmland.tooltip.3": "§a容器可被§e管道§a抽取；从侧面/底面右键打开 §eGUI",
+  "item.alltheimbaium.auto_farmland.tooltip.1": "§7上方种植作物后：每 tick 催熟并§e收获×等级效率§7（每级 +1%）",
+  "item.alltheimbaium.auto_farmland.tooltip.2": "§e无需能量§7；产物以 AE 大数累计在 27 行，可界面取出或管道抽取",
+  "item.alltheimbaium.auto_farmland.tooltip.3": "§7侧/底面右键打开 §eGUI§7；六向输出可设目标与总开关",
   "item.alltheimbaium.block_diamond_x8": "§bATI 钻石块 §fX8",
   "item.alltheimbaium.block_gold_x8": "§eATI 金块 §fX8",
   "item.alltheimbaium.block_quantum_alloy_x8": "§dATI 量子合金块 §fX8",
@@ -219,5 +219,8 @@
   "item.alltheimbaium.resource_farm.tooltip.2": "§e标记槽§7放入一个标记物（圆石/任意树苗/竹子/甘蔗/冰/骨粉/花/蘑菇…）即开始产出该资源",
   "item.alltheimbaium.resource_farm.tooltip.3": "§e每台机器只能标记一次§7；标记后标记槽固定展示该标记物",
   "item.alltheimbaium.resource_farm.tooltip.4": "§e产物§7自动累计并按 权重×等级 产出，可六面输出或用界面取出",
-  "item.alltheimbaium.resource_farm.tooltip.5": "§7悬停界面右上 ? 可查看 各标记物→其产物 的对照表"
+  "item.alltheimbaium.resource_farm.tooltip.5": "§7悬停界面右上 ? 可查看 各标记物→其产物 的对照表",
+  "screen.alltheimbaium.auto_farmland.crop": "当前作物: %s",
+  "screen.alltheimbaium.auto_farmland.no_crop": "无作物（请在上方种植）",
+  "screen.alltheimbaium.auto_farmland.efficiency": "§7收获效率: §a+%s%%"
 }

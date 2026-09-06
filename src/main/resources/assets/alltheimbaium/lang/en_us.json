@@ -11,9 +11,9 @@
   "chat.alltheimbaium.eternal_totem.enabled": "§aEternal Totem Enabled",
   "chat.alltheimbaium.storage_fountain.mark": "§aMarked: §e%s",
   "chat.alltheimbaium.storage_fountain.unmark": "§cUnmarked: §e%s",
-  "item.alltheimbaium.auto_farmland.tooltip.1": "§aMatures and§e auto-harvests§a the crop every tick",
-  "item.alltheimbaium.auto_farmland.tooltip.2": "§aHarvesting consumes §eFE§a energy; products stored in container",
-  "item.alltheimbaium.auto_farmland.tooltip.3": "§aContainer extractable via§e pipes§a; right-click side/bottom to open §eGUI",
+  "item.alltheimbaium.auto_farmland.tooltip.1": "§7Grow a crop on top: matures & §eharvests × level efficiency§7 (+1% per level)",
+  "item.alltheimbaium.auto_farmland.tooltip.2": "§eNo energy needed§7; products accumulate as big numbers into 27 rows, extractable via GUI or pipes",
+  "item.alltheimbaium.auto_farmland.tooltip.3": "§7Side/bottom right-click opens §eGUI§7; six-face output targets and a master toggle are configurable",
   "item.alltheimbaium.block_diamond_x8": "§bATI Diamond Block §fX8",
   "item.alltheimbaium.block_gold_x8": "§eATI Gold Block §fX8",
   "item.alltheimbaium.block_quantum_alloy_x8": "§dATI Quantum Alloy Block §fX8",
@@ -219,5 +219,8 @@
   "item.alltheimbaium.resource_farm.tooltip.2": "§eMarker slot§7: put a marker (cobblestone/any sapling/bamboo/sugar cane/ice/bone meal/flower/mushroom…) to start producing that resource",
   "item.alltheimbaium.resource_farm.tooltip.3": "§eMark only once§7; the marker item is shown in the slot afterwards",
   "item.alltheimbaium.resource_farm.tooltip.4": "§eProducts§7 accumulate by weight × level; extract via pipes or in the GUI",
-  "item.alltheimbaium.resource_farm.tooltip.5": "§7Hover the ? at the top-right to see each marker → its products"
+  "item.alltheimbaium.resource_farm.tooltip.5": "§7Hover the ? at the top-right to see each marker → its products",
+  "screen.alltheimbaium.auto_farmland.crop": "Current crop: %s",
+  "screen.alltheimbaium.auto_farmland.no_crop": "No crop (plant one on top)",
+  "screen.alltheimbaium.auto_farmland.efficiency": "§7Harvest efficiency: §a+%s%%"
 }
