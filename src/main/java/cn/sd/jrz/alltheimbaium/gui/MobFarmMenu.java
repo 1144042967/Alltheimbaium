@@ -5,17 +5,21 @@ import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.items.SlotItemHandler;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
@@ -43,6 +47,12 @@ public class MobFarmMenu extends AbstractContainerMenu {
 
     public final MobFarmEntity entity;
 
+    // 开屏 extraData 带来的数据（客户端用 "?" 帮助；服务端为空）
+    /** "掉落物→生物" 标记对 {itemId, typeId, …} */
+    private final int[] markerPairs;
+    /** "生物→其产物" 行数组：每行 {typeId, itemId…} */
+    private final int[][] productRows;
+
     // 客户端镜像（由数据槽同步）
     private final int[] clientItemIds = new int[MAX_PRODUCTS];
     private final long[] clientStocks = new long[MAX_PRODUCTS];
@@ -55,8 +65,20 @@ public class MobFarmMenu extends AbstractContainerMenu {
     private final int[] clientDirectionState = new int[6];
     private boolean clientOutputEnabled;
 
+    /** 服务端构造（MobFarmEntity.createMenu 调用），无标记/产物表 */
     public MobFarmMenu(int id, Inventory playerInventory, BlockPos pos) {
+        this(id, playerInventory, pos, new int[0], new int[0][]);
+    }
+
+    /** 客户端构造：从开屏 extraData 读取方块坐标、标记对与产物行（顺序与 MobFarmBlock.use 写入一致） */
+    public MobFarmMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
+        this(id, playerInventory, data.readBlockPos(), readMarkerPairs(data), readProductRows(data));
+    }
+
+    private MobFarmMenu(int id, Inventory playerInventory, BlockPos pos, int[] markerPairs, int[][] productRows) {
         super(Registration.MOB_FARM_MENU.get(), id);
+        this.markerPairs = markerPairs;
+        this.productRows = productRows;
         BlockEntity blockEntity = playerInventory.player.level().getBlockEntity(pos);
         this.entity = (MobFarmEntity) blockEntity;
 
@@ -156,6 +178,103 @@ public class MobFarmMenu extends AbstractContainerMenu {
             return entity.getToolStatus();
         }
         return clientToolStatus;
+    }
+
+    // ==================== 标记表读取（客户端 "?" 帮助用） ====================
+
+    /** 标记对条数（掉落物→生物 的映射数量） */
+    public int markerCount() {
+        return markerPairs.length / 2;
+    }
+
+    /** 第 i 条标记物物品（越界返回 null） */
+    @Nullable
+    public Item markerItem(int index) {
+        if (index < 0 || index * 2 + 1 > markerPairs.length) {
+            return null;
+        }
+        //noinspection deprecation
+        return BuiltInRegistries.ITEM.byId(markerPairs[index * 2]);
+    }
+
+    /** 第 i 条对应的收容生物类型（越界返回 null） */
+    @Nullable
+    public EntityType<?> markerType(int index) {
+        if (index < 0 || index * 2 + 1 > markerPairs.length) {
+            return null;
+        }
+        //noinspection deprecation
+        return BuiltInRegistries.ENTITY_TYPE.byId(markerPairs[index * 2 + 1]);
+    }
+
+    // ==================== 产物表读取（第二个 "?" 帮助用） ====================
+
+    /** 产物行数（"生物→其产物" 的映射数量） */
+    public int productRowCount() {
+        return productRows.length;
+    }
+
+    /** 第 i 行的生物类型（越界返回 null） */
+    @Nullable
+    public EntityType<?> productRowType(int row) {
+        if (row < 0 || row >= productRows.length) {
+            return null;
+        }
+        //noinspection deprecation
+        return BuiltInRegistries.ENTITY_TYPE.byId(productRows[row][0]);
+    }
+
+    /** 第 i 行的产物物品数 */
+    public int productRowItemCount(int row) {
+        if (row < 0 || row >= productRows.length) {
+            return 0;
+        }
+        return productRows[row].length - 1;
+    }
+
+    /** 第 i 行第 k 个产物物品（越界返回 null） */
+    @Nullable
+    public Item productRowItem(int row, int k) {
+        if (row < 0 || row >= productRows.length || k < 0 || k + 1 >= productRows[row].length) {
+            return null;
+        }
+        //noinspection deprecation
+        return BuiltInRegistries.ITEM.byId(productRows[row][k + 1]);
+    }
+
+    /** 读取开屏 extraData 中的标记对；读损坏回退空数组 */
+    private static int[] readMarkerPairs(FriendlyByteBuf data) {
+        try {
+            int count = Math.max(0, Math.min(data.readVarInt(), 4096));
+            int[] arr = new int[count];
+            for (int i = 0; i < count; i++) {
+                arr[i] = data.readVarInt();
+            }
+            return arr;
+        } catch (Throwable e) {
+            return new int[0];
+        }
+    }
+
+    /** 读取开屏 extraData 中的产物行（先行数，每行 typeId + 物品数 + 物品id…）；读损坏回退空数组 */
+    private static int[][] readProductRows(FriendlyByteBuf data) {
+        try {
+            int rows = Math.max(0, Math.min(data.readVarInt(), 512));
+            int[][] out = new int[rows][];
+            for (int r = 0; r < rows; r++) {
+                int typeId = data.readVarInt();
+                int count = Math.max(0, Math.min(data.readVarInt(), 256));
+                int[] row = new int[count + 1];
+                row[0] = typeId;
+                for (int i = 0; i < count; i++) {
+                    row[i + 1] = data.readVarInt();
+                }
+                out[r] = row;
+            }
+            return out;
+        } catch (Throwable e) {
+            return new int[0][];
+        }
     }
 
     // ==================== 按钮处理 ====================

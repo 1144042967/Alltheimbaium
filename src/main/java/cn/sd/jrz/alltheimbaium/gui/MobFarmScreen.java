@@ -10,6 +10,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
@@ -64,6 +65,37 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
 
     private static final float COUNT_SCALE = 0.5F;
 
+    // 右上角两个 "?" 帮助（整体对标记槽中心线）：
+    //   A(左)：标记物 → 收容生物（每行左右两组，一页 20 行 → 40 条）
+    //   B(右)：生物 → 其全部产物（一行一个生物，同样分页）
+    private static final int HELP_PAGE_LINES = 20;                 // 每页行数
+    private static final int HELP_PAGE_PAIRS = HELP_PAGE_LINES * 2; // A 每页映射条数（左右两栏）
+    private static final int HELP_COLOR = 0xFFFFD24D;
+    /** 两个 "?" 之间的水平间距（像素） */
+    private static final int HELP_GLYPH_GAP = 4;
+    /** 收容/使用合一槽（标记槽）中心 x：152 + 16/2 */
+    private static final int HELP_SLOT_CENTER_X = 160;
+    /** "?" 纵向位置：标记槽上方 */
+    private static final int HELP_Y = 12;
+    /** 箭头两侧的小留白（像素） */
+    private static final int HELP_COL_GAP = 3;
+    /** A 卡片左右两栏映射之间的大间隙（像素） */
+    private static final int HELP_GROUP_GAP = 26;
+    /** B 卡片：单个生物至多列出的产物数，超出加 "…等 N 项" */
+    private static final int HELP_MAX_PRODUCTS_SHOWN = 6;
+    /** 帮助里的箭头符号 */
+    private static final String HELP_ARROW = "→";
+    /** 自绘帮助卡片的抬升 z，确保盖过槽位里的物品贴图 */
+    private static final int HELP_Z = 400;
+    /** 左 "?"(标记物→生物) 的水平位置（gui 局部坐标，init 计算） */
+    private int helpX1 = 0;
+    /** 右 "?"(生物→产物) 的水平位置（gui 局部坐标，init 计算） */
+    private int helpX2 = 0;
+    /** A 卡当前页（从 0 起） */
+    private int helpPageA = 0;
+    /** B 卡当前页（从 0 起） */
+    private int helpPageB = 0;
+
     private final FaceButton[] faceButtons = new FaceButton[6];
     private StateButton outputButton;
     private boolean spaceDown = false;
@@ -78,6 +110,14 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     @Override
     protected void init() {
         super.init();
+        // 两个 "?" 作为一个整体在标记槽中心线上居中
+        int glyphW = this.font.width("?");
+        int groupW = glyphW * 2 + HELP_GLYPH_GAP;
+        int groupLeft = HELP_SLOT_CENTER_X - groupW / 2;
+        this.helpX1 = groupLeft;
+        this.helpX2 = groupLeft + glyphW + HELP_GLYPH_GAP;
+        this.helpPageA = 0;
+        this.helpPageB = 0;
         for (int i = 0; i < 6; i++) {
             Direction direction = Direction.values()[i];
             this.faceButtons[i] = new FaceButton(this.leftPos + BTN_XS[i % 3], this.topPos + BTN_YS[i / 3], direction,
@@ -115,6 +155,18 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        int mx = (int) mouseX;
+        int my = (int) mouseY;
+        if (button == 0) {
+            if (isHoverHelpA(mx, my)) {
+                cycleHelpA(); // 点击左 "?" 翻 A 卡（纯客户端）
+                return true;
+            }
+            if (isHoverHelpB(mx, my)) {
+                cycleHelpB(); // 点击右 "?" 翻 B 卡（纯客户端）
+                return true;
+            }
+        }
         if (button == 0) {
             for (int i = 0; i < MobFarmMenu.MAX_PRODUCTS; i++) {
                 Slot slot = this.menu.slots.get(MobFarmMenu.SLOT_PRODUCT_BASE + i);
@@ -169,6 +221,9 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         // 等级 + 升级百分比
         guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.mob_farm.level_progress",
                 this.menu.getLevel(), growthPercent()), INFO_X, 24, 0xFFFFFF, true);
+        // 右上标记槽上方两个黄色 "?"：左=A(标记物→生物)、右=B(生物→产物)，整体对槽中心线
+        guiGraphics.drawString(this.font, "?", this.helpX1, HELP_Y, HELP_COLOR, true);
+        guiGraphics.drawString(this.font, "?", this.helpX2, HELP_Y, HELP_COLOR, true);
     }
 
     @Override
@@ -184,8 +239,282 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
             }
         }
         renderSpecialSlotTooltips(guiGraphics, mouseX, mouseY);
+        // 两个 "?" 帮助卡片
+        if (isHoverHelpA(mouseX, mouseY)) {
+            renderHelpCardA(guiGraphics, mouseX, mouseY);
+        }
+        if (isHoverHelpB(mouseX, mouseY)) {
+            renderHelpCardB(guiGraphics, mouseX, mouseY);
+        }
         // 经由本类重载：产物槽显示"数量+速度"，其它槽走默认
         this.renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+
+    /** 某 "?" 字形是否被悬停 */
+    private boolean hoverGlyph(int glyphX, int mouseX, int mouseY) {
+        return mouseX >= this.leftPos + glyphX - 2
+                && mouseX <= this.leftPos + glyphX + this.font.width("?") + 2
+                && mouseY >= this.topPos + HELP_Y - 2 && mouseY <= this.topPos + HELP_Y + 9;
+    }
+
+    private boolean isHoverHelpA(int mouseX, int mouseY) {
+        return hoverGlyph(this.helpX1, mouseX, mouseY);
+    }
+
+    private boolean isHoverHelpB(int mouseX, int mouseY) {
+        return hoverGlyph(this.helpX2, mouseX, mouseY);
+    }
+
+    /** 总页数（每页 per 条，至少 1 页） */
+    private int totalPages(int total, int per) {
+        return Math.max(1, (total + per - 1) / per);
+    }
+
+    /** 点击左 "?" 翻 A 卡 */
+    private void cycleHelpA() {
+        if (this.menu.markerCount() > 0) {
+            this.helpPageA = (this.helpPageA + 1) % totalPages(this.menu.markerCount(), HELP_PAGE_PAIRS);
+        }
+    }
+
+    /** 点击右 "?" 翻 B 卡 */
+    private void cycleHelpB() {
+        if (this.menu.productRowCount() > 0) {
+            this.helpPageB = (this.helpPageB + 1) % totalPages(this.menu.productRowCount(), HELP_PAGE_LINES);
+        }
+    }
+
+    /** 半透明卡片底板：黑色 1px 边框 + 半透明底 */
+    private void drawHelpPanel(GuiGraphics guiGraphics, int bx, int by, int boxW, int boxH) {
+        guiGraphics.fill(bx - 1, by - 1, bx + boxW + 1, by, 0xFF000000);
+        guiGraphics.fill(bx - 1, by + boxH, bx + boxW + 1, by + boxH + 1, 0xFF000000);
+        guiGraphics.fill(bx - 1, by, bx, by + boxH, 0xFF000000);
+        guiGraphics.fill(bx + boxW, by, bx + boxW + 1, by + boxH, 0xFF000000);
+        guiGraphics.fill(bx, by, bx + boxW, by + boxH, 0xF0100010);
+    }
+
+    /** 卡片左上角 x（跟随鼠标但不出屏） */
+    private int cardX(int mouseX, int boxW) {
+        int x = mouseX + 8;
+        if (x + boxW > this.width) {
+            x = mouseX - 8 - boxW;
+        }
+        return Math.max(2, x);
+    }
+
+    /** 卡片左上角 y（跟随鼠标但不出屏） */
+    private int cardY(int mouseY, int boxH) {
+        int y = mouseY + 8;
+        if (y + boxH > this.height) {
+            y = mouseY - 8 - boxH;
+        }
+        return Math.max(2, y);
+    }
+
+    /**
+     * 自绘 卡片A：标记物 → 收容生物，每行两组（左右两栏），"→" 符号。
+     * 各栏的 物品名/生物名 按本页该栏最长项的像素宽度留白，因此两栏箭头与生物名逐行对齐；
+     * 全角（中文等）/半角由字体实际像素宽自然区分。自绘前抬升 z，盖过槽位里的物品贴图。
+     */
+    private void renderHelpCardA(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int count = this.menu.markerCount();
+        if (count <= 0) {
+            return;
+        }
+        int pages = totalPages(count, HELP_PAGE_PAIRS);
+        int from = Math.min(this.helpPageA * HELP_PAGE_PAIRS, count);
+        int to = Math.min(count, from + HELP_PAGE_PAIRS);
+
+        List<Component> itemC = new ArrayList<>();
+        List<Component> mobC = new ArrayList<>();
+        List<Integer> itemW = new ArrayList<>();
+        List<Integer> mobW = new ArrayList<>();
+        for (int i = from; i < to; i++) {
+            Item item = this.menu.markerItem(i);
+            EntityType<?> type = this.menu.markerType(i);
+            if (item == null || item == Items.AIR || type == null) {
+                continue;
+            }
+            Component itemName = new ItemStack(item).getHoverName().copy().withStyle(ChatFormatting.WHITE);
+            Component mobName = Component.translatable(type.getDescriptionId()).withStyle(ChatFormatting.YELLOW);
+            itemC.add(itemName);
+            mobC.add(mobName);
+            itemW.add(this.font.width(itemName));
+            mobW.add(this.font.width(mobName));
+        }
+        int n = itemC.size();
+        if (n == 0) {
+            return;
+        }
+        // 条目按顺序 2 个一组：每行第 0、2、4… 个在左栏，第 1、3、5… 个在右栏
+        int rows = (n + 1) / 2;
+        boolean hasRight = n > 1;
+        int maxLItem = 0, maxLMob = 0, maxRItem = 0, maxRMob = 0;
+        for (int r = 0; r < rows; r++) {
+            int li = r * 2;
+            maxLItem = Math.max(maxLItem, itemW.get(li));
+            maxLMob = Math.max(maxLMob, mobW.get(li));
+            int ri = li + 1;
+            if (ri < n) {
+                maxRItem = Math.max(maxRItem, itemW.get(ri));
+                maxRMob = Math.max(maxRMob, mobW.get(ri));
+            }
+        }
+        Component header = Component.translatable("screen.alltheimbaium.mob_farm.help.header").withStyle(ChatFormatting.GRAY);
+        Component footer = Component.translatable("screen.alltheimbaium.mob_farm.help.page",
+                Math.min(this.helpPageA + 1, pages), pages, count).withStyle(ChatFormatting.GRAY);
+        int arrowW = this.font.width(HELP_ARROW);
+
+        int hpad = 4;
+        int vpad = 4;
+        int lineH = this.font.lineHeight + 1;
+        // 各栏相对内容起点的 x（掉落物列按最长项留白，生物列起点固定）
+        int lItemX = 0;
+        int lArrowX = maxLItem + HELP_COL_GAP;
+        int lMobX = lArrowX + arrowW + HELP_COL_GAP;
+        int rItemX = lMobX + maxLMob + HELP_GROUP_GAP;
+        int rArrowX = rItemX + maxRItem + HELP_COL_GAP;
+        int rMobX = rArrowX + arrowW + HELP_COL_GAP;
+        int rowW = hasRight ? (rMobX + maxRMob) : (lMobX + maxLMob);
+        int contentArea = Math.max(Math.max(this.font.width(header), this.font.width(footer)), rowW);
+        int boxW = contentArea + hpad * 2;
+        int totalLines = 1 + rows + 1;
+        int boxH = vpad * 2 + totalLines * lineH;
+        int bx = cardX(mouseX, boxW);
+        int by = cardY(mouseY, boxH);
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
+        int contentLeft = bx + hpad;
+        int y = by + vpad;
+        guiGraphics.drawString(this.font, header, contentLeft, y, 0xFFFFFF, true);
+        y += lineH;
+        for (int r = 0; r < rows; r++) {
+            int li = r * 2;
+            drawHelpPair(guiGraphics, contentLeft + lItemX, contentLeft + lArrowX, contentLeft + lMobX,
+                    itemC.get(li), mobC.get(li), y);
+            int ri = li + 1;
+            if (ri < n) {
+                drawHelpPair(guiGraphics, contentLeft + rItemX, contentLeft + rArrowX, contentLeft + rMobX,
+                        itemC.get(ri), mobC.get(ri), y);
+            }
+            y += lineH;
+        }
+        guiGraphics.drawString(this.font, footer, contentLeft, y, 0xFFFFFF, true);
+        guiGraphics.pose().popPose();
+    }
+
+    /** 画一组 "物品 → 生物"（按传入的三列起点绘制，保证逐行对齐） */
+    private void drawHelpPair(GuiGraphics guiGraphics, int itemX, int arrowX, int mobX,
+                              Component item, Component mob, int y) {
+        guiGraphics.drawString(this.font, item, itemX, y, 0xFFFFFF, true);
+        guiGraphics.drawString(this.font, HELP_ARROW, arrowX, y, 0xFFAAAAAA, true);
+        guiGraphics.drawString(this.font, mob, mobX, y, 0xFFFFFF, true);
+    }
+
+    /**
+     * 自绘 卡片B：生物 → 其全部产物（一行一个生物）。
+     * 生物名列按本页最长生物像素宽留白使箭头对齐；产物列左对齐，过多时截断。
+     */
+    private void renderHelpCardB(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int total = this.menu.productRowCount();
+        if (total <= 0) {
+            return;
+        }
+        int pages = totalPages(total, HELP_PAGE_LINES);
+        int from = Math.min(this.helpPageB * HELP_PAGE_LINES, total);
+        int to = Math.min(total, from + HELP_PAGE_LINES);
+
+        List<Component> bios = new ArrayList<>();
+        List<Component> prodTexts = new ArrayList<>();
+        List<Integer> bioW = new ArrayList<>();
+        List<Integer> prodW = new ArrayList<>();
+        for (int r = from; r < to; r++) {
+            EntityType<?> type = this.menu.productRowType(r);
+            if (type == null) {
+                continue;
+            }
+            Component bio = Component.translatable(type.getDescriptionId()).withStyle(ChatFormatting.YELLOW);
+            bios.add(bio);
+            bioW.add(this.font.width(bio));
+            Component prodText = buildProductText(r);
+            prodTexts.add(prodText);
+            prodW.add(this.font.width(prodText));
+        }
+        int rows = bios.size();
+        if (rows == 0) {
+            return;
+        }
+        int maxBioW = 0;
+        int maxProdW = 0;
+        for (int i = 0; i < rows; i++) {
+            maxBioW = Math.max(maxBioW, bioW.get(i));
+            maxProdW = Math.max(maxProdW, prodW.get(i));
+        }
+        Component header = Component.translatable("screen.alltheimbaium.mob_farm.help2.header").withStyle(ChatFormatting.GRAY);
+        Component footer = Component.translatable("screen.alltheimbaium.mob_farm.help.page",
+                Math.min(this.helpPageB + 1, pages), pages, total).withStyle(ChatFormatting.GRAY);
+        int arrowW = this.font.width(HELP_ARROW);
+
+        int hpad = 4;
+        int vpad = 4;
+        int lineH = this.font.lineHeight + 1;
+        int arrowLeft = maxBioW + HELP_COL_GAP;
+        int itemsLeft = arrowLeft + arrowW + HELP_COL_GAP;
+        int rowW = itemsLeft + maxProdW;
+        int contentArea = Math.max(Math.max(this.font.width(header), this.font.width(footer)), rowW);
+        int boxW = contentArea + hpad * 2;
+        int totalLines = 1 + rows + 1;
+        int boxH = vpad * 2 + totalLines * lineH;
+        int bx = cardX(mouseX, boxW);
+        int by = cardY(mouseY, boxH);
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
+        int contentLeft = bx + hpad;
+        int y = by + vpad;
+        guiGraphics.drawString(this.font, header, contentLeft, y, 0xFFFFFF, true);
+        y += lineH;
+        for (int i = 0; i < rows; i++) {
+            guiGraphics.drawString(this.font, bios.get(i), contentLeft, y, 0xFFFFFF, true);
+            guiGraphics.drawString(this.font, HELP_ARROW, contentLeft + arrowLeft, y, 0xFFAAAAAA, true);
+            guiGraphics.drawString(this.font, prodTexts.get(i), contentLeft + itemsLeft, y, 0xFFFFFF, true);
+            y += lineH;
+        }
+        guiGraphics.drawString(this.font, footer, contentLeft, y, 0xFFFFFF, true);
+        guiGraphics.pose().popPose();
+    }
+
+    /** 组装某行的产物文本：前 HELP_MAX_PRODUCTS_SHOWN 个产物名 顿号连接，超出加 "…等 N 项" */
+    private Component buildProductText(int row) {
+        int itemCount = this.menu.productRowItemCount(row);
+        MutableComponent text = Component.literal("");
+        boolean first = true;
+        int shown = Math.min(itemCount, HELP_MAX_PRODUCTS_SHOWN);
+        for (int k = 0; k < shown; k++) {
+            Item item = this.menu.productRowItem(row, k);
+            if (item == null || item == Items.AIR) {
+                continue;
+            }
+            if (!first) {
+                text.append(Component.literal("、").withStyle(ChatFormatting.GRAY));
+            }
+            text.append(new ItemStack(item).getHoverName().copy().withStyle(ChatFormatting.WHITE));
+            first = false;
+        }
+        if (itemCount > shown) {
+            if (!first) {
+                text.append(Component.literal("、").withStyle(ChatFormatting.GRAY));
+            }
+            text.append(Component.translatable("screen.alltheimbaium.mob_farm.help2.more",
+                    itemCount - shown).withStyle(ChatFormatting.GRAY));
+        }
+        if (first) {
+            text.append(Component.literal("-").withStyle(ChatFormatting.GRAY));
+        }
+        return text;
     }
 
     /** 找到鼠标悬浮的槽位（在渲染 tooltip 时机，容器内部 hoveredSlot 不可靠，自行用 isHovering 判断） */

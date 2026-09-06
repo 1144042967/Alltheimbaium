@@ -2,7 +2,9 @@ package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.MobFarmEntity;
 import cn.sd.jrz.alltheimbaium.setup.Config;
+import cn.sd.jrz.alltheimbaium.setup.MobFarmMarkerIndex;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -36,8 +38,6 @@ public class MobFarmBlock extends Block implements EntityBlock {
     static int captureRadius;
     static int maxProducts;
     static int sampleKills;
-    static int useIntervalTicks;
-    static int shearRegrowSeconds;
 
     public static void loadConfig() {
         carry = Config.MOB_FARM_CARRY.get();
@@ -47,8 +47,6 @@ public class MobFarmBlock extends Block implements EntityBlock {
         captureRadius = Config.MOB_FARM_CAPTURE_RADIUS.get();
         maxProducts = Config.MOB_FARM_MAX_PRODUCTS.get();
         sampleKills = Config.MOB_FARM_SAMPLE_KILLS.get();
-        useIntervalTicks = Config.MOB_FARM_USE_INTERVAL_TICKS.get();
-        shearRegrowSeconds = Config.MOB_FARM_SHEAR_REGROW_SECONDS.get();
     }
 
     public static long getCarry() {
@@ -77,14 +75,6 @@ public class MobFarmBlock extends Block implements EntityBlock {
 
     public static int getSampleKills() {
         return sampleKills;
-    }
-
-    public static int getUseIntervalTicks() {
-        return Math.max(1, useIntervalTicks);
-    }
-
-    public static int getShearRegrowSeconds() {
-        return shearRegrowSeconds;
     }
 
     public MobFarmBlock(Properties properties) {
@@ -122,8 +112,12 @@ public class MobFarmBlock extends Block implements EntityBlock {
                 return InteractionResult.FAIL;
             }
             // 收容在手持物品阶段完成；放置后的方块右键一律打开 GUI
-            if (player instanceof ServerPlayer serverPlayer) {
-                NetworkHooks.openScreen(serverPlayer, machine, pos);
+            if (player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel serverLevel) {
+                // 首次打开时惰性构建白名单/动态标记表，并随开屏 extraData 发给客户端供 "?" 帮助展示
+                NetworkHooks.openScreen(serverPlayer, machine, buf -> {
+                    buf.writeBlockPos(pos);
+                    MobFarmMarkerIndex.writeToBuf(buf, serverLevel);
+                });
             }
             return InteractionResult.SUCCESS;
         } catch (Throwable e) {

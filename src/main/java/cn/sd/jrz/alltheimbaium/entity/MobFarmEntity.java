@@ -3,10 +3,11 @@ package cn.sd.jrz.alltheimbaium.entity;
 import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.connection.MobFarmConnection;
 import cn.sd.jrz.alltheimbaium.gui.MobFarmMenu;
-import cn.sd.jrz.alltheimbaium.setup.DataConfig;
 import cn.sd.jrz.alltheimbaium.setup.KillLootEstimator;
 import cn.sd.jrz.alltheimbaium.setup.MobFarmCatalog;
 import cn.sd.jrz.alltheimbaium.setup.MobFarmInteraction;
+import cn.sd.jrz.alltheimbaium.setup.MobFarmMarkerIndex;
+import cn.sd.jrz.alltheimbaium.setup.MobFarmWhitelist;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
@@ -248,7 +249,16 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
             //noinspection deprecation
             return egg.getType(null);
         }
-        return MobFarmCatalog.typeOfSignature(stack.getItem());
+        EntityType<?> marker = MobFarmWhitelist.markerTypeOf(stack.getItem());
+        if (marker != null) {
+            return marker;
+        }
+        // 动态掉落物表只在服务端构建：任意"掉落物 → 收容生物"（白名单之外）
+        if (getLevel() instanceof ServerLevel serverLevel) {
+            MobFarmMarkerIndex.ensureBuilt(serverLevel);
+            return MobFarmMarkerIndex.lookup(stack.getItem());
+        }
+        return null;
     }
 
     // ==================== 产物表 ====================
@@ -320,20 +330,14 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
     }
 
     /**
-     * 构建产物表：白名单 Config 额外掉落（为主） + 击杀掉落补充（去重） + 刷怪蛋兜底。
+     * 构建产物表：白名单产物（专用产物白名单，为主） + 击杀掉落补充（去重） + 刷怪蛋兜底。
      */
     private List<Weighted> buildDropTable(ServerLevel serverLevel, EntityType<?> type) {
         Map<Item, Long> map = new HashMap<>();
-        DataConfig cfg = MobFarmCatalog.configFor(type);
-        if (cfg != null) {
-            // 白名单：以现有农场 Config 产物的权重为主
-            for (DataConfig.ItemProduct p : cfg.getProductList()) {
-                if (p.item != null) {
-                    map.put(p.item, Math.max(map.getOrDefault(p.item, 0L), Math.max(1L, p.count)));
-                }
-            }
+        for (MobFarmWhitelist.Product p : MobFarmWhitelist.productsFor(type)) {
+            map.put(p.item(), Math.max(map.getOrDefault(p.item(), 0L), Math.max(1L, p.weight())));
         }
-        // 击杀掉落：仅补充 Config 没有的物品种（避免同一物品双重计权）
+        // 击杀掉落：仅补充白名单没有的物品种（避免同一物品双重计权）
         try {
             for (KillLootEstimator.SampledDrop drop : KillLootEstimator.estimate(serverLevel, type)) {
                 if (!map.containsKey(drop.item())) {
@@ -570,7 +574,11 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
             if (hasContained()) {
                 return true; // 使用槽：任意物品
             }
-            return resolveMarkerTarget(stack) != null; // 标记槽：刷怪蛋或特征掉落物
+            Level lvl = getLevel();
+            if (lvl != null && lvl.isClientSide) {
+                return true; // 客户端算不出动态掉落物表：一律放行，由服务端权威判定收容/清退
+            }
+            return resolveMarkerTarget(stack) != null; // 服务端标记槽：刷怪蛋/静态特征物/动态掉落物
         }
 
         @Override
@@ -623,7 +631,7 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
     // ==================== 服务端 tick ====================
 
     /**
-     * 服务端主循环：等级增长 → 被动累计 → 使用槽通道 → 剪毛恢复 → 六面输出。
+     * 服务端主循环：等级增长 → 被动累计 → 使用槽通道 → 六面输出。
      */
     public void tickServer() {
         Level world = getLevel();
@@ -661,15 +669,7 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
                     }
                 }
             }
-            // 3) 剪毛/挤奶后的恢复计时（仅收容时）
-            boolean regrowDone = false;
-            if (contained && entityTag != null) {
-                EntityType<?> type = getContainedType();
-                if (type != null) {
-                    regrowDone = MobFarmInteraction.tickRegrow(type, entityTag);
-                }
-            }
-            // 4) 使用槽：工具对收容物可产出的物品种，按"该生物刷怪蛋权重×等级"累计，攒够 carry 出 1 件，
+            // 3) 使用槽：工具对收容物可产出的物品种，按"该生物刷怪蛋权重×等级"累计，攒够 carry 出 1 件，
             //    速度与刷怪蛋完全一致；工具缺失/不符时该工具行自动停止（速度 0），也不消耗工具。
             if (contained && entityTag != null) {
                 EntityType<?> t = getContainedType();
@@ -697,14 +697,11 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
                     }
                 }
             }
-            // 5) 主动输出（受总开关控制）
+            // 4) 主动输出（受总开关控制）
             if (outputEnabled) {
                 outputToNeighbors();
             }
             setChanged();
-            if (regrowDone) {
-                sendUpdatePacket();
-            }
         } catch (Throwable e) {
             log.error("MobFarmEntity.tickServer error", e);
         }

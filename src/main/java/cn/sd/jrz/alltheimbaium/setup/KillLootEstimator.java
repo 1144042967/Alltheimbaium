@@ -26,10 +26,16 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 击杀战利品表采样估算：对某实体类型的击杀战利品表跑固定次数，统计每种物品每次击杀的平均掉落量，
  * 用于把"生物本身的击杀掉落"折算成确定性产物的权重。结果按实体类型全局缓存。
+ * 另提供一个廉价版本 {@link #possibleItems}，只关心"实际掷出过哪些物品种"，用于动态标记物检测。
  */
 public final class KillLootEstimator {
     private static final Logger log = LoggerFactory.getLogger(KillLootEstimator.class);
     private static final Map<EntityType<?>, List<SampledDrop>> CACHE = new ConcurrentHashMap<>();
+
+    /** 动态标记物检测的采样掷数：只用于"是否存在某种掉落"，无需精确平均，够快即可 */
+    public static final int MARKER_ROLLS = 200;
+    /** 动态标记物检测缓存：实体类型 → 采样出现过的物品种 */
+    private static final Map<EntityType<?>, List<Item>> MARKER_CACHE = new ConcurrentHashMap<>();
 
     private KillLootEstimator() {
     }
@@ -43,7 +49,24 @@ public final class KillLootEstimator {
      */
     @Nonnull
     public static List<SampledDrop> estimate(ServerLevel serverLevel, @Nonnull EntityType<?> type) {
-        return CACHE.computeIfAbsent(type, t -> doEstimate(serverLevel, t));
+        return CACHE.computeIfAbsent(type, t -> doEstimate(serverLevel, t, MobFarmBlock.getSampleKills()));
+    }
+
+    /**
+     * 掷 {@link #MARKER_ROLLS} 次击杀掉落，返回实际出现过的物品种（每种去重）。
+     * 供动态"掉落物→生物"标记表使用；空表/全空掷返回空列表。
+     */
+    @Nonnull
+    public static List<Item> possibleItems(ServerLevel serverLevel, @Nonnull EntityType<?> type) {
+        return MARKER_CACHE.computeIfAbsent(type, t -> {
+            List<Item> items = new ArrayList<>();
+            for (SampledDrop drop : doEstimate(serverLevel, t, MARKER_ROLLS)) {
+                if (drop.item() != null && !items.contains(drop.item())) {
+                    items.add(drop.item());
+                }
+            }
+            return items;
+        });
     }
 
     /**
@@ -59,7 +82,7 @@ public final class KillLootEstimator {
     }
 
     @Nonnull
-    private static List<SampledDrop> doEstimate(ServerLevel serverLevel, EntityType<?> type) {
+    private static List<SampledDrop> doEstimate(ServerLevel serverLevel, EntityType<?> type, int rolls) {
         List<SampledDrop> result = new ArrayList<>();
         try {
             ResourceLocation lootId = type.getDefaultLootTable();
@@ -67,7 +90,7 @@ public final class KillLootEstimator {
                 return result;
             }
             LootTable table = serverLevel.getServer().getLootData().getLootTable(lootId);
-            int kills = Math.max(1, MobFarmBlock.getSampleKills());
+            int kills = Math.max(1, rolls);
             Entity probe = null;
             try {
                 probe = type.create(serverLevel);
