@@ -7,6 +7,8 @@ import cn.sd.jrz.alltheimbaium.gui.AutoFarmlandMenu;
 import cn.sd.jrz.alltheimbaium.gui.ClockMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalSwordMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalTotemMenu;
+import cn.sd.jrz.alltheimbaium.gui.InstantFurnaceMenu;
+import cn.sd.jrz.alltheimbaium.gui.InstantInscriberMenu;
 import cn.sd.jrz.alltheimbaium.gui.LiquidFountainMenu;
 import cn.sd.jrz.alltheimbaium.gui.MobFarmMenu;
 import cn.sd.jrz.alltheimbaium.gui.ResourceFarmMenu;
@@ -59,6 +61,8 @@ public class Registration {
                     output.accept(Registration.LIQUID_FOUNTAIN_ITEM.get());
                     output.accept(Registration.MOB_FARM_ITEM.get());//生物农场
                     output.accept(Registration.RESOURCE_FARM_ITEM.get());//资源农场
+                    output.accept(Registration.INSTANT_FURNACE_ITEM.get());//零刻熔炉
+                    output.accept(Registration.INSTANT_INSCRIBER_ITEM.get());//零刻压印器
                     output.accept(Registration.ETERNAL_TOTEM.get());
                     output.accept(Registration.ETERNAL_SWORD.get());
                     output.accept(Registration.CLOCK_ITEM.get());
@@ -108,6 +112,10 @@ public class Registration {
                     .strength(0.5f, 0.5f)
                     .noOcclusion()));
     public static final RegistryObject<StorageFountainBlock> STORAGE_FOUNTAIN_BLOCK = BLOCKS.register("storage_fountain", () -> new StorageFountainBlock(BLOCK_PROPERTIES));
+    // 零刻熔炉：18 输入槽 + 18 输出槽，即时熔炼消耗 FE
+    public static final RegistryObject<InstantFurnaceBlock> INSTANT_FURNACE_BLOCK = BLOCKS.register("instant_furnace", () -> new InstantFurnaceBlock(BLOCK_PROPERTIES));
+    // 零刻压印器：读 AE2 压印机配方，压板/组装双模式即时生成（消耗 FE）
+    public static final RegistryObject<InstantInscriberBlock> INSTANT_INSCRIBER_BLOCK = BLOCKS.register("instant_inscriber", () -> new InstantInscriberBlock(BLOCK_PROPERTIES));
     // 生物农场：玻璃罐体（noOcclusion 使罐内生物/后方可见）
     public static final RegistryObject<MobFarmBlock> MOB_FARM_BLOCK = BLOCKS.register("mob_farm", () -> new MobFarmBlock(
             BlockBehaviour.Properties.copy(Blocks.GLASS)
@@ -133,6 +141,8 @@ public class Registration {
     public static final RegistryObject<BlockItem> STORAGE_FOUNTAIN_ITEM = ITEMS.register("storage_fountain", () -> new StorageFountainItem(STORAGE_FOUNTAIN_BLOCK.get()));
     public static final RegistryObject<BlockItem> MOB_FARM_ITEM = ITEMS.register("mob_farm", () -> new MobFarmItem(MOB_FARM_BLOCK.get()));
     public static final RegistryObject<BlockItem> RESOURCE_FARM_ITEM = ITEMS.register("resource_farm", () -> new ResourceFarmItem(RESOURCE_FARM_BLOCK.get()));
+    public static final RegistryObject<BlockItem> INSTANT_FURNACE_ITEM = ITEMS.register("instant_furnace", () -> new InstantFurnaceItem(INSTANT_FURNACE_BLOCK.get()));
+    public static final RegistryObject<BlockItem> INSTANT_INSCRIBER_ITEM = ITEMS.register("instant_inscriber", () -> new InstantInscriberItem(INSTANT_INSCRIBER_BLOCK.get()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X2 = ITEMS.register("package_material_x2", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X3 = ITEMS.register("package_material_x3", () -> new Item(new Item.Properties()));
@@ -157,6 +167,10 @@ public class Registration {
             MENUS.register("clock", () -> IForgeMenuType.create((id, inv, data) -> new ClockMenu(id, inv, data.readBlockPos())));
     public static final RegistryObject<MenuType<StorageFountainMenu>> STORAGE_FOUNTAIN_MENU =
             MENUS.register("storage_fountain", () -> IForgeMenuType.create((id, inv, data) -> new StorageFountainMenu(id, inv, data.readBlockPos())));
+    public static final RegistryObject<MenuType<InstantFurnaceMenu>> INSTANT_FURNACE_MENU =
+            MENUS.register("instant_furnace", () -> IForgeMenuType.create((id, inv, data) -> new InstantFurnaceMenu(id, inv, data.readBlockPos())));
+    public static final RegistryObject<MenuType<InstantInscriberMenu>> INSTANT_INSCRIBER_MENU =
+            MENUS.register("instant_inscriber", () -> IForgeMenuType.create((id, inv, data) -> new InstantInscriberMenu(id, inv, data.readBlockPos())));
     public static final RegistryObject<MenuType<MobFarmMenu>> MOB_FARM_MENU =
             MENUS.register("mob_farm", () -> IForgeMenuType.create((id, inv, data) -> new MobFarmMenu(id, inv, data)));
     public static final RegistryObject<MenuType<ResourceFarmMenu>> RESOURCE_FARM_MENU =
@@ -178,6 +192,8 @@ public class Registration {
     public static final RegistryObject<BlockEntityType<ClockEntity>> CLOCK_ENTITY = ENTITIES.register("clock", () -> BlockEntityType.Builder.of(ClockEntity::new, CLOCK_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<LiquidFountainEntity>> LIQUID_FOUNTAIN_ENTITY = ENTITIES.register("liquid_fountain", () -> BlockEntityType.Builder.of(LiquidFountainEntity::new, LIQUID_FOUNTAIN_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<StorageFountainEntity>> STORAGE_FOUNTAIN_ENTITY = ENTITIES.register("storage_fountain", () -> BlockEntityType.Builder.of(StorageFountainEntity::new, STORAGE_FOUNTAIN_BLOCK.get()).build(null));
+    public static final RegistryObject<BlockEntityType<InstantFurnaceEntity>> INSTANT_FURNACE_ENTITY = ENTITIES.register("instant_furnace", () -> BlockEntityType.Builder.of(InstantFurnaceEntity::new, INSTANT_FURNACE_BLOCK.get()).build(null));
+    public static final RegistryObject<BlockEntityType<InstantInscriberEntity>> INSTANT_INSCRIBER_ENTITY = ENTITIES.register("instant_inscriber", () -> BlockEntityType.Builder.of(InstantInscriberEntity::new, INSTANT_INSCRIBER_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<MobFarmEntity>> MOB_FARM_ENTITY = ENTITIES.register("mob_farm", () -> BlockEntityType.Builder.of(MobFarmEntity::new, MOB_FARM_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<ResourceFarmEntity>> RESOURCE_FARM_ENTITY = ENTITIES.register("resource_farm", () -> BlockEntityType.Builder.of(ResourceFarmEntity::new, RESOURCE_FARM_BLOCK.get()).build(null));
 }

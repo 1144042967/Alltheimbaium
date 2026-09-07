@@ -1,0 +1,48 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "function": "minecraft:copy_name",
+              "source": "block_entity"
+            },
+            {
+              "function": "minecraft:copy_nbt",
+              "ops": [
+                {
+                  "op": "replace",
+                  "source": "input",
+                  "target": "BlockEntityTag.input"
+                },
+                {
+                  "op": "replace",
+                  "source": "output",
+                  "target": "BlockEntityTag.output"
+                },
+                {
+                  "op": "replace",
+                  "source": "energy",
+                  "target": "BlockEntityTag.energy"
+                },
+                {
+                  "op": "replace",
+                  "source": "directionState",
+                  "target": "BlockEntityTag.directionState"
+                }
+              ],
+              "source": "block_entity"
+            }
+          ],
+          "name": "alltheimbaium:instant_furnace"
+        }
+      ],
+      "name": "instant_furnace",
+      "rolls": 1.0
+    }
+  ]
+}

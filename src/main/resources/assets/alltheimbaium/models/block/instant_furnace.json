@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "alltheimbaium:block/instant_furnace_top",
+    "bottom": "alltheimbaium:block/instant_furnace_btm",
+    "side": "alltheimbaium:block/instant_furnace_side",
+    "particle": "alltheimbaium:block/instant_furnace_side"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "alltheimbaium:block/instant_inscriber_top",
+    "bottom": "alltheimbaium:block/instant_inscriber_btm",
+    "side": "alltheimbaium:block/instant_inscriber_side",
+    "particle": "alltheimbaium:block/instant_inscriber_side"
+  }
+}
