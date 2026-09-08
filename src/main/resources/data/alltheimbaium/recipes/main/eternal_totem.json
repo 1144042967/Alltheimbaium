@@ -1,11 +1,14 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "ABA",
+    "XBA",
     "BCB",
-    "ABA"
+    "ABX"
   ],
   "key": {
+    "X": {
+      "item": "alltheimbaium:package_material_x1"
+    },
     "A": {
       "item": "minecraft:netherite_block"
     },
@@ -17,7 +20,6 @@
     }
   },
   "result": {
-    "item": "alltheimbaium:eternal_totem",
-    "count": 1
+    "item": "alltheimbaium:eternal_totem"
   }
 }

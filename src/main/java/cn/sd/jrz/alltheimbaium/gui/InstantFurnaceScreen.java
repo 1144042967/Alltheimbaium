@@ -39,13 +39,13 @@ public class InstantFurnaceScreen extends AbstractContainerScreen<InstantFurnace
     private static final int ENERGY_TRACK_COLOR = 0xFF373737;
     private static final int ENERGY_FILL_COLOR = 0xFFFF8000;
 
-    // 控制区：六面开关（16 方块）+ 交换按钮
-    private static final int FACE_Y = 66;
+    // 控制区（贴图中部留白带 y61~81）：六面开关（16 方块）+ 交换按钮
+    private static final int FACE_Y = 63;
     private static final int FACE_SIZE = 16;
     private static final int FACE_STEP = 18;
     private static final int FACE_X_BASE = 8;
     private static final int SWAP_X = 122;
-    private static final int SWAP_Y = 66;
+    private static final int SWAP_Y = 63;
     private static final int SWAP_W = 45;
     private static final int SWAP_H = 16;
 
@@ -58,7 +58,7 @@ public class InstantFurnaceScreen extends AbstractContainerScreen<InstantFurnace
     public InstantFurnaceScreen(InstantFurnaceMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
-        this.imageHeight = 233;
+        this.imageHeight = InstantFurnaceMenu.IMAGE_HEIGHT;
         this.inventoryLabelY = this.imageHeight - 94;
     }
 

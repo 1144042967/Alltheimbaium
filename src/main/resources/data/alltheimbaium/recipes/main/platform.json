@@ -1,19 +1,22 @@
 {
   "type": "minecraft:crafting_shaped",
   "group": "alltheimbaium",
+  "pattern": [
+    "BXB",
+    "BCB",
+    "BBB"
+  ],
   "key": {
-    "A": {
-      "item": "alltheimbaium:package_material_x2"
+    "X": {
+      "item": "alltheimbaium:package_material_x1"
     },
     "B": {
+      "item": "minecraft:iron_ingot"
+    },
+    "C": {
       "item": "minecraft:smooth_stone"
     }
   },
-  "pattern": [
-    "AAA",
-    "ABA",
-    "AAA"
-  ],
   "result": {
     "item": "alltheimbaium:platform"
   }

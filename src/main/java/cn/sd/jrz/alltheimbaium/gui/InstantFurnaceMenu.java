@@ -45,6 +45,9 @@ public class InstantFurnaceMenu extends AbstractContainerMenu {
     public static final int SLOT_OUTPUT_BASE = InstantFurnaceEntity.MAX_TYPES;
     public static final int SLOT_PLAYER_BASE = InstantFurnaceEntity.MAX_TYPES * 2;
 
+    /** GUI 总高度（像素），对应 176×214 贴图 */
+    public static final int IMAGE_HEIGHT = 214;
+
     public final InstantFurnaceEntity entity;
 
     // 客户端展示数据（服务端通过数据槽同步而来）
@@ -64,9 +67,9 @@ public class InstantFurnaceMenu extends AbstractContainerMenu {
         for (int i = 0; i < InstantFurnaceEntity.MAX_TYPES; i++) {
             addSlot(new RowSlot(i, true, 8 + (i % 9) * 18, 26 + (i / 9) * 18));
         }
-        // 输出行 18~35：两行（y 90 / 108）
+        // 输出行 18~35：两行（y 83 / 101）
         for (int i = 0; i < InstantFurnaceEntity.MAX_TYPES; i++) {
-            addSlot(new RowSlot(i, false, 8 + (i % 9) * 18, 90 + (i / 9) * 18));
+            addSlot(new RowSlot(i, false, 8 + (i % 9) * 18, 83 + (i / 9) * 18));
         }
         // 玩家背包 36~71
         addPlayerInventory(playerInventory);
@@ -284,13 +287,15 @@ public class InstantFurnaceMenu extends AbstractContainerMenu {
     }
 
     private void addPlayerInventory(Inventory playerInventory) {
+        // 玩家背包对齐贴图：首行 = imageHeight-82，快捷栏再 +58
+        int invTop = IMAGE_HEIGHT - 82;
         for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 9; ++j) {
-                this.addSlot(new Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, 151 + i * 18));
+                this.addSlot(new Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, invTop + i * 18));
             }
         }
         for (int i = 0; i < 9; ++i) {
-            this.addSlot(new Slot(playerInventory, i, 8 + i * 18, 209));
+            this.addSlot(new Slot(playerInventory, i, 8 + i * 18, invTop + 58));
         }
     }
 

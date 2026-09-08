@@ -68,6 +68,7 @@ public class Registration {
                     output.accept(Registration.CLOCK_ITEM.get());
                     output.accept(Registration.PLATFORM_ITEM.get());
                     output.accept(Registration.SUPPLY_CRATE_ITEM.get());//补给箱
+                    output.accept(Registration.EXTRACTION_INTERFACE_ITEM.get());//取出接口
 
 
 
@@ -75,13 +76,6 @@ public class Registration {
 
 
                     output.accept(Registration.PACKAGE_MATERIAL_X1.get());
-                    output.accept(Registration.PACKAGE_MATERIAL_X2.get());
-                    output.accept(Registration.PACKAGE_MATERIAL_X3.get());
-                    output.accept(Registration.BLOCK_DIAMOND_X8.get());
-                    output.accept(Registration.BLOCK_GOLD_X8.get());
-                    output.accept(Registration.BLOCK_SILICON_X8.get());
-                    output.accept(Registration.BLOCK_QUANTUM_ALLOY_X8.get());
-                    output.accept(Registration.BLOCK_SKY_STEEL_X8.get());
                 })
                 .build()
         );
@@ -116,6 +110,8 @@ public class Registration {
     public static final RegistryObject<InstantFurnaceBlock> INSTANT_FURNACE_BLOCK = BLOCKS.register("instant_furnace", () -> new InstantFurnaceBlock(BLOCK_PROPERTIES));
     // 零刻压印器：读 AE2 压印机配方，压板/组装双模式即时生成（消耗 FE）
     public static final RegistryObject<InstantInscriberBlock> INSTANT_INSCRIBER_BLOCK = BLOCKS.register("instant_inscriber", () -> new InstantInscriberBlock(BLOCK_PROPERTIES));
+    // 取出接口：聚合相邻本MOD产物/流体机器，供管道被动抽取（无GUI、无主动输出）
+    public static final RegistryObject<ExtractionInterfaceBlock> EXTRACTION_INTERFACE_BLOCK = BLOCKS.register("extraction_interface", () -> new ExtractionInterfaceBlock(BLOCK_PROPERTIES));
     // 生物农场：玻璃罐体（noOcclusion 使罐内生物/后方可见）
     public static final RegistryObject<MobFarmBlock> MOB_FARM_BLOCK = BLOCKS.register("mob_farm", () -> new MobFarmBlock(
             BlockBehaviour.Properties.copy(Blocks.GLASS)
@@ -143,14 +139,8 @@ public class Registration {
     public static final RegistryObject<BlockItem> RESOURCE_FARM_ITEM = ITEMS.register("resource_farm", () -> new ResourceFarmItem(RESOURCE_FARM_BLOCK.get()));
     public static final RegistryObject<BlockItem> INSTANT_FURNACE_ITEM = ITEMS.register("instant_furnace", () -> new InstantFurnaceItem(INSTANT_FURNACE_BLOCK.get()));
     public static final RegistryObject<BlockItem> INSTANT_INSCRIBER_ITEM = ITEMS.register("instant_inscriber", () -> new InstantInscriberItem(INSTANT_INSCRIBER_BLOCK.get()));
+    public static final RegistryObject<BlockItem> EXTRACTION_INTERFACE_ITEM = ITEMS.register("extraction_interface", () -> new BlockItem(EXTRACTION_INTERFACE_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<Item> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> PACKAGE_MATERIAL_X2 = ITEMS.register("package_material_x2", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> PACKAGE_MATERIAL_X3 = ITEMS.register("package_material_x3", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> BLOCK_DIAMOND_X8 = ITEMS.register("block_diamond_x8", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> BLOCK_GOLD_X8 = ITEMS.register("block_gold_x8", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> BLOCK_SILICON_X8 = ITEMS.register("block_silicon_x8", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> BLOCK_QUANTUM_ALLOY_X8 = ITEMS.register("block_quantum_alloy_x8", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> BLOCK_SKY_STEEL_X8 = ITEMS.register("block_sky_steel_x8", () -> new Item(new Item.Properties()));
     public static final RegistryObject<EternalTotemItem> ETERNAL_TOTEM = ITEMS.register("eternal_totem", EternalTotemItem::new);
     public static final RegistryObject<EternalSwordItem> ETERNAL_SWORD = ITEMS.register("eternal_sword", EternalSwordItem::new);
 
@@ -194,6 +184,7 @@ public class Registration {
     public static final RegistryObject<BlockEntityType<StorageFountainEntity>> STORAGE_FOUNTAIN_ENTITY = ENTITIES.register("storage_fountain", () -> BlockEntityType.Builder.of(StorageFountainEntity::new, STORAGE_FOUNTAIN_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<InstantFurnaceEntity>> INSTANT_FURNACE_ENTITY = ENTITIES.register("instant_furnace", () -> BlockEntityType.Builder.of(InstantFurnaceEntity::new, INSTANT_FURNACE_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<InstantInscriberEntity>> INSTANT_INSCRIBER_ENTITY = ENTITIES.register("instant_inscriber", () -> BlockEntityType.Builder.of(InstantInscriberEntity::new, INSTANT_INSCRIBER_BLOCK.get()).build(null));
+    public static final RegistryObject<BlockEntityType<ExtractionInterfaceEntity>> EXTRACTION_INTERFACE_ENTITY = ENTITIES.register("extraction_interface", () -> BlockEntityType.Builder.of(ExtractionInterfaceEntity::new, EXTRACTION_INTERFACE_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<MobFarmEntity>> MOB_FARM_ENTITY = ENTITIES.register("mob_farm", () -> BlockEntityType.Builder.of(MobFarmEntity::new, MOB_FARM_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<ResourceFarmEntity>> RESOURCE_FARM_ENTITY = ENTITIES.register("resource_farm", () -> BlockEntityType.Builder.of(ResourceFarmEntity::new, RESOURCE_FARM_BLOCK.get()).build(null));
 }

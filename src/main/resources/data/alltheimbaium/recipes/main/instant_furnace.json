@@ -1,19 +1,22 @@
 {
   "type": "minecraft:crafting_shaped",
   "group": "instant_furnace",
+  "pattern": [
+    "XBB",
+    "BCB",
+    "BBX"
+  ],
   "key": {
-    "A": {
-      "item": "minecraft:iron_block"
+    "X": {
+      "item": "alltheimbaium:package_material_x1"
     },
     "B": {
+      "item": "minecraft:iron_block"
+    },
+    "C": {
       "item": "minecraft:furnace"
     }
   },
-  "pattern": [
-    "AAA",
-    "ABA",
-    "AAA"
-  ],
   "result": {
     "item": "alltheimbaium:instant_furnace"
   }

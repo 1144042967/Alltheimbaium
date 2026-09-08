@@ -1,25 +1,22 @@
 {
   "type": "minecraft:crafting_shaped",
   "group": "mystical_agriculture_growth_accelerator",
+  "pattern": [
+    "BXB",
+    "BCB",
+    "BBB"
+  ],
   "key": {
-    "A": {
-      "item": "minecraft:dragon_egg"
+    "X": {
+      "item": "alltheimbaium:package_material_x1"
     },
     "B": {
-      "item": "minecraft:dirt"
+      "item": "minecraft:iron_ingot"
     },
     "C": {
-      "item": "minecraft:nether_star"
-    },
-    "D": {
-      "item": "alltheimbaium:package_material_x3"
+      "item": "minecraft:dirt"
     }
   },
-  "pattern": [
-    "DAD",
-    "CBC",
-    "DCD"
-  ],
   "result": {
     "item": "alltheimbaium:farmland"
   }

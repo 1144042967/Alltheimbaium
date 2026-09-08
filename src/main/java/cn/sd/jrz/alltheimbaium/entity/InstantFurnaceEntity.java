@@ -41,8 +41,9 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ATI 零刻熔炉实体（AE 大数版，参考方块生成机/自动耕地）。
@@ -50,10 +51,11 @@ import java.util.List;
  * 输入区与输出区各为最多 {@link #MAX_TYPES} 行"物品种类行"：每行 = 一种物品 + {@code long} 大数存量，
  * 数量无 64 上限、可保存大数；GUI 以 AE 风格数字展示。熔炼无耗时：
  * <ul>
- *     <li>物品被加入输入行 → 立即尝试查询烧炼配方（SMELTING→BLASTING→SMOKING 三级兜底），
- *         每件扣 {@link #ENERGY_PER_SMELT} FE，产物并入对应输出行；</li>
- *     <li>触发时机 = 输入行变化 / 能量注入后存量 ≥ 单件耗能 / 交换完成后；</li>
- *     <li>不逐 tick 计算。</li>
+ *     <li>每 tick 服务端先做一轮批量熔炼（SMELTING→BLASTING→SMOKING 三级兜底查配方，
+ *         每种输入行按当前电量整批一次算完），合成完成后执行输出推送；</li>
+ *     <li>被动输入/输出只做收发货（并入输入行 / 从输出行抽取），不触发配方计算；
+ *         "能否按配方生效"由每 tick 合成环节统一判断；</li>
+ *     <li>交换按钮仅交换输入/输出内容，不触发熔炼。</li>
  * </ul>
  * 输出行产物每 tick 向启用"推送"的面转给相邻机器/箱子；任意面开放 IItemHandler 供管道插入/抽取。
  */
@@ -85,8 +87,6 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
 
     /** 六面推送状态，索引与 Direction.values() 顺序一致 */
     public final int[] directionState = new int[6];
-    /** 熔炼进行中护栏（防止 onContentsChanged / 能量注入回调自触发递归） */
-    private boolean smelting = false;
     /** 输出推送轮询游标 */
     public int findIndex = 0;
 
@@ -95,7 +95,7 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
     /** 输出行（熔炼成品，种类 ≤ MAX_TYPES） */
     public final List<Row> outputRows = new ArrayList<>();
 
-    /** FE 能量存储：上限 2 亿、只接收不放出；注入能量后存量 ≥ 单件耗能时触发一次熔炼。 */
+    /** FE 能量存储：上限 2 亿、只接收不放出；合成由每 tick 按当前电量批量执行。 */
     public final SmeltEnergy energy = new SmeltEnergy(this);
 
     /** 对外 IItemHandler 能力（行为方向无关：插入进输入区、抽取自输出区） */
@@ -199,7 +199,7 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
             }
             row.stock = Tool.suit(row.stock + stack.getCount());
             setChanged();
-            requestSmelt();
+            // 被动输入只收发货；配方合成交由每 tick 统一执行
         }
         return ItemStack.EMPTY;
     }
@@ -257,100 +257,78 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
         return 0;
     }
 
-    // ==================== 熔炼 ====================
+    // ==================== 熔炼（每 tick 批量） ====================
 
-    /**
-     * 请求一次熔炼计算（服务端）。调用点：输入行变化、能量注入、交换完成后。
-     */
-    public void requestSmelt() {
-        Level level = getLevel();
-        if (level == null || level.isClientSide || smelting) {
-            return;
-        }
-        smelting = true;
-        try {
-            doSmeltPass();
-        } catch (Throwable e) {
-            log.error("InstantFurnaceEntity.requestSmelt error", e);
-        } finally {
-            smelting = false;
+    /** 烧炼配方结果缓存：Item → 产物（EMPTY = 不可烧哨兵）；随 RecipeManager 实例变化重建，避免每 tick 全表扫配方 */
+    private RecipeManager cookCacheManager;
+    private final Map<Item, ItemStack> cookCache = new HashMap<>();
+
+    private void ensureCookCache(@Nonnull Level level) {
+        RecipeManager rm = level.getRecipeManager();
+        if (rm != cookCacheManager) {
+            cookCacheManager = rm;
+            cookCache.clear();
         }
     }
 
     /**
-     * 执行一轮熔炼：尽量把输入行中的可烧炼物品转为输出行产物（AE 大数，无每行 64 上限）。
-     * 每行一次性熔炼到"该行空 / 电量不足 / 输出行种类已满"为止，减少配方查询次数。
+     * 每 tick 单遍批量熔炼（服务端）：把输入行中可烧炼物品整批转为输出行产物（AE 大数，无每行 64 上限）。
+     * 对每个输入行一次算完：n = min(行存量, 电量 / 单件耗能)，扣 n、扣能 n×1000、加 n×产物数量，不逐件循环。
+     *
+     * @return 是否有改动（供 serverTick 门控 setChanged）
      */
-    private void doSmeltPass() {
-        Level level = getLevel();
-        if (level == null || level.isClientSide) {
-            return;
+    private boolean smeltOnce(@Nonnull Level level) {
+        if (inputRows.isEmpty() || energy.getEnergyStored() < ENERGY_PER_SMELT) {
+            return false;
         }
-        boolean anyMoved = false;
-        boolean movedThisRound;
-        int guard = 0;
-        do {
-            movedThisRound = false;
-            // 快照遍历：处理中可能因取空移除行
-            List<Row> snapshot = new ArrayList<>(inputRows);
-            for (Row row : snapshot) {
-                if (row.stock <= 0) {
-                    continue;
-                }
-                if (energy.getEnergyStored() < ENERGY_PER_SMELT) {
-                    break; // 电量不足：其余行同样无法熔炼
-                }
-                ItemStack result = findCookResult(new ItemStack(row.item, 1), level);
-                if (result.isEmpty()) {
-                    continue;
-                }
-                Item outItem = result.getItem();
-                long perOut = Math.max(1, result.getCount());
-                Row outRow = findRow(outputRows, outItem);
-                if (outRow == null) {
-                    if (outputRows.size() >= MAX_TYPES) {
-                        continue; // 输出行种类已满且该产物不在其中：暂无法熔炼
-                    }
-                    outRow = new Row(outItem);
-                    outputRows.add(outRow);
-                }
-                long n = Math.min(row.stock, energy.getEnergyStored() / ENERGY_PER_SMELT);
-                if (n <= 0) {
-                    break;
-                }
-                row.stock -= n;
-                energy.spendEnergy((int) (n * ENERGY_PER_SMELT));
-                outRow.stock = Tool.suit(outRow.stock + n * perOut);
-                anyMoved = true;
-                movedThisRound = true;
+        ensureCookCache(level);
+        boolean moved = false;
+        // 快照遍历：处理中可能因取空移除行
+        for (Row row : new ArrayList<>(inputRows)) {
+            if (row.stock <= 0) {
+                continue;
             }
-            cleanEmptyRows(inputRows);
-            cleanEmptyRows(outputRows);
-            if (++guard > 4096) {
-                break; // 安全上限，防止异常导致死循环
+            if (energy.getEnergyStored() < ENERGY_PER_SMELT) {
+                break; // 电量不足：其余行同样无法熔炼
             }
-        } while (movedThisRound);
-        if (anyMoved) {
-            setChanged();
+            ItemStack result = cookCache.computeIfAbsent(row.item, item -> findCookResult(item, level));
+            if (result.isEmpty()) {
+                continue; // 不可烧（含 EMPTY 哨兵）：快速跳过
+            }
+            Item outItem = result.getItem();
+            long perOut = Math.max(1, result.getCount());
+            Row outRow = findRow(outputRows, outItem);
+            if (outRow == null && outputRows.size() >= MAX_TYPES) {
+                continue; // 输出行种类已满且该产物不在其中：暂无法熔炼（扣料前预判）
+            }
+            long n = Math.min(row.stock, (long) energy.getEnergyStored() / ENERGY_PER_SMELT);
+            if (n <= 0) {
+                break;
+            }
+            row.stock -= n;
+            energy.spendEnergy((int) (n * ENERGY_PER_SMELT));
+            addOutputProduct(outItem, n * perOut);
+            moved = true;
         }
+        cleanEmptyRows(inputRows);
+        return moved;
     }
 
     /**
-     * 查询物品的烧炼配方结果：按 SMELTING→BLASTING→SMOKING 三级兜底（客户端不查，返回 null）。
+     * 查询物品的烧炼配方结果（仅在缓存 miss 时调用一次）：按 SMELTING→BLASTING→SMOKING 三级兜底。
+     * 不可烧返回 EMPTY（同样入缓存作哨兵，避免反复查表）；客户端不查。
      */
-    @Nullable
-    private static ItemStack findCookResult(@Nonnull ItemStack input, @Nonnull Level level) {
+    @Nonnull
+    private static ItemStack findCookResult(@Nonnull Item item, @Nonnull Level level) {
         if (level.isClientSide) {
-            return null;
+            return ItemStack.EMPTY;
         }
         try {
             RecipeManager recipeManager = level.getRecipeManager();
-            ItemStack single = input.copyWithCount(1);
-            List<RecipeType<? extends AbstractCookingRecipe>> types = List.of(
-                    RecipeType.SMELTING, RecipeType.BLASTING, RecipeType.SMOKING);
-            for (RecipeType<? extends AbstractCookingRecipe> type : types) {
-                Collection<? extends AbstractCookingRecipe> recipes = recipeManager.getAllRecipesFor(type);
-                for (AbstractCookingRecipe recipe : recipes) {
+            ItemStack single = new ItemStack(item, 1);
+            for (RecipeType<? extends AbstractCookingRecipe> type : List.of(
+                    RecipeType.SMELTING, RecipeType.BLASTING, RecipeType.SMOKING)) {
+                for (AbstractCookingRecipe recipe : recipeManager.getAllRecipesFor(type)) {
                     for (Ingredient ingredient : recipe.getIngredients()) {
                         if (ingredient.test(single)) {
                             return recipe.getResultItem(level.registryAccess()).copy();
@@ -361,13 +339,17 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
         } catch (Throwable e) {
             log.error("InstantFurnaceEntity.findCookResult error", e);
         }
-        return null;
+        return ItemStack.EMPTY;
     }
 
     // ==================== 输出推送 ====================
 
+    /** 单次大批量塞入上限（件），避免对无限容量邻居逐 64 组循环导致卡顿 */
+    private static final long PUSH_BATCH = 1_000_000;
+
     /**
-     * 服务端 tick：把输出行产物转给启用"推送"的相邻面（每 tick 轮询一个面）。
+     * 服务端 tick：每 tick 先完成一轮配方合成，合成运算后执行输出推送。
+     * 只在确有改动（合成动行/扣能、推送推货）时才 setChanged，避免闲置机器持续脏标记。
      */
     public void serverTick() {
         Level level = getLevel();
@@ -375,62 +357,76 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
             return;
         }
         try {
-            pushOutput();
+            boolean changed = smeltOnce(level); // 每 tick 先合成
+            changed |= pushOutput();            // 合成后输出
+            if (changed) {
+                setChanged();
+            }
         } catch (Throwable e) {
             log.error("InstantFurnaceEntity.serverTick error", e);
         }
-        setChanged();
     }
 
-    private void pushOutput() {
+    /**
+     * 把输出行产物转给启用"推送"的相邻面。每 tick 从轮询游标起探测，
+     * 本 tick 最多成功推给一面；选中面无目标/满时顺延探测其余启用面，避免空等。
+     *
+     * @return 是否实际推出了物品
+     */
+    private boolean pushOutput() {
         Level level = getLevel();
-        if (level == null) {
-            return;
+        if (level == null || outputRows.isEmpty()) {
+            return false;
         }
-        findIndex = (findIndex + 1) % 6;
-        Direction direction = Direction.values()[findIndex];
-        if (directionState[findIndex] != STATE_PUSH) {
-            return;
-        }
-        BlockEntity neighbor = level.getBlockEntity(worldPosition.relative(direction));
-        if (neighbor == null) {
-            return;
-        }
-        IItemHandler handler = neighbor.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite()).resolve().orElse(null);
-        if (handler == null) {
-            return;
-        }
-        List<Row> snapshot = new ArrayList<>(outputRows);
-        for (Row row : snapshot) {
-            if (row.stock <= 0) {
+        boolean pushed = false;
+        for (int attempt = 0; attempt < 6; attempt++) {
+            findIndex = (findIndex + 1) % 6;
+            Direction direction = Direction.values()[findIndex];
+            if (directionState[findIndex] != STATE_PUSH) {
                 continue;
             }
-            int maxStack = Math.max(1, new ItemStack(row.item).getMaxStackSize());
-            long remaining = row.stock;
-            while (remaining > 0) {
-                int amount = (int) Math.min(remaining, (long) maxStack);
-                ItemStack leftover = ItemHandlerHelper.insertItemStacked(handler, new ItemStack(row.item, amount), false);
-                int inserted = amount - leftover.getCount();
-                if (inserted <= 0) {
-                    break;
+            BlockEntity neighbor = level.getBlockEntity(worldPosition.relative(direction));
+            if (neighbor == null) {
+                continue;
+            }
+            IItemHandler handler = neighbor.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite()).resolve().orElse(null);
+            if (handler == null) {
+                continue;
+            }
+            for (Row row : new ArrayList<>(outputRows)) {
+                if (row.stock <= 0) {
+                    continue;
                 }
-                row.stock -= inserted;
-                remaining -= inserted;
+                long remaining = row.stock;
+                while (remaining > 0) {
+                    int amount = (int) Math.min(remaining, PUSH_BATCH);
+                    if (amount <= 0) {
+                        break;
+                    }
+                    ItemStack leftover = ItemHandlerHelper.insertItemStacked(handler, new ItemStack(row.item, amount), false);
+                    int inserted = amount - leftover.getCount();
+                    if (inserted <= 0) {
+                        break; // 该面已满：顺延下一面
+                    }
+                    row.stock -= inserted;
+                    remaining -= inserted;
+                    pushed = true;
+                }
+            }
+            cleanEmptyRows(outputRows);
+            if (pushed) {
+                return true; // 本 tick 服务一面即可，其余面留待后续轮转
             }
         }
-        cleanEmptyRows(outputRows);
+        return false;
     }
 
     // ==================== 交换输入/输出 ====================
 
     /**
-     * 把输入行与输出行的内容整体互换，完成后请求一次熔炼（先换位再计算）。
+     * 把输入行与输出行的内容整体互换（仅交换物品，不触发熔炼；合成由每 tick 统一执行）。
      */
     public void swapSlots() {
-        if (smelting) {
-            return;
-        }
-        smelting = true;
         try {
             List<Row> tmp = new ArrayList<>(inputRows);
             inputRows.clear();
@@ -442,10 +438,7 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
             setChanged();
         } catch (Throwable e) {
             log.error("InstantFurnaceEntity.swapSlots error", e);
-        } finally {
-            smelting = false;
         }
-        requestSmelt();
     }
 
     // ==================== 方向状态 ====================
@@ -494,7 +487,7 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
         public int receiveEnergy(int maxReceive, boolean simulate) {
             int received = super.receiveEnergy(maxReceive, simulate);
             if (!simulate && received > 0) {
-                owner.requestSmelt();
+                owner.setChanged(); // 能量须脏标记持久化；合成由每 tick 统一执行
             }
             return received;
         }
@@ -569,18 +562,12 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
         try {
-            // 反序列化不触发熔炼（熔炼只在输入/能量/交换变化时计算）
-            boolean oldSmelting = smelting;
-            smelting = true;
-            try {
-                if (nbt.contains(KEY_INPUT, Tag.TAG_LIST)) {
-                    loadRows(inputRows, (ListTag) nbt.get(KEY_INPUT));
-                }
-                if (nbt.contains(KEY_OUTPUT, Tag.TAG_LIST)) {
-                    loadRows(outputRows, (ListTag) nbt.get(KEY_OUTPUT));
-                }
-            } finally {
-                smelting = oldSmelting;
+            // 反序列化只恢复状态；合成由每 tick 统一执行
+            if (nbt.contains(KEY_INPUT, Tag.TAG_LIST)) {
+                loadRows(inputRows, (ListTag) nbt.get(KEY_INPUT));
+            }
+            if (nbt.contains(KEY_OUTPUT, Tag.TAG_LIST)) {
+                loadRows(outputRows, (ListTag) nbt.get(KEY_OUTPUT));
             }
             if (nbt.contains(KEY_ENERGY, Tag.TAG_INT)) {
                 energy.setEnergyStored(nbt.getInt(KEY_ENERGY));

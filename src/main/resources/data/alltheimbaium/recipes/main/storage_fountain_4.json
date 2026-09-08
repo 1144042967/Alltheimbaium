@@ -1,20 +1,23 @@
 {
   "type": "minecraft:crafting_shaped",
   "group": "farm",
+  "pattern": [
+    "XBB",
+    "BCB",
+    "BBX"
+  ],
   "key": {
-    "A": {
-      "item": "alltheimbaium:package_material_x3"
+    "X": {
+      "item": "alltheimbaium:package_material_x1"
     },
     "B": {
+      "item": "minecraft:iron_ingot"
+    },
+    "C": {
       "tag": "forge:gems"
     }
   },
-  "pattern": [
-    "AAA",
-    "ABA",
-    "AAA"
-  ],
   "result": {
-    "item": "alltheimbaium:storage_fountain"
+    "item": "alltheimbaium:storage_fountain_4"
   }
 }

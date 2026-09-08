@@ -37,12 +37,12 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     private static final int ENERGY_TRACK_COLOR = 0xFF373737;
     private static final int ENERGY_FILL_COLOR = 0xFFFF8000;
 
-    private static final int FACE_Y = 66;
+    private static final int FACE_Y = 63;
     private static final int FACE_SIZE = 16;
     private static final int FACE_STEP = 18;
     private static final int FACE_X_BASE = 8;
     private static final int MODE_X = 121;
-    private static final int MODE_Y = 66;
+    private static final int MODE_Y = 63;
     private static final int MODE_W = 47;
     private static final int MODE_H = 16;
 
@@ -55,7 +55,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     public InstantInscriberScreen(InstantInscriberMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
-        this.imageHeight = 233;
+        this.imageHeight = InstantInscriberMenu.IMAGE_HEIGHT;
         this.inventoryLabelY = this.imageHeight - 94;
     }
 

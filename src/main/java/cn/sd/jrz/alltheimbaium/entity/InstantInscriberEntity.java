@@ -44,7 +44,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * ATI 零刻压印器（AE2 大数版，配方参考 AE2 压印机 Inscriber）。
@@ -55,10 +57,11 @@ import java.util.List;
  *     <li>{@link #MODE_INSCRIBE 压板}：读取 AE2 <code>mode:inscribe</code> 配方。模板(top/bottom)不消耗，
  *         每消耗 1 份原料(middle 命中物)，同时生成它支持的所有配方各一份产物；</li>
  *     <li>{@link #MODE_ASSEMBLY 组装}：读取 AE2 <code>mode:press</code> 配方，消耗其全部输入材料，
- *         优先生成需要 3 种材料的配方，其次 2 种材料的配方。</li>
+ *         优先级 = 3 种材料配方先于 2 种材料配方。</li>
  * </ul>
- * 生成无耗时，仅在"输入变化 / 能量注入后 ≥ 单产物耗能 / 切换模式"时计算一次；每生成一个产物扣
- * {@link #ENERGY_PER_OP} FE（上限 {@link #MAX_ENERGY}）。输出行向启用"推送"的面转给相邻机器。
+ * 生成无耗时：每 tick 服务端按当前模式对输入做一轮批量合成（按优先级直到无配方可做），每生成一件扣
+ * {@link #ENERGY_PER_OP} FE（上限 {@link #MAX_ENERGY}），合成完成后执行输出推送；
+ * 被动输入/输出只收发货，不触发配方计算。
  */
 public class InstantInscriberEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(InstantInscriberEntity.class);
@@ -127,8 +130,12 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
 
     public final int[] directionState = new int[6];
     public int mode = MODE_INSCRIBE;
-    private boolean working = false; // 计算中护栏（防自触发递归）
     public int findIndex = 0;
+
+    /** AE2 inscribe/press 配方缓存，随 RecipeManager 实例变化重建，避免每 tick 全表扫配方（AE2 未装为空列表） */
+    private RecipeManager recipeCacheManager;
+    private List<InscribeEntry> inscribeCache = new ArrayList<>();
+    private List<AssemblyEntry> assemblyCache = new ArrayList<>();
 
     public final List<Row> inputRows = new ArrayList<>();
     public final List<Row> outputRows = new ArrayList<>();
@@ -205,12 +212,11 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
     }
 
     /**
-     * 切换模式（压板 ↔ 组装），切换后尝试计算一次
+     * 切换模式（压板 ↔ 组装）；合成由每 tick 统一执行
      */
     public void cycleMode() {
         mode = (mode + 1) % MODE_COUNT;
         setChanged();
-        requestCompute();
     }
 
     // ==================== 行增删 ====================
@@ -247,7 +253,7 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
             }
             row.stock = Tool.suit(row.stock + stack.getCount());
             setChanged();
-            requestCompute();
+            // 被动输入只收发货；配方合成交由每 tick 统一执行
         }
         return ItemStack.EMPTY;
     }
@@ -296,40 +302,42 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
         return 0;
     }
 
-    // ==================== 生成 ====================
+    // ==================== 生成（每 tick 批量） ====================
 
     /**
-     * 请求一次生成计算（服务端）。调用点：输入变化、能量注入、切换模式。
+     * 服务端每 tick 合成入口：先刷新 AE2 配方缓存，再按当前模式对输入做一轮批量合成。
+     * 空输入 / 电量不足一个最低操作时提前短路。
+     *
+     * @return 是否有改动
      */
-    public void requestCompute() {
-        Level level = getLevel();
-        if (level == null || level.isClientSide || working) {
-            return;
+    public boolean computeOnce(Level level) {
+        if (inputRows.isEmpty() || energy.getEnergyStored() < ENERGY_PER_OP) {
+            return false;
         }
-        working = true;
-        try {
-            if (mode == MODE_ASSEMBLY) {
-                doAssembly(level);
-            } else {
-                doInscribe(level);
-            }
-        } catch (Throwable e) {
-            log.error("InstantInscriberEntity.requestCompute error", e);
-        } finally {
-            working = false;
+        ensureRecipeCache(level);
+        return mode == MODE_ASSEMBLY ? runAssembly() : runInscribe();
+    }
+
+    /** 缓存失效重建：RecipeManager 引用变化即重建（其余 tick / 切模式不再重扫配方表） */
+    private void ensureRecipeCache(Level level) {
+        RecipeManager rm = level.getRecipeManager();
+        if (rm != recipeCacheManager) {
+            recipeCacheManager = rm;
+            inscribeCache = readInscribe(level);
+            assemblyCache = readAssembly(level);
         }
     }
 
     /**
-     * 压板模式：每消耗 1 份原料，同时生成它支持的所有 inscribe 配方各一份。
+     * 压板模式批量合成：对每个输入行，1 份原料 = 命中全部 inscribe 配方各产 outCount。
+     * n = min(行存量, 电量 / 每批成本)，整批一次扣料/扣能/加产物，不逐件循环。
      * 能量/输出行种类不足时整批跳过（不部分消耗材料）。
      */
-    private void doInscribe(Level level) {
-        List<InscribeEntry> recipes = readInscribe(level);
-        if (recipes.isEmpty()) {
-            return;
+    private boolean runInscribe() {
+        if (inscribeCache.isEmpty()) {
+            return false;
         }
-        boolean anyMoved = false;
+        boolean moved = false;
         for (Row row : new ArrayList<>(inputRows)) {
             if (row.stock <= 0) {
                 continue;
@@ -337,7 +345,7 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
             // 该原料命中的所有压板配方
             List<InscribeEntry> hits = new ArrayList<>();
             ItemStack probe = new ItemStack(row.item, 1);
-            for (InscribeEntry entry : recipes) {
+            for (InscribeEntry entry : inscribeCache) {
                 if (entry.material.test(probe)) {
                     hits.add(entry);
                 }
@@ -346,78 +354,82 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
                 continue;
             }
             // 一批成本与输出占位（种类）
-            long cost = 0;
+            long perRound = 0;
             for (InscribeEntry entry : hits) {
-                cost += (long) entry.outCount * ENERGY_PER_OP;
+                perRound += (long) entry.outCount * ENERGY_PER_OP;
             }
-            // 每批消耗 1 份原料
-            while (row.stock > 0 && energy.getEnergyStored() >= cost && canFitOutputTypes(hits)) {
-                row.stock--;
-                energy.spendEnergy((int) cost);
-                for (InscribeEntry entry : hits) {
-                    addOutputProduct(entry.output.getItem(), entry.outCount);
-                }
-                anyMoved = true;
+            if (!canFitOutputTypes(hits)) {
+                continue; // 输出区类型容纳不下整批产物（扣料前预判）
             }
+            long n = Math.min(row.stock, (long) energy.getEnergyStored() / perRound);
+            if (n <= 0) {
+                continue;
+            }
+            row.stock -= n;
+            energy.spendEnergy((int) (n * perRound));
+            for (InscribeEntry entry : hits) {
+                addOutputProduct(entry.output.getItem(), n * entry.outCount);
+            }
+            moved = true;
         }
         cleanEmptyRows(inputRows);
-        if (anyMoved) {
-            setChanged();
-        }
+        return moved;
     }
 
     /**
-     * 组装模式：消耗配方全部输入材料生成结果，优先生成 3 材料配方，其次 2 材料配方。
+     * 组装模式批量合成：消耗配方全部输入材料生成结果。
+     * 优先级 = 3 材料配方先于 2 材料配方；每个配方按整批算完，外层 do-while 直到某轮无配方可执行
+     * （guard 仅防未来回归）。
      */
-    private void doAssembly(Level level) {
-        List<AssemblyEntry> recipes = readAssembly(level);
-        if (recipes.isEmpty()) {
-            return;
+    private boolean runAssembly() {
+        if (assemblyCache.isEmpty()) {
+            return false;
         }
         List<AssemblyEntry> three = new ArrayList<>();
         List<AssemblyEntry> two = new ArrayList<>();
-        for (AssemblyEntry entry : recipes) {
+        for (AssemblyEntry entry : assemblyCache) {
             if (entry.nonEmpty == 3) {
                 three.add(entry);
             } else if (entry.nonEmpty == 2) {
                 two.add(entry);
             }
         }
-        boolean anyMoved = false;
+        boolean moved = false;
         int guard = 0;
-        while (guard++ < 4096) {
-            boolean anyThree = false;
-            for (AssemblyEntry entry : three) {
-                while (tryAssemble(entry)) {
-                    anyThree = true;
-                    anyMoved = true;
-                }
+        boolean progressed;
+        do {
+            progressed = false;
+            progressed |= runExecutables(three); // 3 材料优先，直到本轮该组无配方可执行
+            progressed |= runExecutables(two);
+            if (progressed) {
+                moved = true;
             }
-            if (anyThree) {
-                continue; // 3 材料仍可行则始终优先
-            }
-            boolean anyTwo = false;
-            for (AssemblyEntry entry : two) {
-                while (tryAssemble(entry)) {
-                    anyTwo = true;
-                    anyMoved = true;
-                }
-            }
-            if (!anyTwo) {
-                break;
-            }
-        }
+        } while (progressed && ++guard < 1024);
         cleanEmptyRows(inputRows);
-        if (anyMoved) {
-            setChanged();
+        return moved;
+    }
+
+    /** 对列表内每个配方各整批执行直至无法执行，返回是否有任一执行成功 */
+    private boolean runExecutables(List<AssemblyEntry> entries) {
+        boolean any = false;
+        for (AssemblyEntry entry : entries) {
+            while (executeAssemblyBatch(entry) > 0) {
+                any = true;
+            }
         }
+        return any;
     }
 
     /**
-     * 尝试按配方组装一次：成功则扣材料、扣能量、加产物。
+     * 尝试按配方整批合成一次：解析各材料槽命中行（含 multiplicity：同一行被多个槽命中时按次数扣），
+     * n = min(电量 / 每件成本, 各材料行可用量 / 被用次数)；能量/输出种类容量不足则跳过；
+     * 成功则整批原子扣料/扣能/加产物。
+     *
+     * @return 实际合成次数
      */
-    private boolean tryAssemble(AssemblyEntry entry) {
-        List<Row> needed = new ArrayList<>();
+    private long executeAssemblyBatch(AssemblyEntry entry) {
+        List<Row> rows = new ArrayList<>();
+        List<Long> need = new ArrayList<>();
         for (Ingredient ing : entry.mats) {
             if (ing == null || ing.isEmpty()) {
                 continue;
@@ -430,40 +442,48 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
                 }
             }
             if (row == null) {
-                return false;
+                return 0; // 某材料槽无命中：本次无法执行
             }
-            needed.add(row);
+            int idx = rows.indexOf(row);
+            if (idx < 0) {
+                rows.add(row);
+                need.add(1L);
+            } else {
+                need.set(idx, need.get(idx) + 1);
+            }
         }
-        if (needed.isEmpty()) {
-            return false;
+        if (rows.isEmpty()) {
+            return 0;
         }
-        int cost = entry.outCount * ENERGY_PER_OP;
-        if (energy.getEnergyStored() < cost) {
-            return false;
+        long perOp = (long) entry.outCount * ENERGY_PER_OP;
+        long n = (long) energy.getEnergyStored() / perOp;
+        for (int i = 0; i < rows.size(); i++) {
+            n = Math.min(n, rows.get(i).stock / need.get(i));
         }
-        // 输出种类容量
+        if (n <= 0) {
+            return 0;
+        }
+        // 输出种类容量（扣料前预判）
         if (!canFitOutputTypes(entry.output.getItem())) {
-            return false;
+            return 0;
         }
-        for (Row row : needed) {
-            row.stock--;
+        for (int i = 0; i < rows.size(); i++) {
+            rows.get(i).stock -= n * need.get(i);
         }
-        energy.spendEnergy(cost);
-        addOutputProduct(entry.output.getItem(), entry.outCount);
-        return true;
+        energy.spendEnergy((int) (n * perOp));
+        addOutputProduct(entry.output.getItem(), n * entry.outCount);
+        return n;
     }
 
-    /** 输出区能否容纳这批结果（每个结果必须命中已有输出行，或还有空闲行） */
+    /** 输出区能否容纳这批结果（每个结果必须命中已有输出行，或还有空闲行；同类去重） */
     private boolean canFitOutputTypes(List<InscribeEntry> entries) {
-        int needNew = 0;
+        Set<Item> needNew = new HashSet<>();
         for (InscribeEntry entry : entries) {
-            Item item = entry.output.getItem();
-            Row row = findRow(outputRows, item);
-            if (row == null) {
-                needNew++;
+            if (findRow(outputRows, entry.output.getItem()) == null) {
+                needNew.add(entry.output.getItem());
             }
         }
-        return outputRows.size() + needNew <= OUTPUT_MAX_TYPES;
+        return outputRows.size() + needNew.size() <= OUTPUT_MAX_TYPES;
     }
 
     private boolean canFitOutputTypes(Item item) {
@@ -579,55 +599,81 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
 
     // ==================== 输出推送 ====================
 
+    /** 单次大批量塞入上限（件），避免对无限容量邻居逐 64 组循环导致卡顿 */
+    private static final long PUSH_BATCH = 1_000_000;
+
+    /**
+     * 服务端 tick：每 tick 先按当前模式做一轮批量合成（合成完成后），再执行输出推送。
+     * 只在确有改动（合成动行/扣能、推送推货）时才 setChanged，避免闲置机器持续脏标记。
+     */
     public void serverTick() {
         Level level = getLevel();
         if (level == null || level.isClientSide) {
             return;
         }
         try {
-            pushOutput();
+            boolean changed = computeOnce(level); // 每 tick 先合成
+            changed |= pushOutput();              // 合成后输出
+            if (changed) {
+                setChanged();
+            }
         } catch (Throwable e) {
             log.error("InstantInscriberEntity.serverTick error", e);
         }
-        setChanged();
     }
 
-    private void pushOutput() {
+    /**
+     * 把输出行产物转给启用"推送"的相邻面。每 tick 从轮询游标起探测，
+     * 本 tick 最多成功推给一面；选中面无目标/满时顺延探测其余启用面，避免空等。
+     *
+     * @return 是否实际推出了物品
+     */
+    private boolean pushOutput() {
         Level level = getLevel();
-        if (level == null) {
-            return;
+        if (level == null || outputRows.isEmpty()) {
+            return false;
         }
-        findIndex = (findIndex + 1) % 6;
-        Direction direction = Direction.values()[findIndex];
-        if (directionState[findIndex] != STATE_PUSH) {
-            return;
-        }
-        BlockEntity neighbor = level.getBlockEntity(worldPosition.relative(direction));
-        if (neighbor == null) {
-            return;
-        }
-        IItemHandler handler = neighbor.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite()).resolve().orElse(null);
-        if (handler == null) {
-            return;
-        }
-        for (Row row : new ArrayList<>(outputRows)) {
-            if (row.stock <= 0) {
+        boolean pushed = false;
+        for (int attempt = 0; attempt < 6; attempt++) {
+            findIndex = (findIndex + 1) % 6;
+            Direction direction = Direction.values()[findIndex];
+            if (directionState[findIndex] != STATE_PUSH) {
                 continue;
             }
-            int maxStack = Math.max(1, new ItemStack(row.item).getMaxStackSize());
-            long remaining = row.stock;
-            while (remaining > 0) {
-                int amount = (int) Math.min(remaining, (long) maxStack);
-                ItemStack leftover = ItemHandlerHelper.insertItemStacked(handler, new ItemStack(row.item, amount), false);
-                int inserted = amount - leftover.getCount();
-                if (inserted <= 0) {
-                    break;
+            BlockEntity neighbor = level.getBlockEntity(worldPosition.relative(direction));
+            if (neighbor == null) {
+                continue;
+            }
+            IItemHandler handler = neighbor.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite()).resolve().orElse(null);
+            if (handler == null) {
+                continue;
+            }
+            for (Row row : new ArrayList<>(outputRows)) {
+                if (row.stock <= 0) {
+                    continue;
                 }
-                row.stock -= inserted;
-                remaining -= inserted;
+                long remaining = row.stock;
+                while (remaining > 0) {
+                    int amount = (int) Math.min(remaining, PUSH_BATCH);
+                    if (amount <= 0) {
+                        break;
+                    }
+                    ItemStack leftover = ItemHandlerHelper.insertItemStacked(handler, new ItemStack(row.item, amount), false);
+                    int inserted = amount - leftover.getCount();
+                    if (inserted <= 0) {
+                        break; // 该面已满：顺延下一面
+                    }
+                    row.stock -= inserted;
+                    remaining -= inserted;
+                    pushed = true;
+                }
+            }
+            cleanEmptyRows(outputRows);
+            if (pushed) {
+                return true; // 本 tick 服务一面即可，其余面留待后续轮转
             }
         }
-        cleanEmptyRows(outputRows);
+        return false;
     }
 
     // ==================== 方向/能量 ====================
@@ -662,7 +708,7 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
         public int receiveEnergy(int maxReceive, boolean simulate) {
             int received = super.receiveEnergy(maxReceive, simulate);
             if (!simulate && received > 0) {
-                owner.requestCompute();
+                owner.setChanged(); // 能量须脏标记持久化；合成由每 tick 统一执行
             }
             return received;
         }
@@ -735,17 +781,12 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
         try {
-            boolean oldWorking = working;
-            working = true;
-            try {
-                if (nbt.contains(KEY_INPUT, Tag.TAG_LIST)) {
-                    loadRows(inputRows, (ListTag) nbt.get(KEY_INPUT));
-                }
-                if (nbt.contains(KEY_OUTPUT, Tag.TAG_LIST)) {
-                    loadRows(outputRows, (ListTag) nbt.get(KEY_OUTPUT));
-                }
-            } finally {
-                working = oldWorking;
+            // 反序列化只恢复状态；合成由每 tick 统一执行
+            if (nbt.contains(KEY_INPUT, Tag.TAG_LIST)) {
+                loadRows(inputRows, (ListTag) nbt.get(KEY_INPUT));
+            }
+            if (nbt.contains(KEY_OUTPUT, Tag.TAG_LIST)) {
+                loadRows(outputRows, (ListTag) nbt.get(KEY_OUTPUT));
             }
             if (nbt.contains(KEY_ENERGY, Tag.TAG_INT)) {
                 energy.setEnergyStored(nbt.getInt(KEY_ENERGY));

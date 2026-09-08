@@ -1,17 +1,25 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "ABA",
+    "XBA",
     "BCB",
-    "ABA"
+    "ABX"
   ],
   "key": {
-    "A": { "item": "minecraft:netherite_block" },
-    "B": { "item": "minecraft:golden_apple" },
-    "C": { "item": "minecraft:netherite_sword" }
+    "X": {
+      "item": "alltheimbaium:package_material_x1"
+    },
+    "A": {
+      "item": "minecraft:netherite_block"
+    },
+    "B": {
+      "item": "minecraft:golden_apple"
+    },
+    "C": {
+      "item": "minecraft:netherite_sword"
+    }
   },
   "result": {
-    "item": "alltheimbaium:eternal_sword",
-    "count": 1
+    "item": "alltheimbaium:eternal_sword"
   }
 }

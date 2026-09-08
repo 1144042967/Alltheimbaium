@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "alltheimbaium:block/extraction_interface_top",
+    "bottom": "alltheimbaium:block/extraction_interface_btm",
+    "side": "alltheimbaium:block/extraction_interface_side",
+    "particle": "alltheimbaium:block/extraction_interface_side"
+  }
+}
