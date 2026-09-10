@@ -37,7 +37,7 @@ import java.util.Optional;
  * 生物农场 GUI（176 宽）。
  * <p>
  * 顶部：标题、收容生物与等级/升级进度；右上标记槽(刷怪蛋/特征物收容)与使用槽(物品自动模拟右击)。
- * 中部：27 个产物行虚拟槽（单击取 1、Shift 取 1 组、空格取到背包满，左下角 AE2 风格缩写）。
+ * 中部：27 个产物行虚拟槽（单击取 1、Shift 取 1 组、空格取到背包满，左下角缩写存量）。
  * 下部：六面输出状态按钮 + 主动输出开关 + 清空收容物按钮；最下方玩家背包。
  */
 @OnlyIn(Dist.CLIENT)
@@ -582,7 +582,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         }
     }
 
-    /** 绘制 27 个产物槽左下角的存量缩写（AE2 风格） */
+    /** 绘制 27 个产物槽左下角的存量缩写 */
     private void drawSlotCounts(GuiGraphics guiGraphics) {
         for (int i = 0; i < MobFarmMenu.MAX_PRODUCTS; i++) {
             long stock = this.menu.getProductStock(i);
@@ -673,6 +673,19 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
             this.direction = direction;
         }
 
+        /**
+         * 左键沿用 onPress 的正向循环；右键发反向 id，由菜单侧反向循环。
+         */
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button == 1 && this.active && this.visible && this.clicked(mouseX, mouseY)) {
+                this.playDownSound(Minecraft.getInstance().getSoundManager());
+                MobFarmScreen.this.sendButton(MobFarmMenu.BUTTON_DIR_REVERSE_BASE + this.direction.ordinal());
+                return true;
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
+
         @Override
         protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
             int state = MobFarmScreen.this.menu.getDirectionState(this.direction);
@@ -740,32 +753,22 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
             int state = MobFarmScreen.this.menu.getDirectionState(this.direction);
             ItemStack neighborIcon = MobFarmScreen.this.getNeighborIcon(this.direction);
             String dirName = Component.translatable("screen.alltheimbaium.mob_farm.face." + this.direction.getName()).getString();
-            List<Component> lines = new ArrayList<>();
-            if (!neighborIcon.isEmpty()) {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_target",
-                        MobFarmScreen.this.getNeighborName(this.direction)));
-            } else {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_target",
-                        Component.translatable("screen.alltheimbaium.mob_farm.tooltip_no_target")));
-            }
-            lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_direction", dirName));
+            String content;
             if (state >= MobFarmEntity.STATE_SLOT_BASE) {
                 int slot = state - MobFarmEntity.STATE_SLOT_BASE;
                 ItemStack materialIcon = MobFarmScreen.this.menu.getProductStack(slot);
-                if (!materialIcon.isEmpty()) {
-                    lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material", materialIcon.getHoverName()));
-                } else {
-                    lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material",
-                            Component.translatable("screen.alltheimbaium.mob_farm.slot_number", slot + 1)));
-                }
+                content = materialIcon.isEmpty()
+                        ? Component.translatable("screen.alltheimbaium.output.slot", slot + 1).getString()
+                        : materialIcon.getHoverName().getString();
             } else if (state == MobFarmEntity.STATE_RANDOM) {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material",
-                        Component.translatable("screen.alltheimbaium.mob_farm.random")));
+                content = Component.translatable("screen.alltheimbaium.output.random").getString();
             } else {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material",
-                        Component.translatable("screen.alltheimbaium.mob_farm.disabled")));
+                content = Component.translatable("screen.alltheimbaium.output.disabled").getString();
             }
-            return lines;
+            String target = neighborIcon.isEmpty()
+                    ? null
+                    : MobFarmScreen.this.getNeighborName(this.direction).getString();
+            return FaceTooltip.build(dirName, target, content);
         }
     }
 

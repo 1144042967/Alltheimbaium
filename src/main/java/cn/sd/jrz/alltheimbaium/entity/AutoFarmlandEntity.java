@@ -45,7 +45,7 @@ import java.util.List;
  * 自动耕地方块实体（资源农场式）。
  * <p>
  * 无能量、无标记槽：每 tick 等级增长；上方若有成熟 {@link CropBlock}，则模拟“收获一次”，
- * 把该次掉落每种物品数量 × 当前效率(每级 +1%) 累加到对应产物行（AE 大数 long 存量）；
+ * 把该次掉落每种物品数量 × 当前效率(每级 +1%) 累加到对应产物行（大数 long 存量）；
  * 支持六面输出与总开关。作物保持成熟持续可收。
  */
 public class AutoFarmlandEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
@@ -204,9 +204,20 @@ public class AutoFarmlandEntity extends BlockEntity implements ICapabilityProvid
     }
 
     public void cycleDirectionState(Direction direction) {
+        cycleDirectionState(direction, true);
+    }
+
+    /**
+     * 循环切换某面的输出状态
+     *
+     * @param forward true 正向（左键），false 反向（右键）
+     */
+    public void cycleDirectionState(Direction direction, boolean forward) {
         int idx = direction.ordinal();
         int count = getStateCount();
-        directionState[idx] = (directionState[idx] + 1) % count;
+        directionState[idx] = forward
+                ? (directionState[idx] + 1) % count
+                : (directionState[idx] + count - 1) % count;
         setChanged();
     }
 

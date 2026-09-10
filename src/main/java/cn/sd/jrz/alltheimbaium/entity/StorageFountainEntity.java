@@ -256,8 +256,19 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
      * 循环切换指定面的输出状态
      */
     public void cycleDirectionState(Direction direction) {
+        cycleDirectionState(direction, true);
+    }
+
+    /**
+     * 循环切换某面的输出状态
+     *
+     * @param forward true 正向（左键），false 反向（右键）
+     */
+    public void cycleDirectionState(Direction direction, boolean forward) {
         int idx = direction.ordinal();
-        directionState[idx] = (directionState[idx] + 1) % STATE_COUNT;
+        directionState[idx] = forward
+                ? (directionState[idx] + 1) % STATE_COUNT
+                : (directionState[idx] + STATE_COUNT - 1) % STATE_COUNT;
         setChanged();
     }
 

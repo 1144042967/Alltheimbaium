@@ -60,7 +60,7 @@ public class Registration {
         MENUS.register(context.getModEventBus());
         CREATIVE_MODE_TABS.register(Alltheimbaium.MODID, () -> CreativeModeTab.builder()
                 .title(Component.translatable("itemGroup." + Alltheimbaium.MODID))
-                .icon(() -> new ItemStack(Registration.FARMLAND_ITEM.get()))
+                .icon(() -> new ItemStack(Registration.ETERNAL_SWORD.get()))
                 .displayItems((parameters, output) -> {
                     // 顺序与下方声明顺序一致，按品级升序排列
                     output.accept(Registration.PACKAGE_MATERIAL_X1.get());

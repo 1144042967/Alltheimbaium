@@ -22,8 +22,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,7 +30,7 @@ import java.util.Optional;
  * <p>
  * 黑色背景区域：第一行增长进度条，第二行增长百分比，第三行下次增长数值，第四行产量；
  * 右下角为标记槽（放入物品标记/取消标记）。下方为 9 个已标记物品槽（单击提取 1 个、shift 提取 1 组、空格提取到背包满，
- * 槽位左下角以 AE2 风格缩写显示数量）。再下方为六面输出状态按钮（随机/禁用/槽1~槽9，槽位状态显示对应物品图标），
+ * 槽位左下角以缩写显示数量）。再下方为六面输出状态按钮（随机/禁用/槽1~槽9，槽位状态显示对应物品图标），
  * 左下物品栏标签 + 右侧"输出"总开关按钮，最下方为玩家物品栏。
  */
 @OnlyIn(Dist.CLIENT)
@@ -65,7 +63,7 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     // 已标记物品槽左下角数量文字偏移
     private static final int COUNT_X = 0;
     private static final int COUNT_Y = 12;
-    /** AE2 风格数量文字缩放（0.5 倍小字体，绘制在槽位左下角且位于图标之上） */
+    /** 存量文字缩放（0.5 倍小字体，绘制在槽位左下角且位于图标之上） */
     private static final float COUNT_SCALE = 0.5F;
 
     private final FaceButton[] faceButtons = new FaceButton[6];
@@ -203,8 +201,8 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     }
 
     /**
-     * 绘制 9 个已标记物品槽左下角的存量数量（AE2 风格缩写，如 1.1K、2.1M）。
-     * 参考 AE2 的显示方式：缩小字体（0.5 倍）。
+     * 绘制 9 个已标记物品槽左下角的存量数量（缩写，如 1.1K、2.1M）。
+     * 显示方式：缩小字体（0.5 倍）。
      * 深度层级：物品 z≈250 < 数量文字 z=300 < tooltip 背景 z=400，
      * 因此数量文字盖在物品之上，又位于 tooltip 背景之下（tooltip 显示时背景可覆盖它）。
      */
@@ -280,7 +278,7 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     }
 
     /**
-     * 存量数量单位缩写：参考 AE2，1.1K、2.1M 等
+     * 存量数量单位缩写：1.1K、2.1M 等
      */
     private static String formatCount(long value) {
         if (value < 1000) {
@@ -363,6 +361,19 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
             this.direction = direction;
         }
 
+        /**
+         * 左键沿用 onPress 的正向循环；右键发反向 id，由菜单侧反向循环。
+         */
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button == 1 && this.active && this.visible && this.clicked(mouseX, mouseY)) {
+                this.playDownSound(Minecraft.getInstance().getSoundManager());
+                StorageFountainScreen.this.sendButton(StorageFountainMenu.BUTTON_DIR_REVERSE_BASE + this.direction.ordinal());
+                return true;
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
+
         @Override
         protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
             int state = StorageFountainScreen.this.menu.getDirectionState(this.direction);
@@ -442,35 +453,22 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
             int state = StorageFountainScreen.this.menu.getDirectionState(this.direction);
             ItemStack neighborIcon = StorageFountainScreen.this.getNeighborIcon(this.direction);
             String dirName = Component.translatable("screen.alltheimbaium.storage_fountain.face." + this.direction.getName()).getString();
-            List<Component> lines = new ArrayList<>();
-            // 输出目的：相邻方块名，无相邻方块时提示无目标
-            if (!neighborIcon.isEmpty()) {
-                lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_target",
-                        StorageFountainScreen.this.getNeighborName(this.direction)));
-            } else {
-                lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_target",
-                        Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_no_target")));
-            }
-            // 输出方向
-            lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_direction", dirName));
-            // 输出材料：槽位物品名/槽号，随机，禁用
+            String content;
             if (state >= StorageFountainEntity.STATE_SLOT_BASE) {
                 int slot = state - StorageFountainEntity.STATE_SLOT_BASE;
                 ItemStack materialIcon = StorageFountainScreen.this.menu.getMarkedStack(slot);
-                if (!materialIcon.isEmpty()) {
-                    lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_material", materialIcon.getHoverName()));
-                } else {
-                    lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_material",
-                            Component.translatable("screen.alltheimbaium.storage_fountain.slot_number", slot + 1)));
-                }
+                content = materialIcon.isEmpty()
+                        ? Component.translatable("screen.alltheimbaium.output.slot", slot + 1).getString()
+                        : materialIcon.getHoverName().getString();
             } else if (state == StorageFountainEntity.STATE_RANDOM) {
-                lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_material",
-                        Component.translatable("screen.alltheimbaium.storage_fountain.random")));
+                content = Component.translatable("screen.alltheimbaium.output.random").getString();
             } else {
-                lines.add(Component.translatable("screen.alltheimbaium.storage_fountain.tooltip_material",
-                        Component.translatable("screen.alltheimbaium.storage_fountain.disabled")));
+                content = Component.translatable("screen.alltheimbaium.output.disabled").getString();
             }
-            return lines;
+            String target = neighborIcon.isEmpty()
+                    ? null
+                    : StorageFountainScreen.this.getNeighborName(this.direction).getString();
+            return FaceTooltip.build(dirName, target, content);
         }
     }
 

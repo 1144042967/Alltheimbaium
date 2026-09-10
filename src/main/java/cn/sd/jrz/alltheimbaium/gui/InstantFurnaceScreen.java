@@ -10,7 +10,11 @@ import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
@@ -21,10 +25,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 零刻熔炉 GUI（AE 大数版，参考方块生成机）。
+ * 零刻熔炉 GUI（大数版，参考方块生成机）。
  * <p>
  * 顶部标题 + FE 能量条；中间两行输入格（暖色带，可投料/取回）与两行输出格（冷色带，取成品）共 36 格；
- * 格子左下角以 AE 风格小字显示存量（1.1K/2.1M…）。输入区与输出区之间一排：6 个六面推送开关 + 交换按钮。
+ * 格子左下角以缩写小字显示存量（1.1K/2.1M…）。输入区与输出区之间一排：6 个六面推送开关 + 交换按钮。
  * 交互：单击格取 1、Shift 取 1 组、空格取满；手中持原料点击输入格 = 整组投料并入输入行。
  */
 @OnlyIn(Dist.CLIENT)
@@ -232,7 +236,7 @@ public class InstantFurnaceScreen extends AbstractContainerScreen<InstantFurnace
     }
 
     /**
-     * 在 36 个格子左下角绘制 AE 风格存量小字
+     * 在 36 个格子左下角绘制缩写存量小字
      */
     private void drawSlotCounts(GuiGraphics guiGraphics) {
         for (int i = 0; i < InstantFurnaceEntity.MAX_TYPES; i++) {
@@ -297,6 +301,31 @@ public class InstantFurnaceScreen extends AbstractContainerScreen<InstantFurnace
     }
 
     /**
+     * 获取指定方向相邻方块状态（客户端世界不可用/无机器时返回空气）
+     */
+    private BlockState getNeighborState(Direction direction) {
+        if (this.minecraft != null && this.minecraft.level != null && this.menu.entity != null) {
+            return this.minecraft.level.getBlockState(this.menu.entity.getBlockPos().relative(direction));
+        }
+        return Blocks.AIR.defaultBlockState();
+    }
+
+    /**
+     * 获取指定方向相邻方块的物品图标（无方块或方块无对应物品时返回空）
+     */
+    private ItemStack getNeighborIcon(Direction direction) {
+        Item item = getNeighborState(direction).getBlock().asItem();
+        return item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
+    }
+
+    /**
+     * 获取指定方向相邻方块的显示名
+     */
+    private Component getNeighborName(Direction direction) {
+        return getNeighborState(direction).getBlock().getName();
+    }
+
+    /**
      * 六面推送开关：绿=推送、红=禁用
      */
     private class FaceButton extends Button {
@@ -317,18 +346,31 @@ public class InstantFurnaceScreen extends AbstractContainerScreen<InstantFurnace
             guiGraphics.fill(this.getX() - 1, this.getY() + this.getHeight(), this.getX() + this.getWidth() + 1, this.getY() + this.getHeight() + 1, borderColor);
             guiGraphics.fill(this.getX() - 1, this.getY(), this.getX(), this.getY() + this.getHeight(), borderColor);
             guiGraphics.fill(this.getX() + this.getWidth(), this.getY(), this.getX() + this.getWidth() + 1, this.getY() + this.getHeight(), borderColor);
-            guiGraphics.drawCenteredString(InstantFurnaceScreen.this.font, directionArrow(this.direction),
-                    this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
+            ItemStack neighborIcon = InstantFurnaceScreen.this.getNeighborIcon(this.direction);
+            if (!neighborIcon.isEmpty()) {
+                // 有相邻方块：按钮 16x16 与贴图等大，直接铺满显示，不再画方向箭头
+                guiGraphics.renderItem(neighborIcon, this.getX(), this.getY());
+            } else {
+                guiGraphics.drawCenteredString(InstantFurnaceScreen.this.font, directionArrow(this.direction),
+                        this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
+            }
         }
 
+        /**
+         * hover tooltip：内容（启用/禁用）/ 输出方向 / 输出目标
+         */
+        @Nonnull
         List<Component> buildTooltip() {
             int state = InstantFurnaceScreen.this.menu.getDirectionState(this.direction);
-            List<Component> lines = new ArrayList<>();
-            lines.add(Component.translatable("screen.alltheimbaium.instant_furnace.face." + this.direction.getName()));
-            lines.add(state == InstantFurnaceEntity.STATE_DISABLED
-                    ? Component.translatable("screen.alltheimbaium.instant_furnace.disabled")
-                    : Component.translatable("screen.alltheimbaium.instant_furnace.push"));
-            return lines;
+            ItemStack neighborIcon = InstantFurnaceScreen.this.getNeighborIcon(this.direction);
+            String dirName = Component.translatable("screen.alltheimbaium.instant_furnace.face." + this.direction.getName()).getString();
+            String content = Component.translatable(state == InstantFurnaceEntity.STATE_DISABLED
+                    ? "screen.alltheimbaium.output.disabled"
+                    : "screen.alltheimbaium.output.enabled").getString();
+            String target = neighborIcon.isEmpty()
+                    ? null
+                    : InstantFurnaceScreen.this.getNeighborName(this.direction).getString();
+            return FaceTooltip.build(dirName, target, content);
         }
     }
 }

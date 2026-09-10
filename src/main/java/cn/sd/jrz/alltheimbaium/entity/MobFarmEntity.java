@@ -553,9 +553,20 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
     }
 
     public void cycleDirectionState(Direction direction) {
+        cycleDirectionState(direction, true);
+    }
+
+    /**
+     * 循环切换某面的输出状态
+     *
+     * @param forward true 正向（左键），false 反向（右键）
+     */
+    public void cycleDirectionState(Direction direction, boolean forward) {
         int idx = direction.ordinal();
         int count = getStateCount();
-        directionState[idx] = (directionState[idx] + 1) % count;
+        directionState[idx] = forward
+                ? (directionState[idx] + 1) % count
+                : (directionState[idx] + count - 1) % count;
         setChanged();
     }
 

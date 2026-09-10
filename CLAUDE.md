@@ -100,6 +100,50 @@ protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
 
 标题必须 `true`：品级色（黄/青/淡紫）在浅色背景上不带阴影会糊。传进去的颜色参数已被标题组件的样式色覆盖，只是样式缺失时的兜底。`playerInventoryTitle` 不属于标题，维持 `false`。
 
+### 大数存储的文案约定
+
+**面向玩家的文本（tooltip / README / 界面文字）里不出现 "AE"**：
+
+- 机器的大数存量（自动耕地 / 生物农场 / 资源农场 / 零刻熔炉 / 零刻压印器）统一表述为"大数"，不写"AE 大数"。
+- 存量的**缩写显示方式**（1.1K / 2.1M、0.5 倍小字）参考 AE2 的实现——这属于实现细节，只在本文档记录，不进 tooltip 与 README。代码注释同理只写"缩写"。
+- **例外**：AE2 作为**真实模组依赖**时必须点名。零刻压印器的配方来源就是 `ae2:inscriber`、未装 AE2 便不产出，tooltip 与 README 必须写明；"建议用 AE2 的存储面板管理"这类联动建议同理。去掉这些会让玩家不明白机器为什么不能用。
+
+### 六面输出按钮的 hover tooltip
+
+所有带六面输出按钮的界面（自动耕地 / 生物农场 / 资源农场 / 存储方块制造机 / 零刻熔炉 / 零刻压印器 / 液体无限制造机）一律走 `gui/FaceTooltip.java`，不要各自拼装：
+
+```
+§f<要输出的内容>              ① 无标签，有可选项的机器始终显示
+§7输出方向：§e<方向>            ②
+§7输出目标：§e<指向的方块>       ③ 无目标时显示 §8无
+```
+
+- 第一行内容取自当前面状态，共用键 `screen.alltheimbaium.output.*`：
+  - 有槽位可选的机器（三个农场 + 存储机）：物品名 / 空槽显示 `.slot` 的"槽 N" / `.random` 随机 / `.disabled` 禁用
+  - 只有开/关两态的机器（零刻熔炉 / 零刻压印器 / 液体无限制造机）：`.enabled` 启用 / `.disabled` 禁用
+- `build(...)` 的 `outputContent` 传 `null` 时整行省略。该分支目前**没有调用方**（所有界面都始终显示内容行），保留是为了后续可能出现的"无可选输出"机器。
+- 液体机的面状态要**直接读 `menu.isFaceEnabled(dir)`**，不要用 `FaceButton.state` 缓存字段——那个字段在 `render()` 里晚于 tooltip 渲染才刷新，用它会慢一帧。
+
+### 六面按钮的图标
+
+相邻位置有方块时，按钮直接铺该方块的物品贴图，不再画方向箭头：
+
+- 零刻熔炉 / 零刻压印器的按钮是 16×16，与物品贴图等大，`renderItem(icon, getX(), getY())` 铺满即可。
+- 液体机的按钮是 38×13，需按比例缩放到 13px 再居中（`pose().scale(...)`）。
+- 无相邻方块时回落到原有的方向箭头 / 方向名文字。
+- 三个农场与存储机的按钮是「[相邻贴图] ← [槽位贴图/槽号]」两段式，不走上面这套，见各自的 `FaceButton.renderWidget`。
+- 标签 `§7` 暗、内容 `§e` 亮，内容行 `§f` 更亮，是这一组提示的固定读法。
+- 方向名键三个农场共用 `screen.alltheimbaium.mob_farm.face.*`（**没有** `auto_farmland.face.*` 与 `resource_farm.face.*`）。
+- 拼装一律字符串拼接，不用 `Component.append`——`§` 的格式状态不跨兄弟组件传递，前缀放进独立组件会被丢弃（同 `item/Tip.java`）。
+
+### 六面按钮的点击
+
+- **左键**正向循环（原有点击逻辑不变），**右键**反向循环。
+- 实现：`FaceButton` 覆写 `mouseClicked`，`button == 1` 时发 `BUTTON_DIR_REVERSE_BASE + direction.ordinal()`，否则交回 `super`（走原有 `onPress`）。菜单侧把该区间转成 `entity.cycleDirectionState(dir, false)`。
+- `BUTTON_DIR_REVERSE_BASE` 取值为紧邻各菜单 `BUTTON_OUTPUT` 之后：三个农场菜单 **88**、存储机菜单 **34**，各占 6 个 id。
+- 实体侧 `cycleDirectionState(Direction, boolean forward)` 反向用 `(state + count - 1) % count`，`count == 1` 时仍安全。
+- 该功能目前**不在 tooltip 里提示**（tooltip 行数由规范固定为三行），需要靠玩家自行发现；若要加提示行须先放宽上面的规范。
+
 类型键 `tip.alltheimbaium.type.*`：material / farmland / building / accelerator / agriculture / processing / resource / logistics / supply / combat / survival。
 
 ## 项目架构
@@ -289,6 +333,9 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - **组装模式 `MODE_ASSEMBLY`**：取 `processType=PRESS` 配方，消耗 top/middle/bottom 中全部非空材料；**3 材料配方优先于 2 材料**，外层循环直到无配方可执行（guard 1024）
 - 每件产物 1000 FE，上限 200,000,000 FE；输入 **18 种**、输出 **9 种**
 - 交互与零刻熔炉同构：`BUTTON_MODE` 切模式、`BUTTON_DEPOSIT_INPUT` 投料、三档取出、六面推送/禁用两态
+- **标题栏右侧两个 "?" 帮助卡**（参考 `MobFarmScreen`）：左=压板配方、右=组装配方，一行一条 `输出物品 ← 输入物品…`；点击可翻页，纯客户端逻辑。
+  - 配方数据来自 `InstantInscriberEntity.inscribeSummaries(level)` / `assemblySummaries(level)`——**客户端可用**，因为 `ClientLevel.getRecipeManager()` 返回登录时同步下来的配方管理器（与 JEI、配方书同源）。未装 AE2 时返回空列表，卡片显示"未安装 AE2"。
+  - 摘要把每个 `Ingredient` 折成其第一个候选物品（AE2 压印配方的材料实际都是单一物品），并按产物注册名排序，保证分页顺序稳定。
 
 ### 10. 取出接口 (`ExtractionInterfaceBlock` / `ExtractionInterfaceEntity`)
 

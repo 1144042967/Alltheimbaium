@@ -47,10 +47,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ATI 零刻熔炉实体（AE 大数版，参考方块生成机/自动耕地）。
+ * ATI 零刻熔炉实体（大数版，参考方块生成机/自动耕地）。
  * <p>
  * 输入区与输出区各为最多 {@link #MAX_TYPES} 行"物品种类行"：每行 = 一种物品 + {@code long} 大数存量，
- * 数量无 64 上限、可保存大数；GUI 以 AE 风格数字展示。熔炼无耗时：
+ * 数量无 64 上限、可保存大数；GUI 以缩写数字展示。熔炼无耗时：
  * <ul>
  *     <li>每 tick 服务端先做一轮批量熔炼（SMELTING→BLASTING→SMOKING 三级兜底查配方，
  *         每种输入行按当前电量整批一次算完），合成完成后执行输出推送；</li>
@@ -273,7 +273,7 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
     }
 
     /**
-     * 每 tick 单遍批量熔炼（服务端）：把输入行中可烧炼物品整批转为输出行产物（AE 大数，无每行 64 上限）。
+     * 每 tick 单遍批量熔炼（服务端）：把输入行中可烧炼物品整批转为输出行产物（大数，无每行 64 上限）。
      * 对每个输入行一次算完：n = min(行存量, 电量 / 单件耗能)，扣 n、扣能 n×1000、加 n×产物数量，不逐件循环。
      *
      * @return 是否有改动（供 serverTick 门控 setChanged）

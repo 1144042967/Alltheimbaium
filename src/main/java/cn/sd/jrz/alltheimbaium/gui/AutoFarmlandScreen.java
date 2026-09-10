@@ -16,8 +16,8 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -31,7 +31,7 @@ import java.util.Optional;
 
 /**
  * 自动耕地 GUI（资源农场式，复用 mob_farm 布局）。
- * 无标记槽/能量：顶部显示当前作物与等级进度，27 行产物槽（AE 大数）、六向输出按钮、输出总开关。
+ * 无标记槽/能量：顶部显示当前作物与等级进度，27 行产物槽（大数）、六向输出按钮、输出总开关。
  */
 @OnlyIn(Dist.CLIENT)
 public class AutoFarmlandScreen extends AbstractContainerScreen<AutoFarmlandMenu> {
@@ -44,9 +44,9 @@ public class AutoFarmlandScreen extends AbstractContainerScreen<AutoFarmlandMenu
     private static final int TOOL_BTN_W = 48;
     private static final int TOOL_BTN_H = 12;
     private static final int OUTPUT_BTN_X = 176 - TOOL_BTN_W - 8;
-    private static final int OUTPUT_BTN_Y = 145;
+    private static final int OUTPUT_BTN_Y = 144;
     private static final int PROGRESS_X = 8;
-    private static final int PROGRESS_Y = 34;
+    private static final int PROGRESS_Y = 37;
     private static final int PROGRESS_W = 160; // 去掉标记槽后加宽进度条，横跨顶部信息区（可随 GUI 微调）
     private static final int PROGRESS_H = 4;
     private static final float COUNT_SCALE = 0.5F;
@@ -141,9 +141,9 @@ public class AutoFarmlandScreen extends AbstractContainerScreen<AutoFarmlandMenu
         guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFAA00, true);
         guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x000000, false);
         Component crop = Component.translatable("screen.alltheimbaium.auto_farmland.crop", currentCropName());
-        guiGraphics.drawString(this.font, crop, 8, 14, 0xFFFFFF, true);
+        guiGraphics.drawString(this.font, crop, 8, 16, 0xFFFFFF, true);
         guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.mob_farm.level_progress",
-                this.menu.getLevel(), growthPercent()), 8, 24, 0xFFFFFF, true);
+                this.menu.getLevel(), growthPercent()), 8, 27, 0xFFFFFF, true);
     }
 
     @Override
@@ -283,6 +283,19 @@ public class AutoFarmlandScreen extends AbstractContainerScreen<AutoFarmlandMenu
             this.direction = direction;
         }
 
+        /**
+         * 左键沿用 onPress 的正向循环；右键发反向 id，由菜单侧反向循环。
+         */
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button == 1 && this.active && this.visible && this.clicked(mouseX, mouseY)) {
+                this.playDownSound(Minecraft.getInstance().getSoundManager());
+                AutoFarmlandScreen.this.sendButton(AutoFarmlandMenu.BUTTON_DIR_REVERSE_BASE + this.direction.ordinal());
+                return true;
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
+
         @Override
         protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
             int state = AutoFarmlandScreen.this.menu.getDirectionState(this.direction);
@@ -350,32 +363,22 @@ public class AutoFarmlandScreen extends AbstractContainerScreen<AutoFarmlandMenu
             int state = AutoFarmlandScreen.this.menu.getDirectionState(this.direction);
             ItemStack neighborIcon = AutoFarmlandScreen.this.getNeighborIcon(this.direction);
             String dirName = Component.translatable("screen.alltheimbaium.mob_farm.face." + this.direction.getName()).getString();
-            List<Component> lines = new ArrayList<>();
-            if (!neighborIcon.isEmpty()) {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_target",
-                        AutoFarmlandScreen.this.getNeighborName(this.direction)));
-            } else {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_target",
-                        Component.translatable("screen.alltheimbaium.mob_farm.tooltip_no_target")));
-            }
-            lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_direction", dirName));
+            String content;
             if (state >= AutoFarmlandEntity.STATE_SLOT_BASE) {
                 int slot = state - AutoFarmlandEntity.STATE_SLOT_BASE;
                 ItemStack materialIcon = AutoFarmlandScreen.this.menu.getProductStack(slot);
-                if (!materialIcon.isEmpty()) {
-                    lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material", materialIcon.getHoverName()));
-                } else {
-                    lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material",
-                            Component.translatable("screen.alltheimbaium.mob_farm.slot_number", slot + 1)));
-                }
+                content = materialIcon.isEmpty()
+                        ? Component.translatable("screen.alltheimbaium.output.slot", slot + 1).getString()
+                        : materialIcon.getHoverName().getString();
             } else if (state == AutoFarmlandEntity.STATE_RANDOM) {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material",
-                        Component.translatable("screen.alltheimbaium.mob_farm.random")));
+                content = Component.translatable("screen.alltheimbaium.output.random").getString();
             } else {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material",
-                        Component.translatable("screen.alltheimbaium.mob_farm.disabled")));
+                content = Component.translatable("screen.alltheimbaium.output.disabled").getString();
             }
-            return lines;
+            String target = neighborIcon.isEmpty()
+                    ? null
+                    : AutoFarmlandScreen.this.getNeighborName(this.direction).getString();
+            return FaceTooltip.build(dirName, target, content);
         }
     }
 

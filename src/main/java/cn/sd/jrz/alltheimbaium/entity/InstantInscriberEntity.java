@@ -38,9 +38,11 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.energy.EnergyStorage;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Comparator;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -50,9 +52,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * ATI 零刻压印器（AE2 大数版，配方参考 AE2 压印机 Inscriber）。
+ * ATI 零刻压印器（大数版，配方参考 AE2 压印机 Inscriber）。
  * <p>
- * 输入区最多 {@link #INPUT_MAX_TYPES} 行、输出区最多 {@link #OUTPUT_MAX_TYPES} 行（AE 大数存储）。
+ * 输入区最多 {@link #INPUT_MAX_TYPES} 行、输出区最多 {@link #OUTPUT_MAX_TYPES} 行（大数存储）。
  * 两档模式（GUI 可切换、NBT 保存）：
  * <ul>
  *     <li>{@link #MODE_INSCRIBE 压板}：读取 AE2 <code>mode:inscribe</code> 配方。模板(top/bottom)不消耗，
@@ -596,6 +598,70 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
             log.error("InstantInscriberEntity.readAssembly error", e);
         }
         return result;
+    }
+
+    // ==================== GUI 帮助卡数据 ====================
+
+    /**
+     * GUI 帮助卡用的一条配方摘要。
+     *
+     * @param output 产物
+     * @param inputs 消耗的材料，每个 Ingredient 取其第一个候选物品
+     */
+    public record RecipeSummary(@Nonnull ItemStack output, @Nonnull List<ItemStack> inputs) {
+    }
+
+    /**
+     * 压板模式（INSCRIBE）支持的配方摘要，供 GUI 帮助卡使用：1 份中间原料 → 它支持的全部压板。
+     * <p>
+     * **客户端同样可用**——{@code RecipeManager} 两端都有同步后的配方；未装 AE2 时返回空列表。
+     */
+    @Nonnull
+    public static List<RecipeSummary> inscribeSummaries(@Nonnull Level level) {
+        List<RecipeSummary> result = new ArrayList<>();
+        for (InscribeEntry entry : readInscribe(level)) {
+            result.add(new RecipeSummary(entry.output, firstOf(entry.material)));
+        }
+        sortByOutput(result);
+        return result;
+    }
+
+    /**
+     * 组装模式（PRESS）支持的配方摘要，供 GUI 帮助卡使用：消耗 top/middle/bottom 的全部非空材料
+     */
+    @Nonnull
+    public static List<RecipeSummary> assemblySummaries(@Nonnull Level level) {
+        List<RecipeSummary> result = new ArrayList<>();
+        for (AssemblyEntry entry : readAssembly(level)) {
+            List<ItemStack> inputs = new ArrayList<>();
+            for (Ingredient ing : entry.mats) {
+                inputs.addAll(firstOf(ing));
+            }
+            result.add(new RecipeSummary(entry.output, inputs));
+        }
+        sortByOutput(result);
+        return result;
+    }
+
+    /** 取 Ingredient 的第一个候选物品（AE2 压印配方的材料实际都是单一物品） */
+    @Nonnull
+    private static List<ItemStack> firstOf(@Nullable Ingredient ingredient) {
+        if (ingredient == null || ingredient.isEmpty()) {
+            return List.of();
+        }
+        ItemStack[] items = ingredient.getItems();
+        return items.length == 0 ? List.of() : List.of(items[0]);
+    }
+
+    /**
+     * 按产物注册名排序。{@code getAllRecipesFor} 返回的顺序取决于 Map 迭代，虽然同一会话内稳定，
+     * 但排序后分页顺序才是可预期的。
+     */
+    private static void sortByOutput(@Nonnull List<RecipeSummary> summaries) {
+        summaries.sort(Comparator.comparing(s -> {
+            ResourceLocation id = ForgeRegistries.ITEMS.getKey(s.output().getItem());
+            return id == null ? "" : id.toString();
+        }));
     }
 
     // ==================== 输出推送 ====================

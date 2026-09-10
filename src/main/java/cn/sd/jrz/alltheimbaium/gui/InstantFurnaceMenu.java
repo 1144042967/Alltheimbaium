@@ -20,7 +20,7 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
 /**
- * 零刻熔炉容器（AE 大数版）。
+ * 零刻熔炉容器（大数版）。
  * <p>
  * 槽位：0~17 输入行（虚拟展示，两行）、18~35 输出行（虚拟展示，两行）、36~71 玩家背包。
  * 通过数据槽同步能量、六面状态与 18+18 行的 物品 id + 存量(long)。

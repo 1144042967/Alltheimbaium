@@ -34,6 +34,8 @@ public class StorageFountainMenu extends AbstractContainerMenu {
     public static final int BUTTON_EXTRACT_STACK_BASE = 15;      // 15~23：shift 提取 1 组
     public static final int BUTTON_EXTRACT_ALL_BASE = 24;        // 24~32：空格 提取到背包满
     public static final int BUTTON_OUTPUT = 33;                  // 输出总开关
+    /** 34~39：右键反向循环切换六面输出状态 */
+    public static final int BUTTON_DIR_REVERSE_BASE = 34;
 
     public final StorageFountainEntity entity;
 
@@ -128,6 +130,7 @@ public class StorageFountainMenu extends AbstractContainerMenu {
         return new ItemStack(BuiltInRegistries.ITEM.byId(clientItemIds[index]), 1);
     }
 
+
     /**
      * 指定槽位的存量（内部单位）
      */
@@ -150,6 +153,9 @@ public class StorageFountainMenu extends AbstractContainerMenu {
         }
         if (id >= BUTTON_DIR_BASE && id < BUTTON_DIR_BASE + 6) {
             entity.cycleDirectionState(Direction.values()[id - BUTTON_DIR_BASE]);
+        } else if (id >= BUTTON_DIR_REVERSE_BASE && id < BUTTON_DIR_REVERSE_BASE + 6) {
+            // 右键：反向循环
+            entity.cycleDirectionState(Direction.values()[id - BUTTON_DIR_REVERSE_BASE], false);
         } else if (id >= BUTTON_EXTRACT_ONE_BASE && id < BUTTON_EXTRACT_ONE_BASE + 9) {
             extract(player, id - BUTTON_EXTRACT_ONE_BASE, 1);
         } else if (id >= BUTTON_EXTRACT_STACK_BASE && id < BUTTON_EXTRACT_STACK_BASE + 9) {

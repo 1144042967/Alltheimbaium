@@ -39,6 +39,8 @@ public class MobFarmMenu extends AbstractContainerMenu {
     public static final int BUTTON_EXTRACT_STACK_BASE = 33;      // 33~59：shift 提取 1 组
     public static final int BUTTON_EXTRACT_ALL_BASE = 60;        // 60~86：空格 提取到背包满
     public static final int BUTTON_OUTPUT = 87;                  // 输出总开关
+    /** 88~93：右键反向循环切换六面输出状态 */
+    public static final int BUTTON_DIR_REVERSE_BASE = 88;
 
     // 槽位号
     public static final int SLOT_SPECIAL = 0;                    // 收容/使用合一槽
@@ -149,6 +151,7 @@ public class MobFarmMenu extends AbstractContainerMenu {
         //noinspection deprecation
         return new ItemStack(BuiltInRegistries.ITEM.byId(clientItemIds[index]), 1);
     }
+
 
     public long getProductStock(int index) {
         if (serverSide()) {
@@ -286,6 +289,9 @@ public class MobFarmMenu extends AbstractContainerMenu {
         }
         if (id >= BUTTON_DIR_BASE && id < BUTTON_DIR_BASE + 6) {
             entity.cycleDirectionState(Direction.values()[id - BUTTON_DIR_BASE]);
+        } else if (id >= BUTTON_DIR_REVERSE_BASE && id < BUTTON_DIR_REVERSE_BASE + 6) {
+            // 右键：反向循环
+            entity.cycleDirectionState(Direction.values()[id - BUTTON_DIR_REVERSE_BASE], false);
         } else if (id >= BUTTON_EXTRACT_ONE_BASE && id < BUTTON_EXTRACT_ONE_BASE + MAX_PRODUCTS) {
             extract(player, id - BUTTON_EXTRACT_ONE_BASE, 1);
         } else if (id >= BUTTON_EXTRACT_STACK_BASE && id < BUTTON_EXTRACT_STACK_BASE + MAX_PRODUCTS) {

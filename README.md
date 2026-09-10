@@ -31,7 +31,7 @@
 - 上方作物被反复收获，掉落直接存入机器，全程不消耗能量
 - 只收割普通作物；下界疣与南瓜、西瓜的茎不会被收割
 - 收获效率每级 +1%，等级每 20 秒 +1，无上限
-- 产物按 AE 大数累计在 27 行内，可在界面取出或由管道抽取
+- 产物按大数累计在 27 行内，可在界面取出或由管道抽取
 - 每个面可单独指定输出槽位，也可整体关闭主动输出
 - 顶面右键留给种植，界面需从侧面或底面打开
 
@@ -74,7 +74,7 @@
 - 每台只能收容一次，不可取消或更换
 - 收容后同一个槽变为使用槽：放入剪刀 / 桶 / 碗 / 玻璃瓶可模拟右键获取对应产物，且不消耗耐久
 - 产出速率 = 权重 × 等级 ÷ 500 件/秒，等级每 20 秒 +1
-- 产物按 AE 大数累计在 27 行内，可在界面取出或由管道抽取
+- 产物按大数累计在 27 行内，可在界面取出或由管道抽取
 
 ### ATI 资源农场
 
@@ -83,13 +83,13 @@
 - 每台只能标记一次，不可取消或更换
 - 产出速率 = 权重 × 等级 ÷ 500 件/秒，等级每 20 秒 +1
 - 悬停界面右上角的 ? 可查看「标记物 → 产物」的完整对照表
-- 产物按 AE 大数累计在 27 行内，可在界面取出或由管道抽取
+- 产物按大数累计在 27 行内，可在界面取出或由管道抽取
 
 ### ATI 零刻熔炉
 
 - 原料进入输入区即刻完成烧炼，每件耗 1000 FE
 - 熔炉 / 高炉 / 烟熏配方均可，优先级为熔炉 → 高炉 → 烟熏
-- 输入与输出各 18 种，以 AE 大数存储，不受 64 堆叠限制
+- 输入与输出各 18 种，以大数存储，不受 64 堆叠限制
 - Shift+左键背包物品或点击投料按钮即可投料；取物统一为左键 1 / Shift 一组 / 空格取满
 - 只接收 FE，不向外放电
 
@@ -98,7 +98,7 @@
 - 读取 AE2 压印机配方即时生成，每件产物耗 1000 FE
 - **压板**：只消耗中间那格原料，上下模板既不放入也不消耗，1 份原料产出它支持的全部压板
 - **组装**：消耗上中下三格的全部材料，先算 3 材料配方再算 2 材料配方
-- 输入 18 种 / 输出 9 种，以 AE 大数存储
+- 输入 18 种 / 输出 9 种，以大数存储
 - 依赖 AE2 配方，未安装 AE2 时不产出；只接收 FE，不向外放电
 
 ### ATI 取出接口
@@ -210,7 +210,7 @@ Cost tracks the tier: iron ingots for Utility, iron blocks for Advanced, diamond
 - Crops on top are harvested over and over, with drops going straight into the machine — no energy required
 - Only regular crops are harvested; nether wart and pumpkin/melon stems are not
 - Harvest efficiency is +1% per level, and the level rises by 1 every 20 s with no cap
-- Products accumulate as AE big numbers across 27 rows, extractable in the GUI or by pipes
+- Products accumulate as big numbers across 27 rows, extractable in the GUI or by pipes
 - Each face can target a specific output slot, or active output can be switched off entirely
 - The top face is reserved for planting — open the GUI from a side or the bottom
 
@@ -253,7 +253,7 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 - Each farm can contain only once — no cancelling or swapping
 - Once contained, that slot becomes a use slot: shears / a bucket / a bowl / a glass bottle are right-clicked on the mob for you, with no durability cost
 - Output rate = weight × level ÷ 500 items/s, with the level rising by 1 every 20 s
-- Products accumulate as AE big numbers across 27 rows, extractable in the GUI or by pipes
+- Products accumulate as big numbers across 27 rows, extractable in the GUI or by pipes
 
 ### ATI Resource Farm
 
@@ -262,13 +262,13 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 - Each farm can be marked only once — no cancelling or swapping
 - Output rate = weight × level ÷ 500 items/s, with the level rising by 1 every 20 s
 - Hover the ? at the GUI's top-right for the full marker → products table
-- Products accumulate as AE big numbers across 27 rows, extractable in the GUI or by pipes
+- Products accumulate as big numbers across 27 rows, extractable in the GUI or by pipes
 
 ### ATI Instant Furnace
 
 - Anything entering the input area is smelted instantly, at 1000 FE per item
 - Works with furnace / blast furnace / smoker recipes, in that priority order
-- 18 input and 18 output item types, stored as AE big numbers with no 64 stack limit
+- 18 input and 18 output item types, stored as big numbers with no 64 stack limit
 - Shift+click an inventory item or use the deposit button to feed it; take items with click (1) / Shift-click (a stack) / Space-click (fill)
 - Accepts FE only — it never outputs power
 
@@ -277,7 +277,7 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 - Generates AE2 inscriber recipes instantly, at 1000 FE per product
 - **Press**: consumes only the middle material — the top and bottom templates are neither needed nor consumed, and one material yields every press it feeds into
 - **Assemble**: consumes all materials in the top, middle and bottom slots, running 3-material recipes before 2-material ones
-- 18 input / 9 output item types, stored as AE big numbers
+- 18 input / 9 output item types, stored as big numbers
 - Depends on AE2 recipes and produces nothing without AE2; accepts FE only, never outputs power
 
 ### ATI Extraction Interface

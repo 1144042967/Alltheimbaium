@@ -21,8 +21,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fluids.FluidStack;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -147,13 +145,10 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
     @Override
     public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
-        // 渲染六面按钮 tooltip（按钮显示相邻方块贴图时提示输出目的/输出方向）
+        // 渲染六面按钮 tooltip（输出内容 / 输出方向 / 输出目标）
         for (FaceButton faceButton : this.faceButtons) {
             if (faceButton.isHovered()) {
-                List<Component> lines = faceButton.buildTooltip();
-                if (lines != null) {
-                    guiGraphics.renderTooltip(this.font, lines, Optional.empty(), mouseX, mouseY);
-                }
+                guiGraphics.renderTooltip(this.font, faceButton.buildTooltip(), Optional.empty(), mouseX, mouseY);
             }
         }
         // + 输入槽 hover 提示：槽内无物品时显示容器使用方法说明
@@ -331,20 +326,20 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
         }
 
         /**
-         * 构建 hover tooltip：按钮显示相邻方块贴图时返回 [输出目的/输出方向]，否则返回 null
+         * 构建 hover tooltip：内容（启用/禁用）/ 输出方向 / 输出目标。
+         * 状态直接读 menu，不用缓存的 {@code state} 字段——那个字段在本帧 tooltip 之后才刷新，会慢一帧。
          */
-        @Nullable
+        @Nonnull
         List<Component> buildTooltip() {
             ItemStack neighborIcon = LiquidFountainScreen.this.getNeighborIcon(this.direction);
-            if (neighborIcon.isEmpty()) {
-                return null;
-            }
             String dirName = Component.translatable("screen.alltheimbaium.liquid_fountain.face." + this.direction.getName()).getString();
-            List<Component> lines = new ArrayList<>();
-            lines.add(Component.translatable("screen.alltheimbaium.liquid_fountain.tooltip_target",
-                    LiquidFountainScreen.this.getNeighborName(this.direction)));
-            lines.add(Component.translatable("screen.alltheimbaium.liquid_fountain.tooltip_direction", dirName));
-            return lines;
+            String content = Component.translatable(LiquidFountainScreen.this.menu.isFaceEnabled(this.direction)
+                    ? "screen.alltheimbaium.output.enabled"
+                    : "screen.alltheimbaium.output.disabled").getString();
+            String target = neighborIcon.isEmpty()
+                    ? null
+                    : LiquidFountainScreen.this.getNeighborName(this.direction).getString();
+            return FaceTooltip.build(dirName, target, content);
         }
     }
 

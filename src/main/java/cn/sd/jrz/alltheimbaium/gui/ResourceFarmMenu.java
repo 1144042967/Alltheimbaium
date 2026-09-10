@@ -37,6 +37,8 @@ public class ResourceFarmMenu extends AbstractContainerMenu {
     public static final int BUTTON_EXTRACT_STACK_BASE = 33;
     public static final int BUTTON_EXTRACT_ALL_BASE = 60;
     public static final int BUTTON_OUTPUT = 87;
+    /** 88~93：右键反向循环切换六面输出状态 */
+    public static final int BUTTON_DIR_REVERSE_BASE = 88;
 
     public static final int SLOT_MARKER = 0;
     public static final int SLOT_PRODUCT_BASE = 1;
@@ -139,6 +141,7 @@ public class ResourceFarmMenu extends AbstractContainerMenu {
         return new ItemStack(BuiltInRegistries.ITEM.byId(clientItemIds[index]), 1);
     }
 
+
     public long getProductStock(int index) {
         if (serverSide()) {
             return entity.getProductStock(index);
@@ -213,6 +216,9 @@ public class ResourceFarmMenu extends AbstractContainerMenu {
         }
         if (id >= BUTTON_DIR_BASE && id < BUTTON_DIR_BASE + 6) {
             entity.cycleDirectionState(Direction.values()[id - BUTTON_DIR_BASE]);
+        } else if (id >= BUTTON_DIR_REVERSE_BASE && id < BUTTON_DIR_REVERSE_BASE + 6) {
+            // 右键：反向循环
+            entity.cycleDirectionState(Direction.values()[id - BUTTON_DIR_REVERSE_BASE], false);
         } else if (id >= BUTTON_EXTRACT_ONE_BASE && id < BUTTON_EXTRACT_ONE_BASE + MAX_PRODUCTS) {
             extract(player, id - BUTTON_EXTRACT_ONE_BASE, 1);
         } else if (id >= BUTTON_EXTRACT_STACK_BASE && id < BUTTON_EXTRACT_STACK_BASE + MAX_PRODUCTS) {

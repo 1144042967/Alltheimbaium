@@ -465,6 +465,19 @@ public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu
             this.direction = direction;
         }
 
+        /**
+         * 左键沿用 onPress 的正向循环；右键发反向 id，由菜单侧反向循环。
+         */
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button == 1 && this.active && this.visible && this.clicked(mouseX, mouseY)) {
+                this.playDownSound(Minecraft.getInstance().getSoundManager());
+                ResourceFarmScreen.this.sendButton(ResourceFarmMenu.BUTTON_DIR_REVERSE_BASE + this.direction.ordinal());
+                return true;
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
+
         @Override
         protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
             int state = ResourceFarmScreen.this.menu.getDirectionState(this.direction);
@@ -532,32 +545,22 @@ public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu
             int state = ResourceFarmScreen.this.menu.getDirectionState(this.direction);
             ItemStack neighborIcon = ResourceFarmScreen.this.getNeighborIcon(this.direction);
             String dirName = Component.translatable("screen.alltheimbaium.mob_farm.face." + this.direction.getName()).getString();
-            List<Component> lines = new ArrayList<>();
-            if (!neighborIcon.isEmpty()) {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_target",
-                        ResourceFarmScreen.this.getNeighborName(this.direction)));
-            } else {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_target",
-                        Component.translatable("screen.alltheimbaium.mob_farm.tooltip_no_target")));
-            }
-            lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_direction", dirName));
+            String content;
             if (state >= ResourceFarmEntity.STATE_SLOT_BASE) {
                 int slot = state - ResourceFarmEntity.STATE_SLOT_BASE;
                 ItemStack materialIcon = ResourceFarmScreen.this.menu.getProductStack(slot);
-                if (!materialIcon.isEmpty()) {
-                    lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material", materialIcon.getHoverName()));
-                } else {
-                    lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material",
-                            Component.translatable("screen.alltheimbaium.mob_farm.slot_number", slot + 1)));
-                }
+                content = materialIcon.isEmpty()
+                        ? Component.translatable("screen.alltheimbaium.output.slot", slot + 1).getString()
+                        : materialIcon.getHoverName().getString();
             } else if (state == ResourceFarmEntity.STATE_RANDOM) {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material",
-                        Component.translatable("screen.alltheimbaium.mob_farm.random")));
+                content = Component.translatable("screen.alltheimbaium.output.random").getString();
             } else {
-                lines.add(Component.translatable("screen.alltheimbaium.mob_farm.tooltip_material",
-                        Component.translatable("screen.alltheimbaium.mob_farm.disabled")));
+                content = Component.translatable("screen.alltheimbaium.output.disabled").getString();
             }
-            return lines;
+            String target = neighborIcon.isEmpty()
+                    ? null
+                    : ResourceFarmScreen.this.getNeighborName(this.direction).getString();
+            return FaceTooltip.build(dirName, target, content);
         }
     }
 
