@@ -16,8 +16,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * ATI 取出接口：聚合相邻本 MOD 产物/流体机器，供管道被动抽取。
- * 无 GUI（不覆写 use）、无主动 tick；仅提供只读能力，见 {@link ExtractionInterfaceEntity}。
+ * ATI 取出接口：沿本 MOD 方块连通搜索，聚合范围内全部产物/流体机器，供管道被动抽取。
+ * 无 GUI（不覆写 use）、无主动输出；仅提供只读能力，见 {@link ExtractionInterfaceEntity}。
  */
 public class ExtractionInterfaceBlock extends Block implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(ExtractionInterfaceBlock.class);
@@ -32,10 +32,26 @@ public class ExtractionInterfaceBlock extends Block implements EntityBlock {
         return new ExtractionInterfaceEntity(pos, state);
     }
 
-    /** 无需 tick：抽取聚合在每次能力查询时实时计算 */
+    /** 服务端 tick：周期性重算连通范围；客户端不参与 */
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
-        return null;
+        return (l, p, s, tile) -> {
+            try {
+                tick(l, tile);
+            } catch (Throwable e) {
+                log.error("ExtractionInterfaceBlock.getTicker error", e);
+            }
+        };
+    }
+
+    private <T extends BlockEntity> void tick(@Nonnull Level level, @Nonnull T tile) {
+        if (level.isClientSide) {
+            return;
+        }
+        if (!(tile instanceof ExtractionInterfaceEntity entity)) {
+            return;
+        }
+        entity.serverTick();
     }
 }

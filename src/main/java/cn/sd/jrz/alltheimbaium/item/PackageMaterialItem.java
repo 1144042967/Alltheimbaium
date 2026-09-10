@@ -1,13 +1,10 @@
 package cn.sd.jrz.alltheimbaium.item;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -16,12 +13,15 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * 生成平台物品。
+ * 打包材料（合成中间物）。
+ * <p>
+ * 材料级物品没有可配置项，按规范只保留品级行与一句话概述——合成配方由 JEI 呈现，
+ * 再写一遍用法属于冗余说明。
  */
-public class PlatformItem extends BlockItem {
+public class PackageMaterialItem extends Item {
 
-    public PlatformItem(Block block) {
-        super(block, new Item.Properties().rarity(Rarity.UNCOMMON));
+    public PackageMaterialItem() {
+        super(new Item.Properties());
     }
 
     @Override
@@ -29,11 +29,7 @@ public class PlatformItem extends BlockItem {
     public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
         super.appendHoverText(stack, worldIn, tooltip, flagIn);
         Tip.of(tooltip)
-                .head(stack, "tip.alltheimbaium.type.building")
-                .summary("item.alltheimbaium.platform.summary")
-                .usage("item.alltheimbaium.platform.usage.1",
-                        "item.alltheimbaium.platform.usage.2",
-                        "item.alltheimbaium.platform.usage.3")
-                .warn("item.alltheimbaium.platform.warn.1");
+                .head(stack, "tip.alltheimbaium.type.material")
+                .summary("item.alltheimbaium.package_material_x1.summary");
     }
 }

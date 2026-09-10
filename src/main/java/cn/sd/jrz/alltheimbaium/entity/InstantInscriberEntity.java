@@ -2,6 +2,7 @@ package cn.sd.jrz.alltheimbaium.entity;
 
 import cn.sd.jrz.alltheimbaium.connection.InstantInscriberConnection;
 import cn.sd.jrz.alltheimbaium.gui.InstantInscriberMenu;
+import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
@@ -729,7 +730,7 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.instant_inscriber");
+        return Component.translatable("block.alltheimbaium.instant_inscriber").withStyle(Tip.rarityColor(Registration.INSTANT_INSCRIBER_ITEM.get()));
     }
 
     @Nullable

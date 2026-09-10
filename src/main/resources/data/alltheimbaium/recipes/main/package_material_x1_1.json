@@ -1,6 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "group": "package_material",
+  "group": "alltheimbaium",
   "key": {
     "A": {
       "tag": "minecraft:planks"

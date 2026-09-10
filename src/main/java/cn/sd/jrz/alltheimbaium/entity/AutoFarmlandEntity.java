@@ -3,6 +3,7 @@ package cn.sd.jrz.alltheimbaium.entity;
 import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.connection.AutoFarmlandConnection;
 import cn.sd.jrz.alltheimbaium.gui.AutoFarmlandMenu;
+import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
@@ -357,7 +358,7 @@ public class AutoFarmlandEntity extends BlockEntity implements ICapabilityProvid
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.auto_farmland");
+        return Component.translatable("block.alltheimbaium.auto_farmland").withStyle(Tip.rarityColor(Registration.AUTO_FARMLAND_ITEM.get()));
     }
 
     @Nullable

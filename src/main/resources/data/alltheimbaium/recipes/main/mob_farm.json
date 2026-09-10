@@ -1,6 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "group": "mob_farm",
+  "group": "alltheimbaium",
   "pattern": [
     "XBB",
     "BCB",
@@ -11,7 +11,7 @@
       "item": "alltheimbaium:package_material_x1"
     },
     "B": {
-      "item": "minecraft:iron_ingot"
+      "item": "minecraft:diamond_block"
     },
     "C": {
       "item": "minecraft:glass_bottle"

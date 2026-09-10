@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -23,11 +24,17 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
+/**
+ * ATI 液体无限制造机物品。
+ * <p>
+ * tooltip 说明三件非显然的事：只接受单一流体、未达阈值时不会主动输出但仍可被管道抽走、
+ * 以及手持容器右键可直接装取。
+ */
 public class LiquidFountainItem extends BlockItem {
     private static final Logger log = LoggerFactory.getLogger(LiquidFountainItem.class);
 
     public LiquidFountainItem(Block block) {
-        super(block, new Properties().fireResistant());
+        super(block, new Properties().rarity(Rarity.EPIC).fireResistant());
     }
 
     @Override
@@ -35,8 +42,6 @@ public class LiquidFountainItem extends BlockItem {
     public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
         super.appendHoverText(stack, worldIn, tooltip, flagIn);
         try {
-            // 说明：只有达到无限后才允许主动输出
-            tooltip.add(Component.translatable("screen.alltheimbaium.liquid_fountain.output_note"));
             FluidStack fluidStack = FluidStack.EMPTY;
             if (stack.hasTag()) {
                 CompoundTag tag = stack.getTagElement("BlockEntityTag");
@@ -52,22 +57,33 @@ public class LiquidFountainItem extends BlockItem {
                             fluidStack = new FluidStack(fluid, 0);
                         }
                     }
-                    if (tag.contains("fluid_amount", Tag.TAG_INT)) {
-                        if (fluidStack != FluidStack.EMPTY) {
-                            fluidStack.setAmount(tag.getInt("fluid_amount"));
-                        }
+                    if (tag.contains("fluid_amount", Tag.TAG_INT) && fluidStack != FluidStack.EMPTY) {
+                        fluidStack.setAmount(tag.getInt("fluid_amount"));
                     }
                 }
             }
+            long max = LiquidFountainBlock.getMax();
+            Tip tip = Tip.of(tooltip)
+                    .head(stack, "tip.alltheimbaium.type.resource")
+                    .summary("item.alltheimbaium.liquid_fountain.summary");
             if (fluidStack == FluidStack.EMPTY) {
-                tooltip.add(Component.translatable("screen.alltheimbaium.liquid.fountain.empty", String.format("%,d", LiquidFountainBlock.getMax())));
-                return;
+                tip.state("item.alltheimbaium.liquid_fountain.state.empty");
+            } else if (fluidStack.getAmount() < max) {
+                // 内部存量按 mB 计数，直接展示原始值即可，无需换算
+                tip.state("item.alltheimbaium.liquid_fountain.state.fluid",
+                        fluidStack.getDisplayName().getString(),
+                        String.format("%,d", fluidStack.getAmount()),
+                        String.format("%,d", max));
+            } else {
+                tip.state("item.alltheimbaium.liquid_fountain.state.infinite",
+                        fluidStack.getDisplayName().getString());
             }
-            if (fluidStack.getAmount() < LiquidFountainBlock.getMax()) {
-                tooltip.add(Component.translatable("screen.alltheimbaium.liquid.fountain.current", fluidStack.getDisplayName(), fluidStack.getAmount(), LiquidFountainBlock.getMax()));
-                return;
-            }
-            tooltip.add(Component.translatable("screen.alltheimbaium.liquid.fountain.max", fluidStack.getDisplayName()));
+            tip.usage("item.alltheimbaium.liquid_fountain.usage.1",
+                            "item.alltheimbaium.liquid_fountain.usage.2",
+                            "item.alltheimbaium.liquid_fountain.usage.3")
+                    .params()
+                    .bullet("item.alltheimbaium.liquid_fountain.param.1", String.format("%,d", max))
+                    .warn("item.alltheimbaium.liquid_fountain.warn.1");
         } catch (Throwable e) {
             log.error("LiquidFountainItem.appendHoverText error", e);
         }

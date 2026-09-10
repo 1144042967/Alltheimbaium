@@ -3,6 +3,7 @@ package cn.sd.jrz.alltheimbaium.entity;
 import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.connection.MobFarmConnection;
 import cn.sd.jrz.alltheimbaium.gui.MobFarmMenu;
+import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.KillLootEstimator;
 import cn.sd.jrz.alltheimbaium.setup.MobFarmCatalog;
 import cn.sd.jrz.alltheimbaium.setup.MobFarmInteraction;
@@ -811,7 +812,7 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.mob_farm");
+        return Component.translatable("block.alltheimbaium.mob_farm").withStyle(Tip.rarityColor(Registration.MOB_FARM_ITEM.get()));
     }
 
     @Nullable

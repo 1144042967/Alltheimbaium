@@ -6,6 +6,33 @@
       "entries": [
         {
           "type": "minecraft:item",
+          "functions": [
+            {
+              "function": "minecraft:copy_name",
+              "source": "block_entity"
+            },
+            {
+              "function": "minecraft:copy_nbt",
+              "ops": [
+                {
+                  "op": "replace",
+                  "source": "enabled",
+                  "target": "BlockEntityTag.enabled"
+                },
+                {
+                  "op": "replace",
+                  "source": "directionEnabled",
+                  "target": "BlockEntityTag.directionEnabled"
+                },
+                {
+                  "op": "replace",
+                  "source": "speed",
+                  "target": "BlockEntityTag.speed"
+                }
+              ],
+              "source": "block_entity"
+            }
+          ],
           "name": "alltheimbaium:clock"
         }
       ],

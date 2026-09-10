@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.network;
 
 import cn.sd.jrz.alltheimbaium.gui.EternalSwordMenu;
+import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -45,7 +46,7 @@ public class OpenEternalSwordGuiPacket {
             NetworkHooks.openScreen(player, new MenuProvider() {
                 @Override
                 public Component getDisplayName() {
-                    return Component.translatable("screen.alltheimbaium.eternal_sword.title");
+                    return Component.translatable("screen.alltheimbaium.eternal_sword.title").withStyle(Tip.rarityColor(Registration.ETERNAL_SWORD.get()));
                 }
 
                 @Override

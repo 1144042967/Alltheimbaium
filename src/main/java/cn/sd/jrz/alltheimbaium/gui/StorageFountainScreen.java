@@ -167,7 +167,7 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         // 标题与物品栏标签：亮色背景上用深色文字
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, false);
+        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, true);
         guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
         // 黑色信息面板上的四行信息（局部坐标）：产量/下次增长均以 /tick 为单位。
         // 下次增长 = 下次要增长的数值（增量），不是增长后的值。

@@ -17,6 +17,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
@@ -31,6 +32,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,7 +47,7 @@ public class MobFarmItem extends BlockItem {
     private static final Logger log = LoggerFactory.getLogger(MobFarmItem.class);
 
     public MobFarmItem(Block block) {
-        super(block, new Properties().fireResistant());
+        super(block, new Properties().rarity(Rarity.RARE).fireResistant());
     }
 
     /**
@@ -186,41 +188,55 @@ public class MobFarmItem extends BlockItem {
                     }
                 }
             }
+            Tip tip = Tip.of(tooltip)
+                    .head(stack, "tip.alltheimbaium.type.agriculture")
+                    .summary("item.alltheimbaium.mob_farm.summary");
             if (containedName != null) {
-                tooltip.add(Component.translatable("item.alltheimbaium.mob_farm.tooltip.contained", containedName, level));
-            } else {
-                tooltip.add(Component.translatable("item.alltheimbaium.mob_farm.tooltip.level", level));
+                tip.state("item.alltheimbaium.mob_farm.state.contained", containedName);
             }
-            if (rows != null && !rows.isEmpty()) {
-                for (int i = 0; i < rows.size(); i++) {
-                    try {
-                        CompoundTag c = rows.getCompound(i);
-                        ItemStack rowStack = ItemStack.of(c);
-                        if (rowStack.isEmpty()) {
-                            continue;
-                        }
-                        long stock = c.contains("Stock", Tag.TAG_LONG) ? Tool.suit(c.getLong("Stock")) : 0;
-                        long weight = c.contains("Weight", Tag.TAG_LONG) ? Tool.suit(c.getLong("Weight")) : 0;
-                        String name = rowStack.getHoverName().getString();
-                        if (stock > 0) {
-                            tooltip.add(Component.translatable("item.alltheimbaium.mob_farm.tooltip.product", name, stock));
-                        }
-                        if (weight > 0) {
-                            BigDecimal speed = new BigDecimal(weight).multiply(new BigDecimal(level))
-                                    .divide(new BigDecimal(500), 3, RoundingMode.HALF_UP);
-                            tooltip.add(Component.translatable("item.alltheimbaium.mob_farm.tooltip.rate", name, speed));
-                        }
-                    } catch (Throwable ignored) {
-                    }
-                }
+            tip.state("item.alltheimbaium.mob_farm.state.level", level);
+            // 产物表最多 27 行，压成一行展示，避免把 tooltip 撑爆
+            List<String> products = collectProducts(rows, level);
+            if (!products.isEmpty()) {
+                tip.raw(Tip.inline(products, "tip.alltheimbaium.more"));
             }
-            // 使用说明：未收容与已收容两种状态都说明
-            tooltip.add(Component.translatable("item.alltheimbaium.mob_farm.tooltip.usage.1"));
-            tooltip.add(Component.translatable("item.alltheimbaium.mob_farm.tooltip.usage.2"));
-            tooltip.add(Component.translatable("item.alltheimbaium.mob_farm.tooltip.usage.3"));
-            tooltip.add(Component.translatable("item.alltheimbaium.mob_farm.tooltip.usage.4"));
+            tip.usage("item.alltheimbaium.mob_farm.usage.1",
+                            "item.alltheimbaium.mob_farm.usage.2",
+                            "item.alltheimbaium.mob_farm.usage.3",
+                            "item.alltheimbaium.mob_farm.usage.4")
+                    .params("item.alltheimbaium.mob_farm.param.1")
+                    .warn("item.alltheimbaium.mob_farm.warn.1");
         } catch (Throwable e) {
             log.error("MobFarmItem.appendHoverText error", e);
         }
+    }
+
+    /**
+     * 把产物行压成"§e速率/秒§7 名称"列表；速率 = 权重 × 等级 ÷ 500 件/秒
+     */
+    @Nonnull
+    private static List<String> collectProducts(@Nullable ListTag rows, long level) {
+        List<String> products = new ArrayList<>();
+        if (rows == null || rows.isEmpty()) {
+            return products;
+        }
+        for (int i = 0; i < rows.size(); i++) {
+            try {
+                CompoundTag c = rows.getCompound(i);
+                ItemStack rowStack = ItemStack.of(c);
+                if (rowStack.isEmpty()) {
+                    continue;
+                }
+                long weight = c.contains("Weight", Tag.TAG_LONG) ? Tool.suit(c.getLong("Weight")) : 0;
+                if (weight <= 0) {
+                    continue;
+                }
+                BigDecimal speed = new BigDecimal(weight).multiply(new BigDecimal(level))
+                        .divide(new BigDecimal(500), 3, RoundingMode.HALF_UP);
+                products.add("§e" + speed.stripTrailingZeros().toPlainString() + "/秒§7 " + rowStack.getHoverName().getString());
+            } catch (Throwable ignored) {
+            }
+        }
+        return products;
     }
 }

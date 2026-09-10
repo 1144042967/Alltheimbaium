@@ -162,12 +162,20 @@ public class EternalSwordItem extends SwordItem {
     @Override
     @OnlyIn(Dist.CLIENT)
     public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level level, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.alltheimbaium.eternal_sword.description"));
-        tooltip.add(Component.translatable(
-                getKillAll(stack) == 1 ? "screen.alltheimbaium.eternal_sword.mode_all" : "screen.alltheimbaium.eternal_sword.mode_hostile")
-        );
-        tooltip.add(Component.translatable("screen.alltheimbaium.eternal_sword.range", getRange(stack)));
         super.appendHoverText(stack, level, tooltip, flag);
+        // 伤害由原版"在主手时"属性行给出，这里不再重复
+        Tip.of(tooltip)
+                .head(stack, "tip.alltheimbaium.type.combat")
+                .summary("item.alltheimbaium.eternal_sword.summary")
+                .state(getKillAll(stack) == 1 ? "item.alltheimbaium.eternal_sword.state.mode_all"
+                        : "item.alltheimbaium.eternal_sword.state.mode_hostile")
+                .state("item.alltheimbaium.eternal_sword.state.range", getRange(stack))
+                .usage("item.alltheimbaium.eternal_sword.usage.1",
+                        "item.alltheimbaium.eternal_sword.usage.2",
+                        "item.alltheimbaium.eternal_sword.usage.3",
+                        "item.alltheimbaium.eternal_sword.usage.4")
+                .warn("item.alltheimbaium.eternal_sword.warn.1",
+                        "item.alltheimbaium.eternal_sword.warn.2");
     }
 
     // ==================== NBT 读写 ====================

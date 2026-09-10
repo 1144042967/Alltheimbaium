@@ -84,8 +84,15 @@ public class EternalTotemItem extends Item {
     @Override
     @OnlyIn(Dist.CLIENT)
     public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        tooltip.add(Component.translatable("item.alltheimbaium.eternal_totem.description"));
         super.appendHoverText(stack, worldIn, tooltip, flagIn);
+        Tip.of(tooltip)
+                .head(stack, "tip.alltheimbaium.type.survival")
+                .summary("item.alltheimbaium.eternal_totem.summary")
+                .usage("item.alltheimbaium.eternal_totem.usage.1",
+                        "item.alltheimbaium.eternal_totem.usage.2",
+                        "item.alltheimbaium.eternal_totem.usage.3",
+                        "item.alltheimbaium.eternal_totem.usage.4")
+                .warn("item.alltheimbaium.eternal_totem.warn.1");
     }
 
     @Override

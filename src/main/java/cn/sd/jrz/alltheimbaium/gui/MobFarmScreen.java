@@ -205,7 +205,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         // 标题：金色，无阴影；收容/等级描述：白字 + 黑阴影（同补给箱风格）
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFAA00, false);
+        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFAA00, true);
         // 物品栏标签：黑色、不加阴影
         guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x000000, false);
         // 收容生物

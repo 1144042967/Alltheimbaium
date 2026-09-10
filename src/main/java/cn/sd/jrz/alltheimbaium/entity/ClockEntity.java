@@ -1,8 +1,13 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
 import cn.sd.jrz.alltheimbaium.block.ClockBlock;
+import cn.sd.jrz.alltheimbaium.block.ExtractionInterfaceBlock;
 import cn.sd.jrz.alltheimbaium.block.FarmlandBlock;
+import cn.sd.jrz.alltheimbaium.block.InstantFurnaceBlock;
+import cn.sd.jrz.alltheimbaium.block.InstantInscriberBlock;
+import cn.sd.jrz.alltheimbaium.block.SupplyCrateBlock;
 import cn.sd.jrz.alltheimbaium.gui.ClockMenu;
+import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
@@ -148,11 +153,11 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
             BlockPos pos = getBlockPos().relative(direction);
             BlockState blockState = level.getBlockState(pos);
             Block block = blockState.getBlock();
+            if (isExcluded(block)) {
+                continue;
+            }
             if (level instanceof ServerLevel && block.isRandomlyTicking(blockState)) {
                 blockState.randomTick((ServerLevel) level, pos, level.getRandom());
-            }
-            if (block instanceof ClockBlock || block instanceof FarmlandBlock) {
-                continue;
             }
             if (!(block instanceof EntityBlock entityBlock)) {
                 continue;
@@ -178,12 +183,29 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
         }
     }
 
+    /**
+     * 不参与加速的方块。
+     * <p>
+     * 一是避免互相叠加：加速时钟、ATI 耕地都不会被其它时钟加速；
+     * 二是避免无意义的重复 tick：取出接口靠连通搜索、补给箱靠玩家数据，
+     * 它们的 tick 本身不产生进度；零刻熔炉与零刻压印器每 tick 就按当前电量整批结算完，
+     * 重复调用不会有额外产出，只会白白消耗性能。
+     */
+    private static boolean isExcluded(@Nonnull Block block) {
+        return block instanceof ClockBlock
+                || block instanceof FarmlandBlock
+                || block instanceof ExtractionInterfaceBlock
+                || block instanceof SupplyCrateBlock
+                || block instanceof InstantFurnaceBlock
+                || block instanceof InstantInscriberBlock;
+    }
+
     // ==================== 菜单提供 ====================
 
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.clock");
+        return Component.translatable("block.alltheimbaium.clock").withStyle(Tip.rarityColor(Registration.CLOCK_ITEM.get()));
     }
 
     @Nullable

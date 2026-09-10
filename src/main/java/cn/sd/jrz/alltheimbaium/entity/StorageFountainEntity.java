@@ -3,6 +3,7 @@ package cn.sd.jrz.alltheimbaium.entity;
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.connection.StorageFountainConnection;
 import cn.sd.jrz.alltheimbaium.gui.StorageFountainMenu;
+import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
@@ -299,7 +300,7 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.storage_fountain");
+        return Component.translatable("block.alltheimbaium.storage_fountain").withStyle(Tip.rarityColor(Registration.STORAGE_FOUNTAIN_ITEM.get()));
     }
 
     @Nullable

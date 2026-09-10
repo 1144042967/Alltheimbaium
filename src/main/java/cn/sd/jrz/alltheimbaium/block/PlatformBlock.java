@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.gui.PlatformMenu;
+import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
@@ -203,7 +204,7 @@ public class PlatformBlock extends Block {
             } else {
                 // 右键（空手）：打开配置 GUI
                 MenuProvider provider = new SimpleMenuProvider((id, inv, owner) -> new PlatformMenu(id, inv, pos),
-                        Component.translatable("block.alltheimbaium.platform"));
+                        Component.translatable("block.alltheimbaium.platform").withStyle(Tip.rarityColor(Registration.PLATFORM_ITEM.get())));
                 NetworkHooks.openScreen(serverPlayer, provider, buf -> buf.writeBlockPos(pos));
             }
             return InteractionResult.SUCCESS;

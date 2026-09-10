@@ -3,6 +3,7 @@ package cn.sd.jrz.alltheimbaium.entity;
 import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.connection.ResourceFarmConnection;
 import cn.sd.jrz.alltheimbaium.gui.ResourceFarmMenu;
+import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.ResourceData;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
@@ -526,7 +527,7 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.resource_farm");
+        return Component.translatable("block.alltheimbaium.resource_farm").withStyle(Tip.rarityColor(Registration.RESOURCE_FARM_ITEM.get()));
     }
 
     @Nullable

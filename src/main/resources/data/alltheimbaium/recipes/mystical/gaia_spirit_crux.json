@@ -13,7 +13,7 @@
         }
       ],
       "recipe": {
-        "type": "crafting_shaped",
+        "type": "minecraft:crafting_shaped",
         "key": {
           "E": {
             "item": "mysticalagradditions:insanium_essence"

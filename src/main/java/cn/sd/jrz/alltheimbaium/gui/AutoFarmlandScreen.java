@@ -138,7 +138,7 @@ public class AutoFarmlandScreen extends AbstractContainerScreen<AutoFarmlandMenu
 
     @Override
     protected void renderLabels(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFAA00, false);
+        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFAA00, true);
         guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x000000, false);
         Component crop = Component.translatable("screen.alltheimbaium.auto_farmland.crop", currentCropName());
         guiGraphics.drawString(this.font, crop, 8, 14, 0xFFFFFF, true);

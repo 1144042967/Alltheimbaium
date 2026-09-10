@@ -29,13 +29,20 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.PushReaction;
-import net.minecraftforge.common.Tags;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
+/**
+ * 中心注册文件。
+ * <p>
+ * 声明顺序即物品的注册顺序，也是创造模式标签页的排列顺序，两者保持一致：
+ * 按品级升序（材料级 → 便利级 → 高效级 → 破坏平衡），同级内按用途排列，
+ * 因此自上而下扫一遍标签页，名称颜色梯度就是能力梯度。
+ * 品级与名称颜色的对应关系见 {@code item/Tip.java}。
+ */
 @SuppressWarnings("DataFlowIssue")
 public class Registration {
     private static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, Alltheimbaium.MODID);
@@ -55,27 +62,22 @@ public class Registration {
                 .title(Component.translatable("itemGroup." + Alltheimbaium.MODID))
                 .icon(() -> new ItemStack(Registration.FARMLAND_ITEM.get()))
                 .displayItems((parameters, output) -> {
+                    // 顺序与下方声明顺序一致，按品级升序排列
+                    output.accept(Registration.PACKAGE_MATERIAL_X1.get());
                     output.accept(Registration.FARMLAND_ITEM.get());
+                    output.accept(Registration.PLATFORM_ITEM.get());
+                    output.accept(Registration.EXTRACTION_INTERFACE_ITEM.get());
+                    output.accept(Registration.CLOCK_ITEM.get());
+                    output.accept(Registration.SUPPLY_CRATE_ITEM.get());
                     output.accept(Registration.AUTO_FARMLAND_ITEM.get());
+                    output.accept(Registration.INSTANT_FURNACE_ITEM.get());
+                    output.accept(Registration.INSTANT_INSCRIBER_ITEM.get());
+                    output.accept(Registration.MOB_FARM_ITEM.get());
+                    output.accept(Registration.RESOURCE_FARM_ITEM.get());
                     output.accept(Registration.STORAGE_FOUNTAIN_ITEM.get());
                     output.accept(Registration.LIQUID_FOUNTAIN_ITEM.get());
-                    output.accept(Registration.MOB_FARM_ITEM.get());//生物农场
-                    output.accept(Registration.RESOURCE_FARM_ITEM.get());//资源农场
-                    output.accept(Registration.INSTANT_FURNACE_ITEM.get());//零刻熔炉
-                    output.accept(Registration.INSTANT_INSCRIBER_ITEM.get());//零刻压印器
                     output.accept(Registration.ETERNAL_TOTEM.get());
                     output.accept(Registration.ETERNAL_SWORD.get());
-                    output.accept(Registration.CLOCK_ITEM.get());
-                    output.accept(Registration.PLATFORM_ITEM.get());
-                    output.accept(Registration.SUPPLY_CRATE_ITEM.get());//补给箱
-                    output.accept(Registration.EXTRACTION_INTERFACE_ITEM.get());//取出接口
-
-
-
-
-
-
-                    output.accept(Registration.PACKAGE_MATERIAL_X1.get());
                 })
                 .build()
         );
@@ -87,31 +89,45 @@ public class Registration {
             .pushReaction(PushReaction.DESTROY)
             .strength(0.5f, 0.5f);
 
-    // 方块
+    // ==================== 材料级 ====================
+
+    public static final RegistryObject<PackageMaterialItem> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", PackageMaterialItem::new);
+
+    // ==================== 便利级 ====================
 
     public static final RegistryObject<FarmlandBlock> FARMLAND_BLOCK = BLOCKS.register("farmland", FarmlandBlock::new);
+    public static final RegistryObject<BlockItem> FARMLAND_ITEM = ITEMS.register("farmland", () -> new FarmlandItem(FARMLAND_BLOCK.get(), new Item.Properties()));
+
+    public static final RegistryObject<PlatformBlock> PLATFORM_BLOCK = BLOCKS.register("platform", () -> new PlatformBlock(BLOCK_PROPERTIES));
+    public static final RegistryObject<PlatformItem> PLATFORM_ITEM = ITEMS.register("platform", () -> new PlatformItem(PLATFORM_BLOCK.get()));
+
+    // 取出接口：聚合相邻本MOD产物/流体机器，供管道被动抽取（无GUI、无主动输出）
+    public static final RegistryObject<ExtractionInterfaceBlock> EXTRACTION_INTERFACE_BLOCK = BLOCKS.register("extraction_interface", () -> new ExtractionInterfaceBlock(BLOCK_PROPERTIES));
+    public static final RegistryObject<ExtractionInterfaceItem> EXTRACTION_INTERFACE_ITEM = ITEMS.register("extraction_interface", () -> new ExtractionInterfaceItem(EXTRACTION_INTERFACE_BLOCK.get()));
+
+    public static final RegistryObject<ClockBlock> CLOCK_BLOCK = BLOCKS.register("clock", () -> new ClockBlock(BLOCK_PROPERTIES));
+    public static final RegistryObject<ClockItem> CLOCK_ITEM = ITEMS.register("clock", () -> new ClockItem(CLOCK_BLOCK.get()));
+
+    public static final RegistryObject<SupplyCrateBlock> SUPPLY_CRATE_BLOCK = BLOCKS.register("supply_crate", () -> new SupplyCrateBlock(BLOCK_PROPERTIES));
+    public static final RegistryObject<SupplyCrateItem> SUPPLY_CRATE_ITEM = ITEMS.register("supply_crate", () -> new SupplyCrateItem(SUPPLY_CRATE_BLOCK.get()));
+
+    // ==================== 高效级 ====================
+
     public static final RegistryObject<AutoFarmlandBlock> AUTO_FARMLAND_BLOCK = BLOCKS.register("auto_farmland", () -> new AutoFarmlandBlock(
             BlockBehaviour.Properties.of()
                     .mapColor(DyeColor.BLUE)
                     .pushReaction(PushReaction.DESTROY)
                     .strength(0.5f, 0.5f)));
-    public static final RegistryObject<ClockBlock> CLOCK_BLOCK = BLOCKS.register("clock", () -> new ClockBlock(BLOCK_PROPERTIES));
-    public static final RegistryObject<PlatformBlock> PLATFORM_BLOCK = BLOCKS.register("platform", () -> new PlatformBlock(BLOCK_PROPERTIES));
-    public static final RegistryObject<SupplyCrateBlock> SUPPLY_CRATE_BLOCK = BLOCKS.register("supply_crate", () -> new SupplyCrateBlock(BLOCK_PROPERTIES));
-    // 液体机：玻璃罐体，复制玻璃方块属性（音效等）+ noOcclusion 使其不 cull 相邻方块的面，透过罐体能正常看到后面的地面/物品
-    public static final RegistryObject<LiquidFountainBlock> LIQUID_FOUNTAIN_BLOCK = BLOCKS.register("liquid_fountain", () -> new LiquidFountainBlock(
-            BlockBehaviour.Properties.copy(Blocks.GLASS)
-                    .mapColor(DyeColor.BLUE)
-                    .pushReaction(PushReaction.DESTROY)
-                    .strength(0.5f, 0.5f)
-                    .noOcclusion()));
-    public static final RegistryObject<StorageFountainBlock> STORAGE_FOUNTAIN_BLOCK = BLOCKS.register("storage_fountain", () -> new StorageFountainBlock(BLOCK_PROPERTIES));
+    public static final RegistryObject<BlockItem> AUTO_FARMLAND_ITEM = ITEMS.register("auto_farmland", () -> new AutoFarmlandItem(AUTO_FARMLAND_BLOCK.get(), new Item.Properties()));
+
     // 零刻熔炉：18 输入槽 + 18 输出槽，即时熔炼消耗 FE
     public static final RegistryObject<InstantFurnaceBlock> INSTANT_FURNACE_BLOCK = BLOCKS.register("instant_furnace", () -> new InstantFurnaceBlock(BLOCK_PROPERTIES));
+    public static final RegistryObject<BlockItem> INSTANT_FURNACE_ITEM = ITEMS.register("instant_furnace", () -> new InstantFurnaceItem(INSTANT_FURNACE_BLOCK.get()));
+
     // 零刻压印器：读 AE2 压印机配方，压板/组装双模式即时生成（消耗 FE）
     public static final RegistryObject<InstantInscriberBlock> INSTANT_INSCRIBER_BLOCK = BLOCKS.register("instant_inscriber", () -> new InstantInscriberBlock(BLOCK_PROPERTIES));
-    // 取出接口：聚合相邻本MOD产物/流体机器，供管道被动抽取（无GUI、无主动输出）
-    public static final RegistryObject<ExtractionInterfaceBlock> EXTRACTION_INTERFACE_BLOCK = BLOCKS.register("extraction_interface", () -> new ExtractionInterfaceBlock(BLOCK_PROPERTIES));
+    public static final RegistryObject<BlockItem> INSTANT_INSCRIBER_ITEM = ITEMS.register("instant_inscriber", () -> new InstantInscriberItem(INSTANT_INSCRIBER_BLOCK.get()));
+
     // 生物农场：玻璃罐体（noOcclusion 使罐内生物/后方可见）
     public static final RegistryObject<MobFarmBlock> MOB_FARM_BLOCK = BLOCKS.register("mob_farm", () -> new MobFarmBlock(
             BlockBehaviour.Properties.copy(Blocks.GLASS)
@@ -119,6 +135,8 @@ public class Registration {
                     .pushReaction(PushReaction.DESTROY)
                     .strength(0.5f, 0.5f)
                     .noOcclusion()));
+    public static final RegistryObject<BlockItem> MOB_FARM_ITEM = ITEMS.register("mob_farm", () -> new MobFarmItem(MOB_FARM_BLOCK.get()));
+
     // 通用资源农场：玻璃罐体风格
     public static final RegistryObject<ResourceFarmBlock> RESOURCE_FARM_BLOCK = BLOCKS.register("resource_farm", () -> new ResourceFarmBlock(
             BlockBehaviour.Properties.copy(Blocks.GLASS)
@@ -126,25 +144,27 @@ public class Registration {
                     .pushReaction(PushReaction.DESTROY)
                     .strength(0.5f, 0.5f)
                     .noOcclusion()));
-
-    // 物品
-    public static final RegistryObject<BlockItem> FARMLAND_ITEM = ITEMS.register("farmland", () -> new FarmlandItem(FARMLAND_BLOCK.get(), new Item.Properties()));
-    public static final RegistryObject<BlockItem> AUTO_FARMLAND_ITEM = ITEMS.register("auto_farmland", () -> new AutoFarmlandItem(AUTO_FARMLAND_BLOCK.get(), new Item.Properties()));
-    public static final RegistryObject<ClockItem> CLOCK_ITEM = ITEMS.register("clock", () -> new ClockItem(CLOCK_BLOCK.get(), "block.alltheimbaium.clock.description"));
-    public static final RegistryObject<PlatformItem> PLATFORM_ITEM = ITEMS.register("platform", () -> new PlatformItem(PLATFORM_BLOCK.get()));
-    public static final RegistryObject<SupplyCrateItem> SUPPLY_CRATE_ITEM = ITEMS.register("supply_crate", () -> new SupplyCrateItem(SUPPLY_CRATE_BLOCK.get()));
-    public static final RegistryObject<BlockItem> LIQUID_FOUNTAIN_ITEM = ITEMS.register("liquid_fountain", () -> new LiquidFountainItem(LIQUID_FOUNTAIN_BLOCK.get()));
-    public static final RegistryObject<BlockItem> STORAGE_FOUNTAIN_ITEM = ITEMS.register("storage_fountain", () -> new StorageFountainItem(STORAGE_FOUNTAIN_BLOCK.get()));
-    public static final RegistryObject<BlockItem> MOB_FARM_ITEM = ITEMS.register("mob_farm", () -> new MobFarmItem(MOB_FARM_BLOCK.get()));
     public static final RegistryObject<BlockItem> RESOURCE_FARM_ITEM = ITEMS.register("resource_farm", () -> new ResourceFarmItem(RESOURCE_FARM_BLOCK.get()));
-    public static final RegistryObject<BlockItem> INSTANT_FURNACE_ITEM = ITEMS.register("instant_furnace", () -> new InstantFurnaceItem(INSTANT_FURNACE_BLOCK.get()));
-    public static final RegistryObject<BlockItem> INSTANT_INSCRIBER_ITEM = ITEMS.register("instant_inscriber", () -> new InstantInscriberItem(INSTANT_INSCRIBER_BLOCK.get()));
-    public static final RegistryObject<BlockItem> EXTRACTION_INTERFACE_ITEM = ITEMS.register("extraction_interface", () -> new BlockItem(EXTRACTION_INTERFACE_BLOCK.get(), new Item.Properties()));
-    public static final RegistryObject<Item> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", () -> new Item(new Item.Properties()));
+
+    // ==================== 破坏平衡 ====================
+
+    public static final RegistryObject<StorageFountainBlock> STORAGE_FOUNTAIN_BLOCK = BLOCKS.register("storage_fountain", () -> new StorageFountainBlock(BLOCK_PROPERTIES));
+    public static final RegistryObject<BlockItem> STORAGE_FOUNTAIN_ITEM = ITEMS.register("storage_fountain", () -> new StorageFountainItem(STORAGE_FOUNTAIN_BLOCK.get()));
+
+    // 液体机：玻璃罐体，复制玻璃方块属性（音效等）+ noOcclusion 使其不 cull 相邻方块的面，透过罐体能正常看到后面的地面/物品
+    public static final RegistryObject<LiquidFountainBlock> LIQUID_FOUNTAIN_BLOCK = BLOCKS.register("liquid_fountain", () -> new LiquidFountainBlock(
+            BlockBehaviour.Properties.copy(Blocks.GLASS)
+                    .mapColor(DyeColor.BLUE)
+                    .pushReaction(PushReaction.DESTROY)
+                    .strength(0.5f, 0.5f)
+                    .noOcclusion()));
+    public static final RegistryObject<BlockItem> LIQUID_FOUNTAIN_ITEM = ITEMS.register("liquid_fountain", () -> new LiquidFountainItem(LIQUID_FOUNTAIN_BLOCK.get()));
+
     public static final RegistryObject<EternalTotemItem> ETERNAL_TOTEM = ITEMS.register("eternal_totem", EternalTotemItem::new);
     public static final RegistryObject<EternalSwordItem> ETERNAL_SWORD = ITEMS.register("eternal_sword", EternalSwordItem::new);
 
-    // 菜单类型
+    // ==================== 菜单类型 ====================
+
     public static final RegistryObject<MenuType<EternalSwordMenu>> ETERNAL_SWORD_MENU =
             MENUS.register("eternal_sword", () -> IForgeMenuType.create((id, inv, data) -> new EternalSwordMenu(id, inv)));
     public static final RegistryObject<MenuType<EternalTotemMenu>> ETERNAL_TOTEM_MENU =
@@ -170,13 +190,14 @@ public class Registration {
     public static final RegistryObject<MenuType<SupplyCrateMenu>> SUPPLY_CRATE_MENU =
             MENUS.register("supply_crate", () -> IForgeMenuType.create((id, inv, data) -> new SupplyCrateMenu(id, inv, data)));
 
-    // 配方序列化器
+    // ==================== 配方序列化器 ====================
+
     public static final RegistryObject<RecipeSerializer<SmeltingCraftRecipe>> SMELTING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("smelting_craft", () -> SmeltingCraftRecipe.SERIALIZER);
     public static final RegistryObject<RecipeSerializer<BrewingCraftRecipe>> BREWING_CRAFT_SERIALIZER = RECIPE_SERIALIZERS.register("brewing_craft", () -> BrewingCraftRecipe.SERIALIZER);
     public static final RegistryObject<RecipeSerializer<PotionCombineRecipe>> POTION_COMBINE_SERIALIZER = RECIPE_SERIALIZERS.register("potion_combine", () -> PotionCombineRecipe.SERIALIZER);
 
+    // ==================== 实体 ====================
 
-    // 实体
     public static final RegistryObject<BlockEntityType<CommonEntity>> FARMLAND_ENTITY = ENTITIES.register("farmland", () -> BlockEntityType.Builder.of((pos, state) -> new CommonEntity(pos, state, Registration.FARMLAND_ENTITY::get), FARMLAND_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<AutoFarmlandEntity>> AUTO_FARMLAND_ENTITY = ENTITIES.register("auto_farmland", () -> BlockEntityType.Builder.of(AutoFarmlandEntity::new, AUTO_FARMLAND_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<ClockEntity>> CLOCK_ENTITY = ENTITIES.register("clock", () -> BlockEntityType.Builder.of(ClockEntity::new, CLOCK_BLOCK.get()).build(null));

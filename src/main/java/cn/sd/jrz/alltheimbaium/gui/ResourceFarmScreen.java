@@ -163,7 +163,7 @@ public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFAA00, false);
+        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFAA00, true);
         guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x000000, false);
         // 当前标记
         Component markerText = Component.translatable("screen.alltheimbaium.resource_farm.marked",

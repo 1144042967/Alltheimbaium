@@ -37,7 +37,7 @@ public class EternalTotemScreen extends AbstractContainerScreen<EternalTotemMenu
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, false);
+        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, true);
         guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
         // 输入/输出槽位说明：同一行，靠近各自槽位（输入槽在左、输出槽在右，文字在中间两侧）
         Component input = Component.translatable("screen.alltheimbaium.eternal_totem.input");

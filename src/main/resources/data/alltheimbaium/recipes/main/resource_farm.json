@@ -1,6 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "group": "farm",
+  "group": "alltheimbaium",
   "pattern": [
     "XBB",
     "BCB",
@@ -11,13 +11,13 @@
       "item": "alltheimbaium:package_material_x1"
     },
     "B": {
-      "item": "minecraft:iron_ingot"
+      "item": "minecraft:diamond_block"
     },
     "C": {
-      "tag": "forge:dusts"
+      "item": "minecraft:dirt"
     }
   },
   "result": {
-    "item": "alltheimbaium:storage_fountain_3"
+    "item": "alltheimbaium:resource_farm"
   }
 }

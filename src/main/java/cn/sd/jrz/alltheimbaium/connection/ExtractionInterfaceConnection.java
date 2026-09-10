@@ -2,14 +2,11 @@ package cn.sd.jrz.alltheimbaium.connection;
 
 import cn.sd.jrz.alltheimbaium.entity.AutoFarmlandEntity;
 import cn.sd.jrz.alltheimbaium.entity.ExtractionInterfaceEntity;
-import cn.sd.jrz.alltheimbaium.entity.InstantFurnaceEntity;
-import cn.sd.jrz.alltheimbaium.entity.InstantInscriberEntity;
 import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
 import cn.sd.jrz.alltheimbaium.entity.MobFarmEntity;
 import cn.sd.jrz.alltheimbaium.entity.ResourceFarmEntity;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -28,10 +25,15 @@ import java.util.List;
 /**
  * ATI 取出接口对外能力（只读聚合，方向无关）。
  * <p>
- * 每次查询实时扫描六面相邻方块，把本 MOD 产物机器的"全量只读物品视图"
- * （以 {@code direction = null} 解析，StorageFountain/MobFarm/ResourceFarm/AutoFarmland 为随机全量、
- * InstantFurnace/InstantInscriber 输出区）与液体机（LiquidFountain）的液体聚合为本能力：
- * 物品可任意抽取、液体可 drain；物品不可插入、液体不可 fill，无其它功能。
+ * 聚合范围由 {@link ExtractionInterfaceEntity#getSources()} 给出——那是沿本模组方块连通搜索
+ * 得到的产出机器位置，因此隔着多台机器也能取到，不再限于相邻六面。
+ * 物品以 {@code direction = null}（全量只读）解析；液体来自液体无限制造机。
+ * <p>
+ * 零刻熔炉与零刻压印器不是产出源（见 {@code ExtractionInterfaceEntity.isSource}），
+ * 它们只让网络穿过，其中的物品不会被抽走。
+ * <p>
+ * 槽位列表按游戏刻缓存：管道一次取物会连续调用 {@code getSlots} / {@code getStackInSlot} /
+ * {@code extractItem}，逐次重扫连通范围会带来数量级的多余开销。
  */
 public class ExtractionInterfaceConnection implements IItemHandler, IFluidHandler {
     private static final Logger log = LoggerFactory.getLogger(ExtractionInterfaceConnection.class);
@@ -59,29 +61,13 @@ public class ExtractionInterfaceConnection implements IItemHandler, IFluidHandle
         }
     }
 
+    private List<ItemSlot> cachedItemSlots;
+    private long cachedItemSlotsTick = Long.MIN_VALUE;
+    private List<TankSlot> cachedTankSlots;
+    private long cachedTankSlotsTick = Long.MIN_VALUE;
+
     public ExtractionInterfaceConnection(ExtractionInterfaceEntity owner) {
         this.owner = owner;
-    }
-
-    /** 是否为本 MOD 的产物/流体机器（取出接口自身不计入，避免递归） */
-    private static boolean isSupportedMachine(BlockEntity be) {
-        return be instanceof StorageFountainEntity
-                || be instanceof MobFarmEntity
-                || be instanceof ResourceFarmEntity
-                || be instanceof AutoFarmlandEntity
-                || be instanceof InstantFurnaceEntity
-                || be instanceof InstantInscriberEntity
-                || be instanceof LiquidFountainEntity;
-    }
-
-    /** 相邻六面的本 MOD 产物机器（物品类） */
-    private static boolean isItemMachine(BlockEntity be) {
-        return be instanceof StorageFountainEntity
-                || be instanceof MobFarmEntity
-                || be instanceof ResourceFarmEntity
-                || be instanceof AutoFarmlandEntity
-                || be instanceof InstantFurnaceEntity
-                || be instanceof InstantInscriberEntity;
     }
 
     private boolean usable() {
@@ -89,20 +75,49 @@ public class ExtractionInterfaceConnection implements IItemHandler, IFluidHandle
         return level != null && !level.isClientSide;
     }
 
-    // ==================== 聚合槽位构建 ====================
+    /** 产出物品的机器 */
+    private static boolean isItemSource(BlockEntity be) {
+        return be instanceof StorageFountainEntity
+                || be instanceof MobFarmEntity
+                || be instanceof ResourceFarmEntity
+                || be instanceof AutoFarmlandEntity;
+    }
 
-    /** 收集相邻产物机器以 direction=null（全量只读）暴露的每个槽 */
+    // ==================== 聚合槽位构建（按刻缓存） ====================
+
     private List<ItemSlot> itemSlots() {
-        List<ItemSlot> slots = new ArrayList<>();
-        Level level = owner.getLevel();
         if (!usable()) {
-            return slots;
+            return List.of();
         }
-        BlockPos pos = owner.getBlockPos();
-        for (Direction dir : Direction.values()) {
+        Level level = owner.getLevel();
+        long now = level.getGameTime();
+        if (cachedItemSlots == null || cachedItemSlotsTick != now) {
+            cachedItemSlots = buildItemSlots(level);
+            cachedItemSlotsTick = now;
+        }
+        return cachedItemSlots;
+    }
+
+    private List<TankSlot> tankSlots() {
+        if (!usable()) {
+            return List.of();
+        }
+        Level level = owner.getLevel();
+        long now = level.getGameTime();
+        if (cachedTankSlots == null || cachedTankSlotsTick != now) {
+            cachedTankSlots = buildTankSlots(level);
+            cachedTankSlotsTick = now;
+        }
+        return cachedTankSlots;
+    }
+
+    /** 收集连通范围内物品机器以 direction=null（全量只读）暴露的每个槽 */
+    private List<ItemSlot> buildItemSlots(@Nonnull Level level) {
+        List<ItemSlot> slots = new ArrayList<>();
+        for (BlockPos pos : owner.getSources()) {
             try {
-                BlockEntity be = level.getBlockEntity(pos.relative(dir));
-                if (be == null || !isItemMachine(be)) {
+                BlockEntity be = level.getBlockEntity(pos);
+                if (be == null || !isItemSource(be)) {
                     continue;
                 }
                 LazyOptional<IItemHandler> opt = be.getCapability(ForgeCapabilities.ITEM_HANDLER, null);
@@ -115,23 +130,18 @@ public class ExtractionInterfaceConnection implements IItemHandler, IFluidHandle
                     slots.add(new ItemSlot(handler, i));
                 }
             } catch (Throwable e) {
-                log.error("ExtractionInterfaceConnection.itemSlots error", e);
+                log.error("ExtractionInterfaceConnection.buildItemSlots error", e);
             }
         }
         return slots;
     }
 
-    /** 收集相邻液体机的液体槽（每个 1 tank） */
-    private List<TankSlot> tankSlots() {
+    /** 收集连通范围内液体机的液体槽 */
+    private List<TankSlot> buildTankSlots(@Nonnull Level level) {
         List<TankSlot> tanks = new ArrayList<>();
-        Level level = owner.getLevel();
-        if (!usable()) {
-            return tanks;
-        }
-        BlockPos pos = owner.getBlockPos();
-        for (Direction dir : Direction.values()) {
+        for (BlockPos pos : owner.getSources()) {
             try {
-                BlockEntity be = level.getBlockEntity(pos.relative(dir));
+                BlockEntity be = level.getBlockEntity(pos);
                 if (!(be instanceof LiquidFountainEntity)) {
                     continue;
                 }
@@ -144,7 +154,7 @@ public class ExtractionInterfaceConnection implements IItemHandler, IFluidHandle
                     tanks.add(new TankSlot(handler, i));
                 }
             } catch (Throwable e) {
-                log.error("ExtractionInterfaceConnection.tankSlots error", e);
+                log.error("ExtractionInterfaceConnection.buildTankSlots error", e);
             }
         }
         return tanks;
@@ -256,8 +266,7 @@ public class ExtractionInterfaceConnection implements IItemHandler, IFluidHandle
     @Override
     @Nonnull
     public FluidStack drain(FluidStack resource, FluidAction action) {
-        List<TankSlot> tanks = tankSlots();
-        for (TankSlot entry : tanks) {
+        for (TankSlot entry : tankSlots()) {
             try {
                 FluidStack drained = entry.handler.drain(resource, action);
                 if (!drained.isEmpty()) {
@@ -273,8 +282,7 @@ public class ExtractionInterfaceConnection implements IItemHandler, IFluidHandle
     @Override
     @Nonnull
     public FluidStack drain(int maxDrain, FluidAction action) {
-        List<TankSlot> tanks = tankSlots();
-        for (TankSlot entry : tanks) {
+        for (TankSlot entry : tankSlots()) {
             try {
                 FluidStack drained = entry.handler.drain(maxDrain, action);
                 if (!drained.isEmpty()) {

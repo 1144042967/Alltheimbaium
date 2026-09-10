@@ -4,6 +4,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -15,18 +16,24 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * ATI 补给箱物品：悬停显示使用方法与补给点来源说明。
+ * ATI 补给箱物品。
  */
 public class SupplyCrateItem extends BlockItem {
 
     public SupplyCrateItem(Block block) {
-        super(block, new Item.Properties());
+        super(block, new Item.Properties().rarity(Rarity.UNCOMMON));
     }
 
     @Override
     @OnlyIn(Dist.CLIENT)
     public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        tooltip.add(Component.translatable("item.alltheimbaium.supply_crate.description"));
         super.appendHoverText(stack, worldIn, tooltip, flagIn);
+        Tip.of(tooltip)
+                .head(stack, "tip.alltheimbaium.type.supply")
+                .summary("item.alltheimbaium.supply_crate.summary")
+                .usage("item.alltheimbaium.supply_crate.usage.1",
+                        "item.alltheimbaium.supply_crate.usage.2",
+                        "item.alltheimbaium.supply_crate.usage.3")
+                .warn("item.alltheimbaium.supply_crate.warn.1");
     }
 }

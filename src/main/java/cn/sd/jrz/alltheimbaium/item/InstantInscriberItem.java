@@ -6,6 +6,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -19,13 +20,13 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * 零刻压印器方块物品：悬浮提示显示已存电量与使用说明。
+ * 零刻压印器方块物品：tooltip 显示已存电量与压板 / 组装两种模式的精确区别。
  */
 public class InstantInscriberItem extends BlockItem {
     private static final Logger log = LoggerFactory.getLogger(InstantInscriberItem.class);
 
     public InstantInscriberItem(Block block) {
-        super(block, new Properties().fireResistant());
+        super(block, new Properties().rarity(Rarity.RARE).fireResistant());
     }
 
     @Override
@@ -40,9 +41,17 @@ public class InstantInscriberItem extends BlockItem {
                     stored = Math.max(0, tag.getInt("energy"));
                 }
             }
-            tooltip.add(Component.translatable("screen.alltheimbaium.instant_inscriber.energy_tooltip",
-                    String.format("%,d", stored), String.format("%,d", InstantInscriberEntity.MAX_ENERGY)));
-            tooltip.add(Component.translatable("item.alltheimbaium.instant_inscriber.tooltip.1"));
+            Tip.of(tooltip)
+                    .head(stack, "tip.alltheimbaium.type.processing")
+                    .summary("item.alltheimbaium.instant_inscriber.summary")
+                    .state("item.alltheimbaium.instant_inscriber.state.energy",
+                            String.format("%,d", stored), String.format("%,d", InstantInscriberEntity.MAX_ENERGY))
+                    .usage("item.alltheimbaium.instant_inscriber.usage.1",
+                            "item.alltheimbaium.instant_inscriber.usage.2",
+                            "item.alltheimbaium.instant_inscriber.usage.3")
+                    .params("item.alltheimbaium.instant_inscriber.param.1")
+                    .warn("item.alltheimbaium.instant_inscriber.warn.1",
+                            "item.alltheimbaium.instant_inscriber.warn.2");
         } catch (Throwable e) {
             log.error("InstantInscriberItem.appendHoverText error", e);
         }

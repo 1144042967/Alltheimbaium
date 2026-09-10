@@ -6,6 +6,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -19,14 +20,14 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * 零刻熔炉方块物品：悬浮提示显示已存电量与单件熔炼耗能。
+ * 零刻熔炉方块物品：tooltip 显示已存电量与投料 / 取物的非显然操作。
  * 方块被挖掉时 input/output/energy 通过 loot 表 copy_nbt 存入 BlockEntityTag，重放即可恢复。
  */
 public class InstantFurnaceItem extends BlockItem {
     private static final Logger log = LoggerFactory.getLogger(InstantFurnaceItem.class);
 
     public InstantFurnaceItem(Block block) {
-        super(block, new Properties().fireResistant());
+        super(block, new Properties().rarity(Rarity.RARE).fireResistant());
     }
 
     @Override
@@ -41,11 +42,17 @@ public class InstantFurnaceItem extends BlockItem {
                     stored = Math.max(0, tag.getInt("energy"));
                 }
             }
-            tooltip.add(Component.translatable("screen.alltheimbaium.instant_furnace.energy_tooltip",
-                    String.format("%,d", stored), String.format("%,d", InstantFurnaceEntity.MAX_ENERGY)));
-            tooltip.add(Component.translatable("screen.alltheimbaium.instant_furnace.energy_usage",
-                    String.format("%,d", InstantFurnaceEntity.ENERGY_PER_SMELT)));
-            tooltip.add(Component.translatable("item.alltheimbaium.instant_furnace.tooltip.1"));
+            Tip.of(tooltip)
+                    .head(stack, "tip.alltheimbaium.type.processing")
+                    .summary("item.alltheimbaium.instant_furnace.summary")
+                    .state("item.alltheimbaium.instant_furnace.state.energy",
+                            String.format("%,d", stored), String.format("%,d", InstantFurnaceEntity.MAX_ENERGY))
+                    .usage("item.alltheimbaium.instant_furnace.usage.1",
+                            "item.alltheimbaium.instant_furnace.usage.2",
+                            "item.alltheimbaium.instant_furnace.usage.3")
+                    .params("item.alltheimbaium.instant_furnace.param.1",
+                            "item.alltheimbaium.instant_furnace.param.2")
+                    .warn("item.alltheimbaium.instant_furnace.warn.1");
         } catch (Throwable e) {
             log.error("InstantFurnaceItem.appendHoverText error", e);
         }

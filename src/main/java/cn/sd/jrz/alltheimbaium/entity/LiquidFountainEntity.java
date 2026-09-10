@@ -3,6 +3,7 @@ package cn.sd.jrz.alltheimbaium.entity;
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
 import cn.sd.jrz.alltheimbaium.connection.LiquidFountainConnection;
 import cn.sd.jrz.alltheimbaium.gui.LiquidFountainMenu;
+import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
@@ -498,7 +499,7 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.liquid_fountain");
+        return Component.translatable("block.alltheimbaium.liquid_fountain").withStyle(Tip.rarityColor(Registration.LIQUID_FOUNTAIN_ITEM.get()));
     }
 
     @Nullable

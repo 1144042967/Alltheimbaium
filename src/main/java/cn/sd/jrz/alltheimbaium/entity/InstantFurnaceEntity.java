@@ -2,6 +2,7 @@ package cn.sd.jrz.alltheimbaium.entity;
 
 import cn.sd.jrz.alltheimbaium.connection.InstantFurnaceConnection;
 import cn.sd.jrz.alltheimbaium.gui.InstantFurnaceMenu;
+import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
@@ -510,7 +511,7 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.instant_furnace");
+        return Component.translatable("block.alltheimbaium.instant_furnace").withStyle(Tip.rarityColor(Registration.INSTANT_FURNACE_ITEM.get()));
     }
 
     @Nullable

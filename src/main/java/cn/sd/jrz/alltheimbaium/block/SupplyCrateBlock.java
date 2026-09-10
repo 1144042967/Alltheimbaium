@@ -1,6 +1,8 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.gui.SupplyCrateMenu;
+import cn.sd.jrz.alltheimbaium.item.Tip;
+import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.SupplyData;
 import cn.sd.jrz.alltheimbaium.setup.SupplyRoll;
 import net.minecraft.core.BlockPos;
@@ -57,7 +59,7 @@ public class SupplyCrateBlock extends Block {
 
             MenuProvider provider = new SimpleMenuProvider(
                     (id, inv, owner) -> SupplyCrateMenu.createServer(id, inv, pos, rolls, -1, max, used, serverPlayer),
-                    Component.translatable("block.alltheimbaium.supply_crate"));
+                    Component.translatable("block.alltheimbaium.supply_crate").withStyle(Tip.rarityColor(Registration.SUPPLY_CRATE_ITEM.get())));
             // 开屏数据与服务端菜单使用同一组随机结果，保证客户端显示一致
             NetworkHooks.openScreen(serverPlayer, provider, buf -> writeOpenData(buf, pos, rolls, max, used));
             return InteractionResult.SUCCESS;

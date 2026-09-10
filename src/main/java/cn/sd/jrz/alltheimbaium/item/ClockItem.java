@@ -4,6 +4,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -14,18 +15,25 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
+/**
+ * 加速时钟物品。
+ */
 public class ClockItem extends BlockItem {
-    private final String descriptionKey;
 
-    public ClockItem(Block block, String descriptionKey) {
-        super(block, new Item.Properties());
-        this.descriptionKey = descriptionKey;
+    public ClockItem(Block block) {
+        super(block, new Item.Properties().rarity(Rarity.UNCOMMON));
     }
 
     @Override
     @OnlyIn(Dist.CLIENT)
     public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        tooltip.add(Component.translatable(descriptionKey));
         super.appendHoverText(stack, worldIn, tooltip, flagIn);
+        Tip.of(tooltip)
+                .head(stack, "tip.alltheimbaium.type.accelerator")
+                .summary("item.alltheimbaium.clock.summary")
+                .usage("item.alltheimbaium.clock.usage.1",
+                        "item.alltheimbaium.clock.usage.2",
+                        "item.alltheimbaium.clock.usage.3")
+                .warn("item.alltheimbaium.clock.warn.1");
     }
 }
