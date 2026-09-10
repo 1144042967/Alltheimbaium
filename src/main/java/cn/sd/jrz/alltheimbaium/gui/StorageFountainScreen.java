@@ -2,12 +2,14 @@ package cn.sd.jrz.alltheimbaium.gui;
 
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -22,6 +24,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -71,6 +74,19 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     /** 空格键是否按下（空格+单击物品槽 = 提取到背包满） */
     private boolean spaceDown = false;
 
+    // 标题栏右侧 "?" 帮助：列出"能被标记复制"的三条判定依据（白名单 / MOD / 标签）
+    private static final int HELP_COLOR = 0xFFFFD24D;
+    /** "?" 与标题同一行 */
+    private static final int HELP_Y = 6;
+    /** 帮助卡内容区最大宽度（像素），超出自动换行 */
+    private static final int HELP_MAX_W = 220;
+    /** 标签列与值列之间的间距（像素） */
+    private static final int HELP_COL_GAP = 6;
+    /** 自绘帮助卡的抬升 z，确保盖过槽位里的物品贴图 */
+    private static final int HELP_Z = 400;
+    /** "?" 的水平位置（gui 局部坐标，init 计算） */
+    private int helpX = 0;
+
     public StorageFountainScreen(StorageFountainMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
@@ -81,6 +97,7 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     @Override
     protected void init() {
         super.init();
+        this.helpX = this.imageWidth - 8 - this.font.width("?");
         // 六个面状态按钮，按钮 id 与 Direction.values() 顺序一致（0~5）
         for (int i = 0; i < 6; i++) {
             Direction direction = Direction.values()[i];
@@ -167,6 +184,8 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
         // 标题与物品栏标签：亮色背景上用深色文字
         guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, true);
         guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
+        // 标题栏右侧黄色 "?"：hover 展示可复制物品的三条判定依据
+        guiGraphics.drawString(this.font, "?", this.helpX, HELP_Y, HELP_COLOR, true);
         // 黑色信息面板上的四行信息（局部坐标）：产量/下次增长均以 /tick 为单位。
         // 下次增长 = 下次要增长的数值（增量），不是增长后的值。
         long output = this.menu.getOutput();
@@ -196,8 +215,112 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
         }
         // 标记槽 hover 提示：槽内无物品时显示使用方法说明
         renderMarkerSlotTooltip(guiGraphics, mouseX, mouseY);
+        // 标题栏 "?" 帮助卡
+        if (isHoverHelp(mouseX, mouseY)) {
+            renderHelpCard(guiGraphics, mouseX, mouseY);
+        }
         // 渲染鼠标悬浮物品的信息提示窗
         super.renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+
+    // ==================== 标题栏 "?" 帮助卡 ====================
+
+    /** "?" 字形是否被悬停 */
+    private boolean isHoverHelp(int mouseX, int mouseY) {
+        return mouseX >= this.leftPos + this.helpX - 2
+                && mouseX <= this.leftPos + this.helpX + this.font.width("?") + 2
+                && mouseY >= this.topPos + HELP_Y - 2 && mouseY <= this.topPos + HELP_Y + 9;
+    }
+
+    /** 半透明卡片底板：黑色 1px 边框 + 半透明底 */
+    private void drawHelpPanel(GuiGraphics guiGraphics, int bx, int by, int boxW, int boxH) {
+        guiGraphics.fill(bx - 1, by - 1, bx + boxW + 1, by, 0xFF000000);
+        guiGraphics.fill(bx - 1, by + boxH, bx + boxW + 1, by + boxH + 1, 0xFF000000);
+        guiGraphics.fill(bx - 1, by, bx, by + boxH, 0xFF000000);
+        guiGraphics.fill(bx + boxW, by, bx + boxW + 1, by + boxH, 0xFF000000);
+        guiGraphics.fill(bx, by, bx + boxW, by + boxH, 0xF0100010);
+    }
+
+    /** 卡片左上角 x（跟随鼠标但不出屏） */
+    private int cardX(int mouseX, int boxW) {
+        int x = mouseX + 8;
+        if (x + boxW > this.width) {
+            x = mouseX - 8 - boxW;
+        }
+        return Math.max(2, x);
+    }
+
+    /** 卡片左上角 y（跟随鼠标但不出屏） */
+    private int cardY(int mouseY, int boxH) {
+        int y = mouseY + 8;
+        if (y + boxH > this.height) {
+            y = mouseY - 8 - boxH;
+        }
+        return Math.max(2, y);
+    }
+
+    /**
+     * 自绘 "?" 帮助卡：一行一类判定依据，列出白名单 / MOD / 标签。
+     * 值过长时按像素宽换行，续行缩进到值列，保证左侧标签始终对齐。
+     */
+    private void renderHelpCard(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int hpad = 4;
+        int vpad = 4;
+        int lineH = this.font.lineHeight + 1;
+
+        Component header = Component.translatable("screen.alltheimbaium.storage_fountain.help.header")
+                .withStyle(ChatFormatting.GRAY);
+        List<Component> labels = List.of(
+                Component.translatable("screen.alltheimbaium.storage_fountain.help.items").withStyle(ChatFormatting.GRAY),
+                Component.translatable("screen.alltheimbaium.storage_fountain.help.mods").withStyle(ChatFormatting.GRAY),
+                Component.translatable("screen.alltheimbaium.storage_fountain.help.tags").withStyle(ChatFormatting.GRAY));
+        List<List<? extends String>> sources = List.of(
+                StorageFountainBlock.getAcceptedItems(),
+                StorageFountainBlock.getAcceptedMods(),
+                StorageFountainBlock.getAcceptedTags());
+
+        int labelW = 0;
+        for (Component label : labels) {
+            labelW = Math.max(labelW, this.font.width(label));
+        }
+        int valueW = Math.max(40, HELP_MAX_W - labelW - HELP_COL_GAP);
+
+        List<List<FormattedCharSequence>> wrapped = new ArrayList<>();
+        int valueRows = 0;
+        for (List<? extends String> source : sources) {
+            Component value = source.isEmpty()
+                    ? Component.translatable("screen.alltheimbaium.storage_fountain.help.none").withStyle(ChatFormatting.GRAY)
+                    : Component.literal(String.join("  ", source)).withStyle(ChatFormatting.WHITE);
+            List<FormattedCharSequence> lines = this.font.split(value, valueW);
+            wrapped.add(lines);
+            valueRows += lines.size();
+        }
+
+        int hintW = this.font.width(Component.translatable("screen.alltheimbaium.storage_fountain.help.hint"));
+        int boxW = Math.max(this.font.width(header), Math.max(labelW + HELP_COL_GAP + Math.min(valueW, HELP_MAX_W), hintW)) + hpad * 2;
+        int boxH = vpad * 2 + (1 + valueRows + 1) * lineH;
+        int bx = cardX(mouseX, boxW);
+        int by = cardY(mouseY, boxH);
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
+        int left = bx + hpad;
+        int y = by + vpad;
+        guiGraphics.drawString(this.font, header, left, y, 0xFFFFFF, true);
+        y += lineH;
+        for (int i = 0; i < labels.size(); i++) {
+            guiGraphics.drawString(this.font, labels.get(i), left, y, 0xFFFFFF, true);
+            int valueX = left + labelW + HELP_COL_GAP;
+            for (FormattedCharSequence line : wrapped.get(i)) {
+                guiGraphics.drawString(this.font, line, valueX, y, 0xFFFFFF, true);
+                y += lineH;
+            }
+        }
+        guiGraphics.drawString(this.font,
+                Component.translatable("screen.alltheimbaium.storage_fountain.help.hint").withStyle(ChatFormatting.GRAY),
+                left, y, 0xFFFFFF, true);
+        guiGraphics.pose().popPose();
     }
 
     /**

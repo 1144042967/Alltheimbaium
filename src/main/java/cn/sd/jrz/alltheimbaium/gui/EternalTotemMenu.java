@@ -28,15 +28,15 @@ public class EternalTotemMenu extends AbstractContainerMenu {
     /**
      * 输入槽（终极化学品储罐）在容器中的下标
      */
-    private static final int INPUT_SLOT = EternalTotemItem.POTION_INVENTORY_SIZE;
+    private static final int INPUT_SLOT = EternalTotemItem.STORAGE_INVENTORY_SIZE;
     /**
      * 输出槽（创造化学品储罐）在容器中的下标
      */
-    private static final int OUTPUT_SLOT = EternalTotemItem.POTION_INVENTORY_SIZE + 1;
+    private static final int OUTPUT_SLOT = EternalTotemItem.STORAGE_INVENTORY_SIZE + 1;
     /**
      * 容器总大小：27 药水 + 输入 + 输出
      */
-    private static final int CONTAINER_SIZE = EternalTotemItem.POTION_INVENTORY_SIZE + 2;
+    private static final int CONTAINER_SIZE = EternalTotemItem.STORAGE_INVENTORY_SIZE + 2;
 
     private final SimpleContainer container = new SimpleContainer(CONTAINER_SIZE);
     /**
@@ -75,8 +75,8 @@ public class EternalTotemMenu extends AbstractContainerMenu {
             }
         });
         // 27 个药水槽（顶部 3 行 9 列）
-        for (int i = 0; i < EternalTotemItem.POTION_INVENTORY_SIZE; i++) {
-            addSlot(new PotionSlot(container, i, 8 + (i % 9) * 18, 18 + (i / 9) * 18));
+        for (int i = 0; i < EternalTotemItem.STORAGE_INVENTORY_SIZE; i++) {
+            addSlot(new PotionFoodSlot(container, i, 8 + (i % 9) * 18, 18 + (i / 9) * 18));
         }
         // 输入槽（终极化学品储罐，左侧）与输出槽（创造化学品储罐，右侧）
         addSlot(new InputTankSlot(container, INPUT_SLOT, 8, 75));
@@ -179,7 +179,7 @@ public class EternalTotemMenu extends AbstractContainerMenu {
         }
         // 数字键交换：button 是目标快捷栏（0-8），对应菜单槽 药水27+输入1+输出1+背包27 = 56
         if (clickType == ClickType.SWAP) {
-            int hotbarStart = EternalTotemItem.POTION_INVENTORY_SIZE + 2 + 27;
+            int hotbarStart = EternalTotemItem.STORAGE_INVENTORY_SIZE + 2 + 27;
             int hotbarSlot = hotbarStart + button;
             if (hotbarSlot >= 0 && hotbarSlot < this.slots.size()) {
                 Slot hb = this.slots.get(hotbarSlot);
@@ -206,16 +206,16 @@ public class EternalTotemMenu extends AbstractContainerMenu {
     }
 
     /**
-     * 药水槽：只允许放药水类物品
+     * 药水 / 食物槽：药水类物品与任何可食用物品都可以放
      */
-    private static class PotionSlot extends Slot {
-        PotionSlot(Container container, int index, int x, int y) {
+    private static class PotionFoodSlot extends Slot {
+        PotionFoodSlot(Container container, int index, int x, int y) {
             super(container, index, x, y);
         }
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return stack.getItem() instanceof PotionItem;
+            return stack.getItem() instanceof PotionItem || stack.isEdible();
         }
     }
 

@@ -42,9 +42,10 @@ import java.util.*;
  * 永恒之剑。
  * <p>
  * - 无耐久条、基础攻击伤害为 0
- * - 右击对范围内生物造成「槽位中所有 ID 不同的带伤害物品伤害总和」的伤害
+ * - 右击对范围内生物结算三段：剑自身伤害（槽位攻击力之和 + 附魔伤害加成）、剑附魔的命中效果、
+ *   以及槽位里每把武器各打一次（各用自己那把武器的伤害与附魔）
  * - ALT+右击打开配置界面（击杀模式 / 攻击距离 / 27 格物品槽位）
- * - 剑附魔来自槽位中的附魔书：附魔书等级直接叠加
+ * - 剑附魔来自槽位中的附魔书：按点数叠加（等级 1~10 计 1/2/4/…/512 点），上限 10 级
  * - 禁止附魔台 / 铁砧附魔；对 Draconic-Evolution 混沌守卫可突破免伤限制
  */
 public class EternalSwordItem extends SwordItem {
@@ -61,6 +62,10 @@ public class EternalSwordItem extends SwordItem {
      * 物品槽位数量
      */
     public static final int INVENTORY_SIZE = 27;
+    /**
+     * 附魔叠加后的等级上限：等级 1~10 对应点数 2^0 ~ 2^9
+     */
+    public static final int MAX_ENCHANT_LEVEL = 10;
     /**
      * 可选攻击距离
      */
@@ -124,7 +129,13 @@ public class EternalSwordItem extends SwordItem {
     }
 
     /**
-     * 范围攻击：对攻击距离内的目标造成剑的伤害（混沌守卫走免伤突破）
+     * 范围攻击：对攻击距离内的目标结算三段伤害，命中后逐个目标依次执行——
+     * <ol>
+     *     <li>剑自身伤害 = 槽位伤害总和 + 剑上附魔的伤害加成（锋利 / 亡灵杀手 / 节肢杀手）；</li>
+     *     <li>剑上附魔的命中效果（火焰附加、击退、节肢杀手的迟缓等）；</li>
+     *     <li>槽位里每把武器各对目标做一次近战命中，用<b>那把武器自己的伤害</b>与命中附魔。</li>
+     * </ol>
+     * 混沌守卫走反射免伤突破。
      */
     private void doAttack(Level level, Player player, ItemStack stack) {
         int range = getRange(stack);
@@ -132,6 +143,7 @@ public class EternalSwordItem extends SwordItem {
         float baseDamage = getSwordDamage(stack);
         DamageSource source = level.damageSources().playerAttack(player);
         AABB aabb = player.getBoundingBox().inflate(range);
+        List<ItemStack> slotWeapons = collectSlotWeapons(stack);
         // 只取可能的目标：活着的生物 或 混沌守卫（本体/部位）
         List<Entity> targets = level.getEntities(player, aabb,
                 e -> e.isAlive() && (e instanceof LivingEntity || Tool.isGuardian(e)));
@@ -141,19 +153,83 @@ public class EternalSwordItem extends SwordItem {
                 if (living instanceof ArmorStand) continue;
                 // 敌对模式：只攻击敌对生物（Enemy 接口：僵尸、骷髅、苦力怕、末影龙、守卫者等）
                 if (!killAll && !(living instanceof Enemy)) continue;
-                // 剑的伤害 = 槽位伤害总和 + 剑自身附魔（锋利/亡灵杀手等）加成
+                // 第一段：剑自身伤害
                 float damage = baseDamage + EnchantmentHelper.getDamageBonus(stack, living.getMobType());
                 // 混沌守卫本体：反射突破免伤，命中则跳过普通伤害
                 if (Tool.bypassGuardianDamage(living, source, damage)) continue;
                 living.hurt(source, damage);
-                // 火焰附加生效
-                int fireAspect = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.FIRE_ASPECT, stack);
-                if (fireAspect > 0 && !living.fireImmune()) {
-                    living.setSecondsOnFire(fireAspect * 4);
+                // 第二段：剑上附魔的命中效果（原版的 doPostHurt / doPostAttack 钩子，
+                // 覆盖火焰附加、击退、节肢杀手的迟缓，无需再手写火焰附加）
+                applyWeaponEffects(stack, player, living);
+                // 第三段：槽位里每把武器各打一次
+                for (ItemStack weapon : slotWeapons) {
+                    meleeHit(weapon, player, living, source);
                 }
             } else if (Tool.isGuardian(target)) {
                 // 混沌守卫部位（非 LivingEntity）：反射突破免伤
                 Tool.bypassGuardianDamage(target, source, baseDamage);
+            }
+        }
+    }
+
+    /**
+     * 收集槽位里所有能造成伤害的武器，按物品 ID 去重（与剑伤害的"同 ID 只计一次"规则一致，
+     * 否则在槽位里塞满同一把武器就能把近战命中次数刷上去）。
+     */
+    private static List<ItemStack> collectSlotWeapons(ItemStack sword) {
+        List<ItemStack> weapons = new ArrayList<>();
+        CompoundTag tag = sword.getTag();
+        if (tag == null || !tag.contains(TAG_ITEMS)) {
+            return weapons;
+        }
+        Set<String> seen = new HashSet<>();
+        ListTag list = tag.getList(TAG_ITEMS, Tag.TAG_COMPOUND);
+        for (Tag t : list) {
+            ItemStack s = ItemStack.of((CompoundTag) t);
+            if (s.isEmpty() || getDamageContribution(s) <= 0F) {
+                continue;
+            }
+            ResourceLocation key = ForgeRegistries.ITEMS.getKey(s.getItem());
+            if (key != null && seen.add(key.toString())) {
+                weapons.add(s);
+            }
+        }
+        return weapons;
+    }
+
+    /**
+     * 用指定武器对目标做一次近战命中：伤害 = 该武器攻击力 + 它自己的附魔伤害加成，再触发其命中附魔效果。
+     */
+    private static void meleeHit(ItemStack weapon, Player player, LivingEntity target, DamageSource source) {
+        float damage = getDamageContribution(weapon) + EnchantmentHelper.getDamageBonus(weapon, target.getMobType());
+        if (damage <= 0F) {
+            return;
+        }
+        if (Tool.bypassGuardianDamage(target, source, damage)) {
+            return;
+        }
+        target.hurt(source, damage);
+        applyWeaponEffects(weapon, player, target);
+    }
+
+    /**
+     * 触发武器上附魔的命中效果。
+     * <p>
+     * 原版 {@code EnchantmentHelper} 的两个入口都从"攻击者主手"读附魔，这里改为按附魔逐条调用
+     * {@link Enchantment#doPostHurt} / {@link Enchantment#doPostAttack}，就能指定任意一把武器，
+     * 也不必临时替换玩家的主手物品。
+     */
+    private static void applyWeaponEffects(ItemStack weapon, Player player, LivingEntity target) {
+        Map<Enchantment, Integer> enchantments = EnchantmentHelper.getEnchantments(weapon);
+        if (enchantments.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
+            try {
+                entry.getKey().doPostHurt(target, player, entry.getValue());
+                entry.getKey().doPostAttack(player, target, entry.getValue());
+            } catch (Throwable ignored) {
+                // 单个附魔出错不影响其余
             }
         }
     }
@@ -173,7 +249,8 @@ public class EternalSwordItem extends SwordItem {
                 .usage("item.alltheimbaium.eternal_sword.usage.1",
                         "item.alltheimbaium.eternal_sword.usage.2",
                         "item.alltheimbaium.eternal_sword.usage.3",
-                        "item.alltheimbaium.eternal_sword.usage.4")
+                        "item.alltheimbaium.eternal_sword.usage.4",
+                        "item.alltheimbaium.eternal_sword.usage.5")
                 .warn("item.alltheimbaium.eternal_sword.warn.1",
                         "item.alltheimbaium.eternal_sword.warn.2");
     }
@@ -282,17 +359,35 @@ public class EternalSwordItem extends SwordItem {
     }
 
     /**
-     * 剑附魔 = 所有附魔书的附魔等级直接相加（任何等级附魔都可以叠加）。
-     * 例如：锋利V + 锋利III + 锋利I → 锋利IX
+     * 剑附魔 = 槽位里所有附魔书的附魔按 <b>点数</b> 累加后换算回等级。
+     * <p>
+     * 等级 1~10 分别计 1、2、4、8、16、32、64、128、256、512 点；每一类附魔各自累加点数，
+     * 累加值够到哪一档就是哪一级，最高 {@link #MAX_ENCHANT_LEVEL} 级。
+     * 例如：锋利 V + 锋利 V = 16 + 16 = 32 点 → 锋利 VI；锋利 V + 锋利 I = 17 点 → 仍是锋利 V。
      */
     public static Map<Enchantment, Integer> calcEnchantments(List<ItemStack> stacks) {
-        Map<Enchantment, Integer> result = new HashMap<>();
+        Map<Enchantment, Long> points = new HashMap<>();
         for (ItemStack s : stacks) {
             if (s == null || s.isEmpty() || !s.is(Items.ENCHANTED_BOOK)) continue;
             for (Map.Entry<Enchantment, Integer> e : EnchantmentHelper.getEnchantments(s).entrySet()) {
-                result.merge(e.getKey(), e.getValue(), Integer::sum);
+                int level = Math.max(1, Math.min(MAX_ENCHANT_LEVEL, e.getValue()));
+                points.merge(e.getKey(), 1L << (level - 1), Long::sum);
             }
         }
+        Map<Enchantment, Integer> result = new HashMap<>();
+        points.forEach((enchantment, point) -> result.put(enchantment, levelForPoints(point)));
         return result;
+    }
+
+    /**
+     * 点数换算回等级：达到哪一档就是哪一级，最高 {@link #MAX_ENCHANT_LEVEL} 级。
+     * 1 点 → 1 级，16 点 → 5 级，32 点 → 6 级，512 点及以上 → 10 级。
+     */
+    public static int levelForPoints(long points) {
+        int level = 1;
+        while (level < MAX_ENCHANT_LEVEL && points >= (1L << level)) {
+            level++;
+        }
+        return level;
     }
 }

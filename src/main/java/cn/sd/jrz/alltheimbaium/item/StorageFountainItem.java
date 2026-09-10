@@ -1,7 +1,6 @@
 package cn.sd.jrz.alltheimbaium.item;
 
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
-import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -37,17 +36,6 @@ public class StorageFountainItem extends BlockItem {
     /** 可复制范围说明里最多列出的标签 / MOD 数量 */
     private static final int MAX_ACCEPT_LISTED = 4;
 
-    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
-    static List<? extends String> acceptedMods;
-    static List<? extends String> acceptedTags;
-
-    /**
-     * 由 Config.onConfigLoad() 在配置文件加载完成后调用
-     */
-    public static void loadConfig() {
-        acceptedMods = Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get();
-        acceptedTags = Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get();
-    }
 
     public StorageFountainItem(Block block) {
         super(block, new Properties().rarity(Rarity.EPIC).fireResistant());
@@ -99,10 +87,12 @@ public class StorageFountainItem extends BlockItem {
             // 只在未标记任何物品时列出可复制范围，避免每次 hover 都拖着一条长表
             if (stackList.isEmpty()) {
                 tip.params("item.alltheimbaium.storage_fountain.param.1")
+                        .bullet("item.alltheimbaium.storage_fountain.param.items",
+                                Tip.join(asLiteralList(StorageFountainBlock.getAcceptedItems()), MAX_ACCEPT_LISTED, "tip.alltheimbaium.more"))
                         .bullet("item.alltheimbaium.storage_fountain.param.tags",
-                                Tip.join(asLiteralList(acceptedTags), MAX_ACCEPT_LISTED, "tip.alltheimbaium.more"))
+                                Tip.join(asLiteralList(StorageFountainBlock.getAcceptedTags()), MAX_ACCEPT_LISTED, "tip.alltheimbaium.more"))
                         .bullet("item.alltheimbaium.storage_fountain.param.mods",
-                                Tip.join(asLiteralList(acceptedMods), MAX_ACCEPT_LISTED, "tip.alltheimbaium.more"));
+                                Tip.join(asLiteralList(StorageFountainBlock.getAcceptedMods()), MAX_ACCEPT_LISTED, "tip.alltheimbaium.more"));
             }
         } catch (Throwable e) {
             log.error("StorageFountainItem.appendHoverText error", e);

@@ -264,7 +264,12 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 记录并无限复制物品（类似创造抽屉），右键打开 GUI（`StorageFountainMenu`/`StorageFountainScreen`）。
 
 - **标记槽**（黑色信息面板右下角，容量恒为 1）：放入支持的物品 → 标记该物品类型并复制；放入已标记物品 → 取消标记并清空存量
-- 支持判定见 `StorageFountainBlock.isAcceptedItem()`：物品命名空间**子串**匹配配置 `storage_fountain.accepted_mods`，或任一标签 path **子串**匹配 `accepted_tags`（默认含 `storage_blocks`/`ores`/`ingots`/`dusts`/`gems` 等 12 项）
+- 支持判定见 `StorageFountainBlock.isAcceptedItem()`，三条依据命中其一即可，**白名单优先**：
+  1. 物品白名单 `storage_fountain.accepted_items`——完整注册 ID（如 `minecraft:diamond`）**精确匹配**；
+  2. 物品命名空间**子串**匹配 `accepted_mods`；
+  3. 任一标签 path **子串**匹配 `accepted_tags`（默认含 `storage_blocks`/`ores`/`ingots`/`dusts`/`gems` 等 12 项）。
+  配置值由 `StorageFountainBlock` 静态缓存，并暴露 `getAcceptedItems()/getAcceptedMods()/getAcceptedTags()` 供 GUI 与物品 tooltip 取用（`StorageFountainItem` 不再自行缓存一份）
+- **标题栏右侧 `?` 帮助卡**（参考 `MobFarmScreen`）：hover 逐行列出当前生效的白名单 / MOD / 标签，值过长时用 `Font.split` 按像素宽换行、续行缩进到值列。纯客户端，数据直接读上面的静态 getter
 - 最多 `max_item_types`（默认 9）种物品，对应 GUI 中 9 个已标记物品槽
 - 每 `growth_interval_seconds`（默认 20 秒）`output += growth_step`（默认 +5）；`output` 初值 5，使用 `carry = 1000` 作为内部计数进位阈值，折合 `output/50` 件/秒。**代码中没有增长上限**
 - GUI 黑色信息面板四行：增长进度条 / 增长百分比 / 下次增长数值 / 产量
@@ -381,7 +386,10 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - `@Mod.EventBusSubscriber` 注册事件，监听 `LivingDeathEvent`，优先级 `HIGHEST`
 - `findTotem()` 按 主手 → 副手 → 盔甲 → 背包 → Curios 饰品槽 的顺序查找，任意位置即可生效
 - 触发：取消死亡 → `removeAllEffects()` → `setHealth(1)` → 给予 40 秒抗火 / 45 秒生命恢复 II / 5 秒伤害吸收 II → 广播实体事件 35
-- 之后逐个应用 27 格药水槽（NBT 键 `potion_items`）中药水的效果
+- 之后逐个应用 27 格槽位（NBT 键 `potion_items`）中药水的效果，再挨个"食用"槽位里的**食物**
+  - 槽位名为药水 / 食物槽：`EternalTotemMenu.PotionFoodSlot.mayPlace` 接受 `PotionItem` 或 `isEdible()`
+  - 食用走 `EternalTotemItem.eatStoredFood()`：对每个可食用物品调 `ItemStack.finishUsingItem(level, player)`，因此营养与原版食物效果（金苹果的生命恢复 / 伤害吸收等）都按原版逻辑生效；**忽略返回值、不消耗**，每次复活都能再用
+  - NBT 键仍叫 `potion_items`：槽位含义已扩展，改键会让旧存档里的药水丢失
 - ALT+右键打开配置界面（`RightClickHandler` → `OpenEternalTotemGuiPacket`）
 - 手持图腾右键 Mekanism 终极化学品储罐 → 变为创造化学品储罐（受配置 `eternal_totem.tank_conversion` 控制）
 - **已移除右键开关功能**，`use()` 仅保留挥手动画
@@ -391,11 +399,18 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - 继承 `SwordItem`，自定义 `ForgeTier`（攻击加成 0、耐久 0）保证剑本身攻击伤害为 0；`canBeDepleted()` 返回 false（无耐久条）
 - `getAttributeModifiers()` 覆写：主手时把 `ATTACK_DAMAGE` 替换为 `getSwordDamage(stack) - 1`，使面板直接显示实际伤害
 - 右击对 `player.getBoundingBox().inflate(range)` 内所有存活生物造成伤害；击杀模式 0=仅敌对生物（`Enemy` 接口），1=所有生物；跳过玩家与盔甲架
-- 命中 Draconic-Evolution 混沌守卫时走 `Tool.bypassGuardianDamage()` 反射突破免伤
-- 火焰附加生效
+- 命中 Draconic-Evolution 混沌守卫时走 `Tool.bypassGuardianDamage()` 反射突破免伤（三段伤害都过这道判定）
 - ALT+右键打开配置界面（27 格物品槽 + 击杀模式 + 攻击距离 8/16/24/32）
-- **伤害 = 所有 ID 不同的带伤害物品 `ATTACK_DAMAGE` modifier 之和**（`calcDamage()`，同 ID 只计一次），最低 1
-- **附魔 = 槽位中所有附魔书的附魔等级直接相加**（`calcEnchantments()`，锋利 V + III → 锋利 VIII）
+- **右击对每个目标结算三段**（`doAttack()`）：
+  1. 剑自身伤害 = 所有 ID 不同的带伤害物品 `ATTACK_DAMAGE` modifier 之和（`calcDamage()`，同 ID 只计一次）+ `EnchantmentHelper.getDamageBonus`，最低 1；
+  2. 剑上附魔的命中效果；
+  3. 槽位里每把武器各做一次近战命中，用**那把武器自己**的伤害与命中附魔。
+- 命中附魔效果统一走 `applyWeaponEffects()`：原版 `EnchantmentHelper.doPostHurtEffects/doPostDamageEffects` 都从"攻击者主手"读附魔，这里改为按附魔逐条调 `Enchantment#doPostHurt` / `#doPostAttack`（两者都是 public），既能指定任意一把武器，也不必临时替换玩家主手。火焰附加因此不再手写。
+- 槽位武器按**物品 ID 去重**（`collectSlotWeapons()`），与剑伤害的"同 ID 只计一次"一致，避免塞满同一把武器刷命中次数
+- **附魔 = 槽位中所有附魔书按点数累加后换算回等级**（`calcEnchantments()` / `levelForPoints()`）：
+  - 等级 1~10 分别计 `2^0`~`2^9` 点，即 1/2/4/8/16/32/64/128/256/512；每类附魔各自累加
+  - 累加点数够到哪一档就是哪一级，上限 `MAX_ENCHANT_LEVEL = 10`
+  - 例：锋利 V + V = 16+16 = 32 点 → 锋利 VI；锋利 V + I = 17 点 → 仍是锋利 V
 - 禁止附魔台/铁砧附魔（`isEnchantable`/`isBookEnchantable` 返回 false）
 
 ### 15. 自定义合成配方

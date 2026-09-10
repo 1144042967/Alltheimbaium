@@ -6,6 +6,7 @@ import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -41,6 +42,8 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     static long growthStep;
     static List<? extends String> acceptedMods;
     static List<? extends String> acceptedTags;
+    /** 物品白名单：完整注册 ID，命中则无视标签/命名空间规则直接接受 */
+    static List<? extends String> acceptedItems;
     static int maxItemTypes;
 
     /**
@@ -52,7 +55,26 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         growthStep = Config.STORAGE_FOUNTAIN_GROWTH_STEP.get();
         acceptedMods = Config.STORAGE_FOUNTAIN_ACCEPTED_MODS.get();
         acceptedTags = Config.STORAGE_FOUNTAIN_ACCEPTED_TAGS.get();
+        acceptedItems = Config.STORAGE_FOUNTAIN_ACCEPTED_ITEMS.get();
         maxItemTypes = Config.STORAGE_FOUNTAIN_MAX_ITEM_TYPES.get();
+    }
+
+    /** 物品白名单（完整注册 ID），供 GUI 帮助卡展示 */
+    @Nonnull
+    public static List<? extends String> getAcceptedItems() {
+        return acceptedItems;
+    }
+
+    /** 接受的 MOD 命名空间，供 GUI 帮助卡展示 */
+    @Nonnull
+    public static List<? extends String> getAcceptedMods() {
+        return acceptedMods;
+    }
+
+    /** 接受的标签片段，供 GUI 帮助卡展示 */
+    @Nonnull
+    public static List<? extends String> getAcceptedTags() {
+        return acceptedTags;
     }
 
     public static long getCarry() {
@@ -188,10 +210,15 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     }
 
     /**
-     * 判断物品是否符合接受的 MOD 命名空间或标签
+     * 判断物品是否可被标记复制：物品白名单 → MOD 命名空间 → 标签，命中其一即可
      */
     public static boolean isAcceptedItem(ItemStack stack) {
-        String namespace = BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        // 白名单优先：完整注册 ID 精确匹配，无视后两条规则
+        if (acceptedItems.contains(id.toString())) {
+            return true;
+        }
+        String namespace = id.getNamespace();
         for (String mod : acceptedMods) {
             if (namespace.contains(mod)) return true;
         }

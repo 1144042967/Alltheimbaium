@@ -135,14 +135,16 @@
 - 死亡时自动触发，取消死亡并把血量留 1 点，可无限次使用
 - 放在背包或饰品栏任意位置即可生效，无需手持
 - 触发时清除全部状态效果，并给予 40 秒抗火 / 45 秒生命恢复 II / 5 秒伤害吸收 II
-- 27 格药水槽里的药水会在基础效果之后逐个生效，可用来补回被清除的增益
-- 按住 ALT 右键打开配置界面：药水槽，以及「终极化学品储罐 → 创造化学品储罐」的转化
+- 27 格药水/食物槽：药水效果会逐个生效，食物会被挨个食用（如金苹果的生命恢复与伤害吸收）
+- 药水与食物都只读取、不消耗，每次复活都能再用
+- 按住 ALT 右键打开配置界面：药水与食物槽，以及「终极化学品储罐 → 创造化学品储罐」的转化
 
 ### 永恒之剑
 
-- 右击对范围内的生物同时造成剑的伤害
-- 伤害 = 槽位中所有 ID 不同的带伤害物品的攻击力之和，最低 1
-- 附魔来自槽位里的附魔书，等级直接相加（锋利 V + III → 锋利 VIII）
+- 右击对范围内的生物结算三段伤害：剑自身伤害 + 剑附魔的命中效果 + 槽位内每把武器各打一次
+- 剑自身伤害 = 槽位中所有 ID 不同的带伤害物品的攻击力之和，最低 1
+- 槽位里的每把武器还会用**自己**的伤害与附魔效果各命中一次
+- 附魔来自槽位里的附魔书：等级 1~10 各计 1/2/4/8/16/32/64/128/256/512 点，累加到哪一档就是哪一级，上限 10 级
 - 按住 ALT 右键打开配置界面：击杀模式 / 攻击距离 / 27 格物品槽
 - 命中 Draconic-Evolution 的混沌守卫时可突破其免伤
 - 无法附魔、无法锻造，也不能作为合成材料
@@ -231,7 +233,8 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 ### ATI Storage Block Fountain
 
 - Drop a supported item into the GUI's marker slot to duplicate it forever; dropping an already-marked item unmarks it and wipes its stock
-- Supported items carry tags such as `ores` / `storage_blocks` / `ingots` / `dusts` / `gems`, or come from `modern_industrialization` / `extended_industrialization`
+- An item qualifies through any of three routes: the item whitelist (config `accepted_items`, full registry IDs), coming from `modern_industrialization` / `extended_industrialization`, or carrying tags such as `ores` / `storage_blocks` / `ingots` / `dusts` / `gems`
+- Hover the ? at the top-right of the GUI title for the full whitelist / mod / tag list currently in effect
 - Up to 9 item types at once; output starts at 0.1/tick and grows by 0.1/tick every 20 s with no cap
 - Taking items: click for 1, Shift-click for a stack, Space-click to fill your inventory
 - The six face buttons pick which slot that face outputs (or Random / Disabled), and that setting also restricts passive pipe extraction
@@ -314,14 +317,16 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 - Triggers on death, cancelling it and leaving you at 1 HP — reusable forever
 - Works from anywhere in your inventory or accessory slots, no need to hold it
 - On trigger it clears every effect, then grants 40 s Fire Resistance / 45 s Regeneration II / 5 s Absorption II
-- The 27 potion slots apply one by one after those base effects — use them to restore the buffs that were cleared
-- ALT+right-click opens the config GUI: the potion slots and the Ultimate → Creative Chemical Tank conversion
+- The 27 potion/food slots: potions apply one by one, and food is eaten one by one (e.g. a golden apple's Regeneration and Absorption)
+- Neither potions nor food are consumed — every revive can reuse them
+- ALT+right-click opens the config GUI: the potion and food slots, and the Ultimate → Creative Chemical Tank conversion
 
 ### Eternal Sword
 
-- Right-click to deal the sword's damage to every mob in range at once
-- Damage is the summed attack of every distinct damage item in its slots, minimum 1
-- Enchantments come from books in its slots, with levels added outright (Sharpness V + III → Sharpness VIII)
+- Right-click settles three layers on every mob in range: the sword's own damage, the sword's on-hit enchantments, then each weapon in its slots striking once
+- The sword's own damage is the summed attack of every distinct damage item in its slots, minimum 1
+- Each weapon in its slots also strikes once with its own damage and on-hit enchantments
+- Enchantments come from books in its slots: levels 1~10 are worth 1/2/4/8/16/32/64/128/256/512 points, and the summed points decide the level, capped at 10
 - ALT+right-click opens the config GUI: kill mode / range / 27 item slots
 - Strikes bypass the damage immunity of Draconic-Evolution's Chaos Guardian
 - Cannot be enchanted, smithed, or used as a crafting material

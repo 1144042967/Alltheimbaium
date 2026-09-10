@@ -58,6 +58,8 @@ public class Config {
     public static ForgeConfigSpec.LongValue STORAGE_FOUNTAIN_INITIAL_OUTPUT;
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_MODS;
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_TAGS;
+    /** 物品白名单：完整注册 ID，命中则无视标签/命名空间规则直接接受 */
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_ITEMS;
 
     // ==================== 生物农场 ====================
     public static ForgeConfigSpec.IntValue MOB_FARM_LEVEL_UP_INTERVAL_SECONDS;
@@ -171,6 +173,11 @@ public class Config {
                         () -> List.of("storage_blocks", "ores", "ingots", "dusts", "gems", "alloys",
                                 "plates", "enriched", "circuits", "pellets", "matter", "klein_star"),
                         o -> o instanceof String);
+        STORAGE_FOUNTAIN_ACCEPTED_ITEMS = builder
+                .comment("物品白名单：完整物品注册 ID（如 minecraft:diamond）。列出的物品无视上面的标签与命名空间规则，始终可以被标记复制")
+                .defineList("accepted_items",
+                        List::of,
+                        o -> o instanceof String);
         builder.pop();
 
         // ---- 生物农场 ----
@@ -256,7 +263,6 @@ public class Config {
             StorageFountainBlock.loadConfig();
             StorageFountainBlock.loadConfig();
             StorageFountainEntity.loadConfig();
-            StorageFountainItem.loadConfig();
             MobFarmBlock.loadConfig();
             PotionCombineRecipe.loadConfig();
         }

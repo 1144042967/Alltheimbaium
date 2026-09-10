@@ -126,12 +126,14 @@ public class TotemEventHandler {
     }
 
     /**
-     * 基础效果之后，逐个应用图腾 27 格药水槽位中药水的效果
+     * 基础效果之后：先逐个应用图腾槽位中药水的效果，再挨个"食用"槽位里的食物。
+     * 两者都只读取、不消耗，物品原样留在槽位里。
      */
     private static void applyPotionEffects(Player player) {
         ItemStack totem = findTotem(player);
         if (!totem.isEmpty()) {
             EternalTotemItem.applyPotionEffects(player, totem);
+            EternalTotemItem.eatStoredFood(player, totem);
         }
     }
 }

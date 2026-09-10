@@ -40,11 +40,13 @@ public class EternalTotemItem extends Item {
 
     // ==================== 常量 ====================
     /**
-     * 药水槽位数量
+     * 药水 / 食物槽位数量
      */
-    public static final int POTION_INVENTORY_SIZE = 27;
+    public static final int STORAGE_INVENTORY_SIZE = 27;
     /**
-     * 图腾 NBT 中药水槽位的键
+     * 图腾 NBT 中槽位的键。
+     * <p>
+     * 名字保留 {@code potion_items}：槽位含义已扩为"药水 + 食物"，但改键会让旧存档里的药水丢失。
      */
     public static final String TAG_POTION_ITEMS = "potion_items";
     /**
@@ -100,10 +102,10 @@ public class EternalTotemItem extends Item {
         return true;
     }
 
-    // ==================== 药水槽位 NBT ====================
+    // ==================== 药水 / 食物槽位 NBT ====================
 
     /**
-     * 从图腾 NBT 加载 27 格药水槽位
+     * 从图腾 NBT 加载 27 格药水 / 食物槽位
      */
     public static void loadPotionItems(ItemStack totem, SimpleContainer inv) {
         CompoundTag tag = totem.getTag();
@@ -112,20 +114,20 @@ public class EternalTotemItem extends Item {
         for (Tag t : list) {
             CompoundTag ct = (CompoundTag) t;
             int slot = ct.getByte("Slot");
-            if (slot >= 0 && slot < POTION_INVENTORY_SIZE) {
+            if (slot >= 0 && slot < STORAGE_INVENTORY_SIZE) {
                 inv.setItem(slot, ItemStack.of(ct));
             }
         }
     }
 
     /**
-     * 保存 27 格药水槽位到图腾 NBT
+     * 保存 27 格药水 / 食物槽位到图腾 NBT
      */
     public static void savePotionItems(ItemStack totem, SimpleContainer inv) {
         if (totem == null || totem.isEmpty()) return;
         CompoundTag tag = totem.getOrCreateTag();
         ListTag list = new ListTag();
-        for (int i = 0; i < POTION_INVENTORY_SIZE; i++) {
+        for (int i = 0; i < STORAGE_INVENTORY_SIZE; i++) {
             ItemStack s = inv.getItem(i);
             if (!s.isEmpty()) {
                 CompoundTag ct = new CompoundTag();
@@ -138,7 +140,7 @@ public class EternalTotemItem extends Item {
     }
 
     /**
-     * 读取图腾 27 格药水槽位中的非空物品
+     * 读取图腾 27 格药水 / 食物槽位中的非空物品
      */
     public static List<ItemStack> getPotionItems(ItemStack totem) {
         List<ItemStack> list = new ArrayList<>();
@@ -155,13 +157,33 @@ public class EternalTotemItem extends Item {
     }
 
     /**
-     * 应用图腾 27 格药水槽位中药水的效果到玩家
+     * 应用图腾 27 格药水 / 食物槽位中药水的效果到玩家
      */
     public static void applyPotionEffects(Player player, ItemStack totem) {
         for (ItemStack s : getPotionItems(totem)) {
             if (s.isEmpty()) continue;
             for (MobEffectInstance effect : PotionUtils.getMobEffects(s)) {
                 player.addEffect(effect);
+            }
+        }
+    }
+
+    /**
+     * 挨个"食用"图腾槽位里的食物：给予营养并触发食物自带效果（如金苹果的生命恢复 / 伤害吸收）。
+     * <p>
+     * 直接调用物品自己的 {@code finishUsingItem}，因此苹果、金苹果乃至任何自定义食物都按原版
+     * 食用逻辑处理；**忽略返回值、不消耗物品**，每次复活都能再用。
+     */
+    public static void eatStoredFood(Player player, ItemStack totem) {
+        Level level = player.level();
+        for (ItemStack s : getPotionItems(totem)) {
+            if (s.isEmpty() || !s.isEdible()) {
+                continue;
+            }
+            try {
+                s.finishUsingItem(level, player);
+            } catch (Throwable ignored) {
+                // 单个食物失败不影响其余
             }
         }
     }
