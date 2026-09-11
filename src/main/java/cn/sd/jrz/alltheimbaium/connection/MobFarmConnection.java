@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.connection;
 
 import cn.sd.jrz.alltheimbaium.entity.MobFarmEntity;
+import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -79,9 +80,10 @@ public class MobFarmConnection implements IItemHandler {
             if (item == null || stock <= 0) {
                 return ItemStack.EMPTY;
             }
+            // 管道查询要返回真实存量：不能按物品自身的堆叠上限（通常 64）截断，
+            // 否则管道只能看到 64，取不走本模组的大数存量。超过 int 的部分夹到 Integer.MAX_VALUE。
             ItemStack stack = new ItemStack(item);
-            int maxStack = Math.max(1, new ItemStack(item).getMaxStackSize());
-            stack.setCount((int) Math.min(stock, (long) maxStack));
+            stack.setCount(Tool.suitInt(stock));
             return stack;
         } catch (Throwable e) {
             log.error("MobFarmConnection.getStackInSlot error", e);

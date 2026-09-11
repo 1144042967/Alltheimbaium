@@ -79,7 +79,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     private int helpPageA = 0;
     private int helpPageB = 0;
     /** 配方摘要缓存：客户端 RecipeManager 在会话内不变，首次用到时取一次 */
-    private List<InstantInscriberEntity.RecipeSummary> pressRecipes;
+    private List<InstantInscriberEntity.PressSummary> pressRecipes;
     private List<InstantInscriberEntity.RecipeSummary> assemblyRecipes;
 
     private final FaceButton[] faceButtons = new FaceButton[6];
@@ -248,8 +248,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
         }
         // 两个 "?" 帮助卡片
         if (isHoverHelpA(mouseX, mouseY)) {
-            renderRecipeCard(guiGraphics, mouseX, mouseY, pressRecipes(), this.helpPageA,
-                    "screen.alltheimbaium.instant_inscriber.help.press.header");
+            renderPressCard(guiGraphics, mouseX, mouseY);
         }
         if (isHoverHelpB(mouseX, mouseY)) {
             renderRecipeCard(guiGraphics, mouseX, mouseY, assemblyRecipes(), this.helpPageB,
@@ -264,7 +263,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
      * 压板模式配方摘要。客户端 {@code RecipeManager} 在会话内不变，取到一次就缓存。
      */
     @Nonnull
-    private List<InstantInscriberEntity.RecipeSummary> pressRecipes() {
+    private List<InstantInscriberEntity.PressSummary> pressRecipes() {
         if (this.pressRecipes == null && this.minecraft != null && this.minecraft.level != null) {
             this.pressRecipes = InstantInscriberEntity.inscribeSummaries(this.minecraft.level);
             this.assemblyRecipes = InstantInscriberEntity.assemblySummaries(this.minecraft.level);
@@ -380,18 +379,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
         int lineH = this.font.lineHeight + 1;
 
         if (recipes.isEmpty()) {
-            // 未装 AE2 或没有可用配方
-            Component empty = Component.translatable("screen.alltheimbaium.instant_inscriber.help.empty").withStyle(ChatFormatting.GRAY);
-            int boxW = Math.max(this.font.width(header), this.font.width(empty)) + hpad * 2;
-            int boxH = vpad * 2 + lineH * 2;
-            int bx = cardX(mouseX, boxW);
-            int by = cardY(mouseY, boxH);
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
-            drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
-            guiGraphics.drawString(this.font, header, bx + hpad, by + vpad, 0xFFFFFF, true);
-            guiGraphics.drawString(this.font, empty, bx + hpad, by + vpad + lineH, 0xFFFFFF, true);
-            guiGraphics.pose().popPose();
+            renderEmptyCard(guiGraphics, mouseX, mouseY, header);
             return;
         }
 
@@ -446,6 +434,109 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
         }
         guiGraphics.drawString(this.font, footer, left, y, 0xFFFFFF, true);
         guiGraphics.pose().popPose();
+    }
+
+    /**
+     * 自绘**压板**帮助卡：一行一条 {@code 原料 → 产物}。
+     * <p>
+     * 方向与组装卡相反——压板是"1 份原料吃出多种压板"，所以**输入排在左侧、输出排在右侧**；
+     * 同一份原料支持的多个压板并排在该行后半段（数据侧已在 {@code inscribeSummaries} 里按输入聚合去重）。
+     */
+    private void renderPressCard(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        Component header = Component.translatable("screen.alltheimbaium.instant_inscriber.help.press.header").withStyle(ChatFormatting.GRAY);
+        List<InstantInscriberEntity.PressSummary> recipes = pressRecipes();
+        int hpad = 4;
+        int vpad = 4;
+        int lineH = this.font.lineHeight + 1;
+
+        if (recipes.isEmpty()) {
+            renderEmptyCard(guiGraphics, mouseX, mouseY, header);
+            return;
+        }
+
+        int total = recipes.size();
+        int pages = totalPages(total, HELP_PAGE_LINES);
+        int from = Math.min(this.helpPageA * HELP_PAGE_LINES, total);
+        int to = Math.min(total, from + HELP_PAGE_LINES);
+
+        List<Component> inputNames = new ArrayList<>();
+        List<Component> outputNames = new ArrayList<>();
+        int maxInW = 0;
+        int maxOutW = 0;
+        for (int i = from; i < to; i++) {
+            InstantInscriberEntity.PressSummary summary = recipes.get(i);
+            Component inName = joinNames(summary.inputs());
+            Component outName = joinNames(summary.outputs());
+            inputNames.add(inName);
+            outputNames.add(outName);
+            maxInW = Math.max(maxInW, this.font.width(inName));
+            maxOutW = Math.max(maxOutW, this.font.width(outName));
+        }
+        if (inputNames.isEmpty()) {
+            return;
+        }
+
+        Component footer = Component.translatable("screen.alltheimbaium.instant_inscriber.help.page",
+                Math.min(this.helpPageA + 1, pages), pages, total).withStyle(ChatFormatting.GRAY);
+        int arrowW = this.font.width(HELP_ARROW);
+        int arrowX = maxInW + HELP_COL_GAP;
+        int outX = arrowX + arrowW + HELP_COL_GAP;
+        int rowW = outX + maxOutW;
+        int contentArea = Math.max(Math.max(this.font.width(header), this.font.width(footer)), rowW);
+        int boxW = contentArea + hpad * 2;
+        int boxH = vpad * 2 + (1 + inputNames.size() + 1) * lineH;
+        int bx = cardX(mouseX, boxW);
+        int by = cardY(mouseY, boxH);
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
+        int left = bx + hpad;
+        int y = by + vpad;
+        guiGraphics.drawString(this.font, header, left, y, 0xFFFFFF, true);
+        y += lineH;
+        for (int i = 0; i < inputNames.size(); i++) {
+            guiGraphics.drawString(this.font, inputNames.get(i), left, y, 0xFFFFFF, true);
+            guiGraphics.drawString(this.font, HELP_ARROW, left + arrowX, y, 0xFFAAAAAA, true);
+            guiGraphics.drawString(this.font, outputNames.get(i), left + outX, y, 0xFFFFFF, true);
+            y += lineH;
+        }
+        guiGraphics.drawString(this.font, footer, left, y, 0xFFFFFF, true);
+        guiGraphics.pose().popPose();
+    }
+
+    /** 空态卡片：未装 AE2 或没有可用配方时，只画标题 + 一句提示 */
+    private void renderEmptyCard(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, @Nonnull Component header) {
+        int hpad = 4;
+        int vpad = 4;
+        int lineH = this.font.lineHeight + 1;
+        Component empty = Component.translatable("screen.alltheimbaium.instant_inscriber.help.empty").withStyle(ChatFormatting.GRAY);
+        int boxW = Math.max(this.font.width(header), this.font.width(empty)) + hpad * 2;
+        int boxH = vpad * 2 + lineH * 2;
+        int bx = cardX(mouseX, boxW);
+        int by = cardY(mouseY, boxH);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
+        guiGraphics.drawString(this.font, header, bx + hpad, by + vpad, 0xFFFFFF, true);
+        guiGraphics.drawString(this.font, empty, bx + hpad, by + vpad + lineH, 0xFFFFFF, true);
+        guiGraphics.pose().popPose();
+    }
+
+    /** 把一组物品名用 {@code " / "} 连起来，数量 > 1 时带 ×N */
+    @Nonnull
+    private static Component joinNames(@Nonnull List<ItemStack> stacks) {
+        StringBuilder sb = new StringBuilder();
+        for (ItemStack stack : stacks) {
+            if (sb.length() > 0) {
+                sb.append(" / ");
+            }
+            sb.append(stack.getHoverName().getString());
+            if (stack.getCount() > 1) {
+                sb.append(" ×").append(stack.getCount());
+            }
+        }
+        return Component.literal(sb.toString()).withStyle(ChatFormatting.WHITE);
     }
 
     private static String modeKey(int mode) {

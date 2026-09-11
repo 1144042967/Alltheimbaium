@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,8 +64,11 @@ import java.util.Map;
 public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(InstantFurnaceEntity.class);
 
-    /** FE 能量上限：2 亿（小于 int 上限，可用单个数据槽同步） */
-    public static final int MAX_ENERGY = 200_000_000;
+    /**
+     * FE 能量上限：20 亿。仍在 int 范围内，但**超过数据槽的 16 位**，同步时必须拆成高低两块
+     * （见 {@code InstantFurnaceMenu} 的 chunk 工具）。
+     */
+    public static final int MAX_ENERGY = 2_000_000_000;
     /** 每熔炼一个物品消耗的 FE */
     public static final int ENERGY_PER_SMELT = 1000;
     /** 输入 / 输出区各可容纳的最大物品种类数（"槽位数"） */
@@ -107,6 +111,8 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
 
     public InstantFurnaceEntity(BlockPos pos, BlockState state) {
         super(Registration.INSTANT_FURNACE_ENTITY.get(), pos, state);
+        // 六面输出默认全关：刚放下时不该把产物主动推给相邻方块，要玩家在界面里逐面打开
+        Arrays.fill(directionState, STATE_DISABLED);
     }
 
     // ==================== 行读取（菜单/数据同步用） ====================

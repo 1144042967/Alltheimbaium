@@ -46,9 +46,12 @@ import java.util.Comparator;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -69,7 +72,11 @@ import java.util.Set;
 public class InstantInscriberEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(InstantInscriberEntity.class);
 
-    public static final int MAX_ENERGY = 200_000_000;
+    /**
+     * FE 能量上限：20 亿。仍在 int 范围内，但**超过数据槽的 16 位**，同步时必须拆成高低两块
+     * （见 {@code InstantInscriberMenu} 的 chunk 工具）。
+     */
+    public static final int MAX_ENERGY = 2_000_000_000;
     public static final int ENERGY_PER_OP = 1000;
     public static final int INPUT_MAX_TYPES = 18;
     public static final int OUTPUT_MAX_TYPES = 9;
@@ -150,6 +157,8 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
 
     public InstantInscriberEntity(BlockPos pos, BlockState state) {
         super(Registration.INSTANT_INSCRIBER_ENTITY.get(), pos, state);
+        // 六面输出默认全关：刚放下时不该把产物主动推给相邻方块，要玩家在界面里逐面打开
+        Arrays.fill(directionState, STATE_DISABLED);
     }
 
     // ==================== 行读取 ====================
@@ -612,18 +621,59 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
     }
 
     /**
+     * 压板帮助卡用的一条摘要：**同一份原料 + 它支持的全部压板产物**。
+     * <p>
+     * 与 {@link RecipeSummary} 的区别在于聚合方向——压板是"1 份原料吃出多种压板"，
+     * 按产物逐条列会把同一份原料重复很多遍，所以这里按<b>输入</b>聚合。
+     */
+    public record PressSummary(@Nonnull List<ItemStack> inputs, @Nonnull List<ItemStack> outputs) {
+    }
+
+    /**
      * 压板模式（INSCRIBE）支持的配方摘要，供 GUI 帮助卡使用：1 份中间原料 → 它支持的全部压板。
      * <p>
+     * AE2 的压印配方是 (上, 中, 下) → 产物，压板模式只认中间那格，因此多套模板可能落在同一份原料上；
+     * 这里做两件事：
+     * <ol>
+     *     <li><b>去重</b>：计算后 (输入, 产物) 完全一致的组合只保留一份；</li>
+     *     <li><b>按输入聚合</b>：输入的注册名相同的产物并进同一条，界面上就是一行。</li>
+     * </ol>
      * **客户端同样可用**——{@code RecipeManager} 两端都有同步后的配方；未装 AE2 时返回空列表。
      */
     @Nonnull
-    public static List<RecipeSummary> inscribeSummaries(@Nonnull Level level) {
-        List<RecipeSummary> result = new ArrayList<>();
+    public static List<PressSummary> inscribeSummaries(@Nonnull Level level) {
+        // 输入注册名 → 该输入支持的产物（保持首次出现顺序，最后再统一排序）
+        Map<String, List<ItemStack>> outputsByInput = new LinkedHashMap<>();
+        Map<String, ItemStack> inputById = new LinkedHashMap<>();
+        Set<String> seenPair = new HashSet<>();
         for (InscribeEntry entry : readInscribe(level)) {
-            result.add(new RecipeSummary(entry.output, firstOf(entry.material)));
+            List<ItemStack> inputs = firstOf(entry.material);
+            if (inputs.isEmpty()) {
+                continue;
+            }
+            ItemStack input = inputs.get(0);
+            String inputKey = itemKey(input);
+            String pairKey = inputKey + " -> " + itemKey(entry.output) + " x" + entry.output.getCount();
+            if (!seenPair.add(pairKey)) {
+                continue;
+            }
+            inputById.putIfAbsent(inputKey, input);
+            outputsByInput.computeIfAbsent(inputKey, key -> new ArrayList<>()).add(entry.output);
         }
-        sortByOutput(result);
+        List<PressSummary> result = new ArrayList<>();
+        for (Map.Entry<String, List<ItemStack>> e : outputsByInput.entrySet()) {
+            result.add(new PressSummary(List.of(inputById.get(e.getKey())), List.copyOf(e.getValue())));
+        }
+        // 按输入注册名排序，保证分页顺序稳定
+        result.sort(Comparator.comparing(summary -> itemKey(summary.inputs().get(0))));
         return result;
+    }
+
+    /** 物品的注册名，用于去重与排序 */
+    @Nonnull
+    private static String itemKey(@Nonnull ItemStack stack) {
+        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        return id == null ? "" : id.toString();
     }
 
     /**
@@ -632,10 +682,19 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
     @Nonnull
     public static List<RecipeSummary> assemblySummaries(@Nonnull Level level) {
         List<RecipeSummary> result = new ArrayList<>();
+        Set<String> seenPair = new HashSet<>();
         for (AssemblyEntry entry : readAssembly(level)) {
             List<ItemStack> inputs = new ArrayList<>();
             for (Ingredient ing : entry.mats) {
                 inputs.addAll(firstOf(ing));
+            }
+            // 计算后 (产物, 材料) 完全一致的组合只保留一份
+            StringBuilder key = new StringBuilder(itemKey(entry.output)).append('x').append(entry.output.getCount());
+            for (ItemStack input : inputs) {
+                key.append(" + ").append(itemKey(input));
+            }
+            if (!seenPair.add(key.toString())) {
+                continue;
             }
             result.add(new RecipeSummary(entry.output, inputs));
         }

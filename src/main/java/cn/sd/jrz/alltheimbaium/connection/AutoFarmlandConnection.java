@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.connection;
 
 import cn.sd.jrz.alltheimbaium.entity.AutoFarmlandEntity;
+import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -75,8 +76,9 @@ public class AutoFarmlandConnection implements IItemHandler {
             if (item == null || stock <= 0) {
                 return ItemStack.EMPTY;
             }
-            int maxStack = Math.max(1, new ItemStack(item).getMaxStackSize());
-            return new ItemStack(item, (int) Math.min(stock, (long) maxStack));
+            // 管道查询要返回真实存量：不能按物品自身的堆叠上限（通常 64）截断，
+            // 否则管道只能看到 64，取不走本模组的大数存量。超过 int 的部分夹到 Integer.MAX_VALUE。
+            return new ItemStack(item, Tool.suitInt(stock));
         } catch (Throwable e) {
             log.error("AutoFarmlandConnection.getStackInSlot error", e);
         }

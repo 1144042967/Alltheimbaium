@@ -74,25 +74,34 @@ public class InstantFurnaceMenu extends AbstractContainerMenu {
         // 玩家背包 36~71
         addPlayerInventory(playerInventory);
 
-        // 数据同步：能量 + 六面状态
-        addDataSlot(makeDataSlot(() -> entity == null ? 0 : entity.getEnergyStored(), v -> clientEnergy = v));
+        // 数据同步：能量（20 亿超过 16 位，拆高低两块）+ 六面状态
+        addDataSlot(makeDataSlot(() -> entity == null ? 0 : intChunk(entity.getEnergyStored(), 1), v -> clientEnergy = merge32(v, intChunk(clientEnergy, 0))));
+        addDataSlot(makeDataSlot(() -> entity == null ? 0 : intChunk(entity.getEnergyStored(), 0), v -> clientEnergy = merge32(intChunk(clientEnergy, 1), v)));
         for (Direction direction : Direction.values()) {
             final int idx = direction.ordinal();
             addDataSlot(makeDataSlot(() -> entity == null ? 0 : entity.getDirectionState(direction), v -> clientDirectionState[idx] = v));
         }
-        // 输入行 18：itemId + 存量(hi/lo)
+        // 输入行 18：itemId + 存量（long，拆四个 16 位块）
         for (int i = 0; i < InstantFurnaceEntity.MAX_TYPES; i++) {
             final int idx = i;
             addDataSlot(makeDataSlot(() -> entity == null ? 0 : entity.getInputItemId(idx), v -> clientInputIds[idx] = v));
-            addDataSlot(makeDataSlot(() -> entity == null ? 0 : hiWord(entity.getInputStock(idx)), v -> clientInputStocks[idx] = mergeLong(v, loWord(clientInputStocks[idx]))));
-            addDataSlot(makeDataSlot(() -> entity == null ? 0 : loWord(entity.getInputStock(idx)), v -> clientInputStocks[idx] = mergeLong(hiWord(clientInputStocks[idx]), v)));
+            for (int k = 0; k < 4; k++) {
+                final int part = k;
+                addDataSlot(makeDataSlot(
+                        () -> entity == null ? 0 : longChunk(entity.getInputStock(idx), part),
+                        v -> clientInputStocks[idx] = setChunk(clientInputStocks[idx], part, v)));
+            }
         }
-        // 输出行 18：itemId + 存量(hi/lo)
+        // 输出行 18：itemId + 存量（long，拆四个 16 位块）
         for (int i = 0; i < InstantFurnaceEntity.MAX_TYPES; i++) {
             final int idx = i;
             addDataSlot(makeDataSlot(() -> entity == null ? 0 : entity.getOutputItemId(idx), v -> clientOutputIds[idx] = v));
-            addDataSlot(makeDataSlot(() -> entity == null ? 0 : hiWord(entity.getOutputStock(idx)), v -> clientOutputStocks[idx] = mergeLong(v, loWord(clientOutputStocks[idx]))));
-            addDataSlot(makeDataSlot(() -> entity == null ? 0 : loWord(entity.getOutputStock(idx)), v -> clientOutputStocks[idx] = mergeLong(hiWord(clientOutputStocks[idx]), v)));
+            for (int k = 0; k < 4; k++) {
+                final int part = k;
+                addDataSlot(makeDataSlot(
+                        () -> entity == null ? 0 : longChunk(entity.getOutputStock(idx), part),
+                        v -> clientOutputStocks[idx] = setChunk(clientOutputStocks[idx], part, v)));
+            }
         }
     }
 
@@ -363,15 +372,30 @@ public class InstantFurnaceMenu extends AbstractContainerMenu {
         };
     }
 
-    private static int hiWord(long value) {
-        return (int) (value >> 32);
+    // ==================== 数据槽拆位工具 ====================
+    // 数据槽在线路上走 ClientboundContainerSetDataPacket，值用 writeShort 写——**只有 16 位**。
+    // 因此 32 位值要拆成 2 块、64 位值要拆成 4 块；每块按无符号 16 位传递
+    // （0~65535 写出去会被读成负数，所以取块与并块都要 & 0xFFFF）。
+
+    /** 取 32 位值的第 {@code part} 个 16 位块（part 0 = 低 16 位） */
+    private static int intChunk(int value, int part) {
+        return (value >>> (part * 16)) & 0xFFFF;
     }
 
-    private static int loWord(long value) {
-        return (int) (value & 0xFFFFFFFFL);
+    /** 把两个 16 位块并回 32 位值 */
+    private static int merge32(int high, int low) {
+        return ((high & 0xFFFF) << 16) | (low & 0xFFFF);
     }
 
-    private static long mergeLong(int hi, int lo) {
-        return ((long) hi << 32) | (lo & 0xFFFFFFFFL);
+    /** 取 long 的第 {@code part} 个 16 位块（part 0 = 低 16 位，共 4 块） */
+    private static int longChunk(long value, int part) {
+        return (int) ((value >>> (part * 16)) & 0xFFFFL);
+    }
+
+    /** 把第 {@code part} 个 16 位块写回 long */
+    private static long setChunk(long value, int part, int chunk) {
+        int shift = part * 16;
+        long mask = 0xFFFFL << shift;
+        return (value & ~mask) | (((long) (chunk & 0xFFFF)) << shift);
     }
 }

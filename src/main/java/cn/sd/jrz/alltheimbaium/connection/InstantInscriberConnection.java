@@ -2,6 +2,7 @@ package cn.sd.jrz.alltheimbaium.connection;
 
 import cn.sd.jrz.alltheimbaium.entity.InstantInscriberEntity;
 import cn.sd.jrz.alltheimbaium.entity.InstantInscriberEntity.Row;
+import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
 import org.slf4j.Logger;
@@ -41,15 +42,33 @@ public class InstantInscriberConnection implements IItemHandler {
     public ItemStack getStackInSlot(int slot) {
         try {
             if (isOutputSlot(slot)) {
-                return owner.getOutputStack(slot - InstantInscriberEntity.INPUT_MAX_TYPES);
+                int index = slot - InstantInscriberEntity.INPUT_MAX_TYPES;
+                return withFullStock(owner.getOutputStack(index), owner.getOutputStock(index));
             }
             if (isInputSlot(slot)) {
-                return owner.getInputStack(slot);
+                return withFullStock(owner.getInputStack(slot), owner.getInputStock(slot));
             }
         } catch (Throwable e) {
             log.error("InstantInscriberConnection.getStackInSlot error", e);
         }
         return ItemStack.EMPTY;
+    }
+
+    /**
+     * 把 {@code count = 1} 的模板换成真实存量。
+     * <p>
+     * 实体的 {@code getInputStack}/{@code getOutputStack} 是给 GUI 用的（GUI 自己画缩写存量，
+     * 槽位里只能放 1 个），管道查询则要拿到全部数量，否则只能取走 1 个。
+     * 超过 int 的部分夹到 {@link Integer#MAX_VALUE}。
+     */
+    @Nonnull
+    private static ItemStack withFullStock(@Nonnull ItemStack template, long stock) {
+        if (template.isEmpty() || stock <= 0) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack stack = template.copy();
+        stack.setCount(Tool.suitInt(stock));
+        return stack;
     }
 
     @Override

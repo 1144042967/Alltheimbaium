@@ -179,7 +179,7 @@
   "screen.alltheimbaium.instant_furnace.face.up": "Up",
   "screen.alltheimbaium.instant_furnace.face.west": "West",
   "screen.alltheimbaium.instant_furnace.row_count": "Count: %s",
-  "screen.alltheimbaium.instant_furnace.swap": "Swap",
+  "screen.alltheimbaium.instant_furnace.swap": "↑↓",
   "screen.alltheimbaium.instant_inscriber.deposit_hint": "§eClick to deposit: §7merge the held §f%s§7 into the input row",
   "screen.alltheimbaium.instant_inscriber.energy_tooltip": "§7Energy: §e%s§7 / §e%s§7 FE",
   "screen.alltheimbaium.instant_inscriber.energy_usage": "§7Energy per generated product: §e%s§7 FE",

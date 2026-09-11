@@ -245,9 +245,13 @@ public class XxxItem extends BlockItem {
   ```
 - 玩家背包采用标准四行布局时，`inventoryLabelY = this.imageHeight - 94`；布局特殊（剑 / 图腾）才手填。
 - **每个 Screen 都必须覆写 `renderLabels`**，标题传 `true`、`playerInventoryTitle` 传 `false`。标题颜色由 `Tip.rarityColor(...)` 给的样式色决定，`drawString` 的颜色参数只是样式缺失时的兜底（详见上方「GUI 标题颜色」）。
-- 状态同步走 `DataSlot`：`long` 必须拆成高/低两个 int（`ClientboundContainerSetDataPacket` 用 `writeShort`，单槽只有 16 位，否则 ≥32768 的值会显示成 4.29M）。
+- 状态同步走 `DataSlot`，但**单个数据槽只有 16 位**：`ClientboundContainerSetDataPacket` 用 `writeShort` 读写，0~65535 传过去会被读成负数。所以 32 位值要拆 **2 块**、64 位值要拆 **4 块**，取块与并块都要 `& 0xFFFF`。**注意不是"拆成高低两个 int"**——那样每个 int 仍会被截断到 16 位。参考 `InstantFurnaceMenu` / `InstantInscriberMenu` 底部的 `intChunk` / `merge32` / `longChunk` / `setChunk`。
+  - 只有取值 ≤ 32767 的状态（模式、开关、面状态）才能直接用单槽。
+  - 能量这类"看起来不大"的值也很容易越界：`MAX_ENERGY` 是 20 亿，必须拆 2 块。
 - 交互走 `clickMenuButton` + 按钮 ID 常量，常量集中声明在 Menu 顶部；右键反向循环的区间取 `BUTTON_DIR_REVERSE_BASE`，值为紧邻各菜单 `BUTTON_OUTPUT` 之后。
 - 六面输出按钮一律走 `gui/FaceTooltip.java`，不要各自拼装；图标与点击行为见上方三条「六面按钮」小节。
+- **对外 `IItemHandler.getStackInSlot` 必须返回真实存量，不能按堆叠上限截断**：这些机器是 AE 大数存储，按 `Math.min(stock, maxStackSize)` 返回 64，管道就只能看到 64、取不走其余。用 `Tool.suitInt(stock)` 一步到位（超过 int 上限的部分夹到 `Integer.MAX_VALUE`）；`getSlotLimit` 返回 `Integer.MAX_VALUE`，`extractItem` 按调用方请求的数量走。
+  - 反之，**给 GUI 用的取值方法要保持小数量**（如 `InstantFurnaceEntity.getOutputStack` 固定返回 `count = 1`），因为界面自己画缩写存量、槽位里也只放 1 个。管道要真实数量时，由 Connection 在这类模板上 `setCount(Tool.suitInt(stock))`（见 `InstantFurnaceConnection.withFullStock`）。
 - **凡是 JEI 看不到的参考数据，都要在标题栏右侧放一个 `?` 帮助卡**（抄 `InstantInscriberScreen` / `CreativeTransmuterScreen`）：`init()` 里把位置右对齐到内边距 8，`renderLabels` 画黄色 `?`，hover 自绘半透明卡片（`HELP_Z = 400` 盖住槽位物品），`mouseClicked` 点击翻页，空态给一句"未安装 X"。写死的配方表、由配置推导的接受范围都属于这一类。
 - 语言键：`screen.alltheimbaium.<name>.*`，六面提示共用 `screen.alltheimbaium.output.*`，只有物品 GUI 才有 `screen.alltheimbaium.<name>.title`。
 
@@ -439,13 +443,13 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 ### 8. 零刻熔炉 (`InstantFurnaceBlock` / `InstantFurnaceEntity`)
 
 - 输入区 **18 种**物品行、输出区 **18 种**，均为 AE 大数（`long`，无 64 上限）
-- 每件耗能 `ENERGY_PER_SMELT = 1000 FE`，能量上限 `MAX_ENERGY = 200,000,000 FE`
+- 每件耗能 `ENERGY_PER_SMELT = 1000 FE`，能量上限 `MAX_ENERGY = 2,000,000,000 FE`（20 亿，进度条满格即此值）
 - 配方按 `SMELTING → BLASTING → SMOKING` 三级兜底查表，结果缓存（不可烧的以 EMPTY 哨兵缓存）
 - 无耗时：每 tick 按当前电量整批结算；输入/输出种类满时不部分消耗
 - 投料：Shift+左键背包物品 / `BUTTON_DEPOSIT_INPUT` / 管道插入槽 0~17
 - 取出：每种行支持 左键=1 / Shift=1组 / 空格=取满；管道只能从输出槽 18~35 抽取
-- `BUTTON_SWAP` 交换输入/输出内容（仅交换，不触发熔炼）
-- 六面输出只有"推送/禁用"两态（`STATE_PUSH`），逐面切换，**没有主动输出总开关**
+- `BUTTON_SWAP` 交换输入/输出内容（仅交换，不触发熔炼）；按钮文案就是 `↑↓`
+- 六面输出只有"推送/禁用"两态（`STATE_PUSH`），逐面切换，**没有主动输出总开关**；**六面默认全为禁用**（构造器里 `Arrays.fill(directionState, STATE_DISABLED)`），要玩家自己逐面打开
 
 ### 9. 零刻压印器 (`InstantInscriberBlock` / `InstantInscriberEntity`)
 
@@ -453,11 +457,14 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 - **压板模式 `MODE_INSCRIBE`（默认）**：取 `processType=INSCRIBE` 配方，只认 `getIngredients().get(1)`（middle）作为被消耗的原料；**上/下模板既不要求也不消耗**。每消耗 1 份原料，产出该原料命中的全部压板配方各一份
 - **组装模式 `MODE_ASSEMBLY`**：取 `processType=PRESS` 配方，消耗 top/middle/bottom 中全部非空材料；**3 材料配方优先于 2 材料**，外层循环直到无配方可执行（guard 1024）
-- 每件产物 1000 FE，上限 200,000,000 FE；输入 **18 种**、输出 **9 种**
-- 交互与零刻熔炉同构：`BUTTON_MODE` 切模式、`BUTTON_DEPOSIT_INPUT` 投料、三档取出、六面推送/禁用两态
-- **标题栏右侧两个 "?" 帮助卡**（参考 `MobFarmScreen`）：左=压板配方、右=组装配方，一行一条 `输出物品 ← 输入物品…`；点击可翻页，纯客户端逻辑。
+- 每件产物 1000 FE，上限 2,000,000,000 FE（20 亿）；输入 **18 种**、输出 **9 种**
+- 交互与零刻熔炉同构：`BUTTON_MODE` 切模式、`BUTTON_DEPOSIT_INPUT` 投料、三档取出、六面推送/禁用两态；**六面默认全为禁用**（同熔炉）
+- **标题栏右侧两个 "?" 帮助卡**（参考 `MobFarmScreen`）：左=压板配方、右=组装配方；点击可翻页，纯客户端逻辑。
   - 配方数据来自 `InstantInscriberEntity.inscribeSummaries(level)` / `assemblySummaries(level)`——**客户端可用**，因为 `ClientLevel.getRecipeManager()` 返回登录时同步下来的配方管理器（与 JEI、配方书同源）。未装 AE2 时返回空列表，卡片显示"未安装 AE2"。
-  - 摘要把每个 `Ingredient` 折成其第一个候选物品（AE2 压印配方的材料实际都是单一物品），并按产物注册名排序，保证分页顺序稳定。
+  - 摘要把每个 `Ingredient` 折成其第一个候选物品（AE2 压印配方的材料实际都是单一物品）。
+  - **两张卡的列方向是相反的，别改混**：压板卡是 `输入 → 输出…`（输入在左），组装卡是 `输出 ← 输入…`（输出在左）。
+  - **压板卡按输入聚合**（`PressSummary`）：AE2 的压印配方是 (上,中,下) → 产物，压板模式只认中间那格，所以多套模板会落在同一份原料上。`inscribeSummaries` 先按 `(输入, 产物)` 去重，再把同一输入的多个产物并成一条，界面上就是一行 `原料 → 压板A / 压板B`。`assemblySummaries` 同样对 `(产物, 材料)` 去重，但保持逐条列出。
+  - 两张卡都按注册名排序（压板按输入、组装按产物），保证分页顺序稳定。
 
 ### 10. 取出接口 (`ExtractionInterfaceBlock` / `ExtractionInterfaceEntity`)
 

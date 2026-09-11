@@ -64,7 +64,7 @@ public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu
     private static final int OUTPUT_BTN_X = 176 - TOOL_BTN_W - 8;
     private static final int OUTPUT_BTN_Y = 145;
     private static final int PROGRESS_X = 8;
-    private static final int PROGRESS_Y = 34;
+    private static final int PROGRESS_Y = 37;
     private static final int PROGRESS_W = 132;
     private static final int PROGRESS_H = 4;
 
@@ -168,10 +168,10 @@ public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu
         // 当前标记
         Component markerText = Component.translatable("screen.alltheimbaium.resource_farm.marked",
                 markerDisplay());
-        guiGraphics.drawString(this.font, markerText, 8, 14, 0xFFFFFF, true);
+        guiGraphics.drawString(this.font, markerText, 8, 16, 0xFFFFFF, true);
         // 等级 + 进度
         guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.resource_farm.level_progress",
-                this.menu.getLevel(), growthPercent()), 8, 24, 0xFFFFFF, true);
+                this.menu.getLevel(), growthPercent()), 8, 27, 0xFFFFFF, true);
         // 右上 "?"（对标记槽中心，槽上方）
         guiGraphics.drawString(this.font, "?", this.helpX, HELP_Y, HELP_COLOR, true);
     }

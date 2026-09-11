@@ -179,7 +179,7 @@
   "screen.alltheimbaium.instant_furnace.face.up": "上",
   "screen.alltheimbaium.instant_furnace.face.west": "西",
   "screen.alltheimbaium.instant_furnace.row_count": "数量: %s",
-  "screen.alltheimbaium.instant_furnace.swap": "交换",
+  "screen.alltheimbaium.instant_furnace.swap": "↑↓",
   "screen.alltheimbaium.instant_inscriber.deposit_hint": "§e点击投料: §7把手中 §f%s §7并入输入行",
   "screen.alltheimbaium.instant_inscriber.energy_tooltip": "§7电量: §e%s§7 / §e%s§7 FE",
   "screen.alltheimbaium.instant_inscriber.energy_usage": "§7每生成一个产物耗能: §e%s§7 FE",

@@ -100,7 +100,10 @@
 - 原料进入输入区即刻完成烧炼，每件耗 1000 FE
 - 熔炉 / 高炉 / 烟熏配方均可，优先级为熔炉 → 高炉 → 烟熏
 - 输入与输出各 18 种，以大数存储，不受 64 堆叠限制
+- 能量上限 20 亿 FE，界面顶部的进度条满格就是 20 亿
 - Shift+左键背包物品或点击投料按钮即可投料；取物统一为左键 1 / Shift 一组 / 空格取满
+- 六面输出开关默认全关，需要在界面里逐面打开
+- 界面上的 ↑↓ 按钮交换输入区与输出区的内容
 - 只接收 FE，不向外放电
 
 ### ATI 零刻压印器
@@ -109,6 +112,8 @@
 - **压板**：只消耗中间那格原料，上下模板既不放入也不消耗，1 份原料产出它支持的全部压板
 - **组装**：消耗上中下三格的全部材料，先算 3 材料配方再算 2 材料配方
 - 输入 18 种 / 输出 9 种，以大数存储
+- 能量上限 20 亿 FE，进度条满格就是 20 亿；六面输出开关默认全关
+- 标题栏两个 ? 查看配方：左=压板（原料在左、产物在右，同一原料的多个压板列在同一行）、右=组装（产物在左、材料在右）
 - 依赖 AE2 配方，未安装 AE2 时不产出；只接收 FE，不向外放电
 
 ### ATI 取出接口
@@ -297,7 +302,10 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 - Anything entering the input area is smelted instantly, at 1000 FE per item
 - Works with furnace / blast furnace / smoker recipes, in that priority order
 - 18 input and 18 output item types, stored as big numbers with no 64 stack limit
+- Energy caps at 2 billion FE — the bar at the top is full at 2,000,000,000
 - Shift+click an inventory item or use the deposit button to feed it; take items with click (1) / Shift-click (a stack) / Space-click (fill)
+- All six output faces start disabled and must be enabled one by one in the GUI
+- The ↑↓ button swaps the input and output areas
 - Accepts FE only — it never outputs power
 
 ### ATI Instant Inscriber
@@ -306,6 +314,8 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 - **Press**: consumes only the middle material — the top and bottom templates are neither needed nor consumed, and one material yields every press it feeds into
 - **Assemble**: consumes all materials in the top, middle and bottom slots, running 3-material recipes before 2-material ones
 - 18 input / 9 output item types, stored as big numbers
+- Energy caps at 2 billion FE and all six output faces start disabled
+- Two `?` glyphs in the title bar open the recipe cards: left = Press (material on the left, products on the right, with every press sharing one material on a single row), right = Assemble (products on the left, materials on the right)
 - Depends on AE2 recipes and produces nothing without AE2; accepts FE only, never outputs power
 
 ### ATI Extraction Interface

@@ -43,7 +43,6 @@ import java.util.Optional;
 @OnlyIn(Dist.CLIENT)
 public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/mob_farm_gui.png");
-    private static final int DARK_TEXT = 0x404040;
 
     // 六面状态按钮
     private static final int BTN_W = 48;
@@ -59,7 +58,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     // 信息/进度条（renderBg 屏幕坐标用这些常量 + leftPos/topPos）
     private static final int INFO_X = 8;
     private static final int PROGRESS_X = 8;
-    private static final int PROGRESS_Y = 34;
+    private static final int PROGRESS_Y = 37;
     private static final int PROGRESS_W = 132;
     private static final int PROGRESS_H = 4;
 
@@ -217,10 +216,10 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         } else {
             contained = Component.translatable("screen.alltheimbaium.mob_farm.empty");
         }
-        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.mob_farm.contained", contained), INFO_X, 14, 0xFFFFFF, true);
+        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.mob_farm.contained", contained), INFO_X, 16, 0xFFFFFF, true);
         // 等级 + 升级百分比
         guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.mob_farm.level_progress",
-                this.menu.getLevel(), growthPercent()), INFO_X, 24, 0xFFFFFF, true);
+                this.menu.getLevel(), growthPercent()), INFO_X, 27, 0xFFFFFF, true);
         // 右上标记槽上方两个黄色 "?"：左=A(标记物→生物)、右=B(生物→产物)，整体对槽中心线
         guiGraphics.drawString(this.font, "?", this.helpX1, HELP_Y, HELP_COLOR, true);
         guiGraphics.drawString(this.font, "?", this.helpX2, HELP_Y, HELP_COLOR, true);
