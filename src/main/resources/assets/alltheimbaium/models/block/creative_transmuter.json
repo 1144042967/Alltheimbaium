@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "alltheimbaium:block/creative_transmuter_top",
+    "bottom": "alltheimbaium:block/creative_transmuter_btm",
+    "side": "alltheimbaium:block/creative_transmuter_side",
+    "particle": "alltheimbaium:block/creative_transmuter_side"
+  }
+}

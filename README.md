@@ -12,9 +12,9 @@
 | 材料级 | 白色 | 仅作合成中间物 | ATI 打包材料 |
 | 便利级 | 黄色 | 省事、提速，但本身不产生资源 | ATI 耕地、生成平台、取出接口、加速时钟、补给箱 |
 | 高效级 | 青色 | 需要输入或能量，批量加工 | ATI 自动耕地、零刻熔炉、零刻压印器、生物农场、资源农场 |
-| 破坏平衡 | 淡紫 | 一次建立后无限产出，或绝对能力 | 存储方块制造机、液体无限制造机、永恒图腾、永恒之剑 |
+| 破坏平衡 | 淡紫 | 一次建立后无限产出，或绝对能力 | 存储方块制造机、液体无限制造机、创造物品质变器、永恒图腾、永恒之剑 |
 
-合成成本同品级一致：便利级用铁锭、高效级用铁块、破坏平衡用钻石块，永恒系列用下界合金块。
+合成成本同品级一致：便利级用铁锭、高效级用铁块、破坏平衡用钻石块，永恒系列用下界合金块。创造物品质变器是例外，它走的是下界合金块环（产出的是创造化学品储罐）。
 
 ## 机器
 
@@ -66,6 +66,16 @@
 - 手持空桶或带液容器右键可直接装取；界面左上 + 槽也会自动处理进出容器
 - 模型为流体储罐外观，内部液体随存量动态渲染
 - 支持管道输入输出，建议用 AE2 的存储面板管理
+
+### ATI 创造物品质变器
+
+- 布局参考工作台：3×3 输入栏 + 输出栏，但输入与输出都**存在机器里**，关掉界面、拆下重放都不会丢
+- 输入栏每格只放 1 个，九格填满**同一种材料**时自动转化，产物进入输出栏
+- 输出栏被占用时停止转化，把产物取走即可继续
+- 输入栏可接管道输入，输出栏可接管道输出
+- 输入栏只收配方内的材料，无关物品放不进去也塞不进来
+- 配方写死在代码里（JEI 与配方书里看不到），点界面标题栏右侧的 `?` 可查看全部配方并翻页，物品 tooltip 的参数段也会列出
+- 当前配方：9 × 终极化学品储罐 → 创造化学品储罐（需安装 Mekanism）
 
 ### ATI 生物农场
 
@@ -196,9 +206,9 @@ An item's name colour comes from its vanilla rarity, and matches both its power 
 | Material | White | Crafting intermediate only | ATI Package Material |
 | Utility | Yellow | Convenience and speed, but produces nothing on its own | ATI Farmland, Generation Platform, Extraction Interface, Acceleration Clock, Supply Crate |
 | Advanced | Aqua | Needs input or energy, batch processing | ATI Auto Farmland, Instant Furnace, Instant Inscriber, Mob Farm, Resource Farm |
-| Overpowered | Light purple | Infinite output once set up, or absolute power | Storage Block Fountain, Liquid Infinity Fountain, Eternal Totem, Eternal Sword |
+| Overpowered | Light purple | Infinite output once set up, or absolute power | Storage Block Fountain, Liquid Infinity Fountain, Creative Transmuter, Eternal Totem, Eternal Sword |
 
-Cost tracks the tier: iron ingots for Utility, iron blocks for Advanced, diamond blocks for Overpowered, and netherite blocks for the Eternal items.
+Cost tracks the tier: iron ingots for Utility, iron blocks for Advanced, diamond blocks for Overpowered, and netherite blocks for the Eternal items. The Creative Transmuter is the exception — it uses a netherite block ring, because what it produces is a Creative Chemical Tank.
 
 ## Machines
 
@@ -251,6 +261,16 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 - Right-click with an empty or filled container to draw or pour directly; the + slot in the GUI handles containers automatically
 - Modelled as a fluid tank, with the internal fluid rendered to match its stock
 - Supports pipe input and output, recommended to use AE2's storage panel for management
+
+### ATI Creative Transmuter
+
+- Laid out like a crafting table — a 3×3 input grid plus an output slot — but both **live inside the machine**: closing the GUI or breaking the block loses nothing
+- One item per input slot; fill all nine with the **same material** and it converts on its own into the output slot
+- Conversion halts while the output slot is occupied; take the result out to continue
+- Pipes can feed the input grid and pull from the output slot
+- The input grid only accepts recipe ingredients, so anything else cannot be placed or pushed in
+- Recipes are hardcoded (invisible to JEI and the recipe book); click the `?` at the right of the title bar to browse them all, and the item tooltip's parameter section lists them too
+- Current recipe: 9 × Ultimate Chemical Tank → Creative Chemical Tank (requires Mekanism)
 
 ### ATI Mob Farm
 

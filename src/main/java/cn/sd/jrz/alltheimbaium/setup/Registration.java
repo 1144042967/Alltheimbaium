@@ -5,6 +5,7 @@ import cn.sd.jrz.alltheimbaium.block.*;
 import cn.sd.jrz.alltheimbaium.entity.*;
 import cn.sd.jrz.alltheimbaium.gui.AutoFarmlandMenu;
 import cn.sd.jrz.alltheimbaium.gui.ClockMenu;
+import cn.sd.jrz.alltheimbaium.gui.CreativeTransmuterMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalSwordMenu;
 import cn.sd.jrz.alltheimbaium.gui.EternalTotemMenu;
 import cn.sd.jrz.alltheimbaium.gui.InstantFurnaceMenu;
@@ -76,6 +77,7 @@ public class Registration {
                     output.accept(Registration.RESOURCE_FARM_ITEM.get());
                     output.accept(Registration.STORAGE_FOUNTAIN_ITEM.get());
                     output.accept(Registration.LIQUID_FOUNTAIN_ITEM.get());
+                    output.accept(Registration.CREATIVE_TRANSMUTER_ITEM.get());
                     output.accept(Registration.ETERNAL_TOTEM.get());
                     output.accept(Registration.ETERNAL_SWORD.get());
                 })
@@ -160,6 +162,10 @@ public class Registration {
                     .noOcclusion()));
     public static final RegistryObject<BlockItem> LIQUID_FOUNTAIN_ITEM = ITEMS.register("liquid_fountain", () -> new LiquidFountainItem(LIQUID_FOUNTAIN_BLOCK.get()));
 
+    // 质变器：形状是普通实心方块，不沿用玻璃罐体的 noOcclusion
+    public static final RegistryObject<CreativeTransmuterBlock> CREATIVE_TRANSMUTER_BLOCK = BLOCKS.register("creative_transmuter", () -> new CreativeTransmuterBlock(BLOCK_PROPERTIES));
+    public static final RegistryObject<BlockItem> CREATIVE_TRANSMUTER_ITEM = ITEMS.register("creative_transmuter", () -> new CreativeTransmuterItem(CREATIVE_TRANSMUTER_BLOCK.get()));
+
     public static final RegistryObject<EternalTotemItem> ETERNAL_TOTEM = ITEMS.register("eternal_totem", EternalTotemItem::new);
     public static final RegistryObject<EternalSwordItem> ETERNAL_SWORD = ITEMS.register("eternal_sword", EternalSwordItem::new);
 
@@ -171,6 +177,8 @@ public class Registration {
             MENUS.register("eternal_totem", () -> IForgeMenuType.create((id, inv, data) -> new EternalTotemMenu(id, inv)));
     public static final RegistryObject<MenuType<LiquidFountainMenu>> LIQUID_FOUNTAIN_MENU =
             MENUS.register("liquid_fountain", () -> IForgeMenuType.create((id, inv, data) -> new LiquidFountainMenu(id, inv, data.readBlockPos())));
+    public static final RegistryObject<MenuType<CreativeTransmuterMenu>> CREATIVE_TRANSMUTER_MENU =
+            MENUS.register("creative_transmuter", () -> IForgeMenuType.create((id, inv, data) -> new CreativeTransmuterMenu(id, inv, data.readBlockPos())));
     public static final RegistryObject<MenuType<AutoFarmlandMenu>> AUTO_FARMLAND_MENU =
             MENUS.register("auto_farmland", () -> IForgeMenuType.create((id, inv, data) -> new AutoFarmlandMenu(id, inv, data.readBlockPos())));
     public static final RegistryObject<MenuType<ClockMenu>> CLOCK_MENU =
@@ -202,6 +210,7 @@ public class Registration {
     public static final RegistryObject<BlockEntityType<AutoFarmlandEntity>> AUTO_FARMLAND_ENTITY = ENTITIES.register("auto_farmland", () -> BlockEntityType.Builder.of(AutoFarmlandEntity::new, AUTO_FARMLAND_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<ClockEntity>> CLOCK_ENTITY = ENTITIES.register("clock", () -> BlockEntityType.Builder.of(ClockEntity::new, CLOCK_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<LiquidFountainEntity>> LIQUID_FOUNTAIN_ENTITY = ENTITIES.register("liquid_fountain", () -> BlockEntityType.Builder.of(LiquidFountainEntity::new, LIQUID_FOUNTAIN_BLOCK.get()).build(null));
+    public static final RegistryObject<BlockEntityType<CreativeTransmuterEntity>> CREATIVE_TRANSMUTER_ENTITY = ENTITIES.register("creative_transmuter", () -> BlockEntityType.Builder.of(CreativeTransmuterEntity::new, CREATIVE_TRANSMUTER_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<StorageFountainEntity>> STORAGE_FOUNTAIN_ENTITY = ENTITIES.register("storage_fountain", () -> BlockEntityType.Builder.of(StorageFountainEntity::new, STORAGE_FOUNTAIN_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<InstantFurnaceEntity>> INSTANT_FURNACE_ENTITY = ENTITIES.register("instant_furnace", () -> BlockEntityType.Builder.of(InstantFurnaceEntity::new, INSTANT_FURNACE_BLOCK.get()).build(null));
     public static final RegistryObject<BlockEntityType<InstantInscriberEntity>> INSTANT_INSCRIBER_ENTITY = ENTITIES.register("instant_inscriber", () -> BlockEntityType.Builder.of(InstantInscriberEntity::new, INSTANT_INSCRIBER_BLOCK.get()).build(null));

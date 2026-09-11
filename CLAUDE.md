@@ -43,10 +43,11 @@
 | 材料级 | `COMMON` | 白色 | 仅合成中间物 | `package_material_x1` |
 | 便利级 | `UNCOMMON` | 黄色 | 省事、提速，本身不产生资源 | `farmland` `platform` `extraction_interface` `clock` `supply_crate` |
 | 高效级 | `RARE` | 青色 | 需输入或能量，批量加工 | `auto_farmland` `instant_furnace` `instant_inscriber` `mob_farm` `resource_farm` |
-| 破坏平衡 | `EPIC` | 淡紫 | 一次建立后无限产出，或绝对能力 | `storage_fountain` `liquid_fountain` `eternal_totem` `eternal_sword` |
+| 破坏平衡 | `EPIC` | 淡紫 | 一次建立后无限产出，或绝对能力 | `storage_fountain` `liquid_fountain` `creative_transmuter` `eternal_totem` `eternal_sword` |
 
 - `RARE` 与 `EPIC` 物品一律 `fireResistant()`。
 - 合成成本随品级递增：便利级用铁锭、高效级用铁块、破坏平衡用钻石块，永恒系列用下界合金块。`auto_farmland` 走"耕地升级"路线（6 耕地 + 红石），不套用铁块环。
+- **例外**：`creative_transmuter` 是破坏平衡级里唯一走**下界合金块环**的机器（它最终产出的是创造化学品储罐，成本对标永恒系列而非同级的存储/液体制造机）。
 
 ### tooltip 结构（由 `item/Tip.java` 统一生成）
 
@@ -189,6 +190,8 @@ assets/alltheimbaium/lang/zh_cn.json + en_us.json
 - 材料级方块的贴图**直接复用物品贴图**（`cube_all` 指向 `alltheimbaium:item/package_material`），不另画一份 block 贴图。
 - 有方块状态的方块才在 `variants` 里多列分支（只有 `platform` 的 `disguised`），其余一律单分支。
 - 别照抄的遗留文件：`textures/block/storage_fountain.png` 没有任何模型或代码引用（该方块用的是 `_top/_side/_btm` 三张），多画这样一张纯属浪费。
+- **贴图与 GUI 底图一律写成 `tools/gen_<name>_assets.py` 生成器**（已有 `gen_instant_furnace_assets.py` / `gen_instant_inscriber_assets.py` / `gen_creative_transmuter_assets.py`），不要只提交 PNG：生成器可重复执行、便于微调，也是贴图与 Java 侧坐标耦合关系的唯一记录。脚本开头的 docstring 要写明该机器 `Menu`/`Screen` 的槽位坐标与 `imageWidth/imageHeight`，**改 Java 坐标必须同步改脚本并重跑**。
+- 画 GUI 底图不要自己估摸边框，直接抄 `gen_creative_transmuter_assets.py` 里的 `_panel()` / `_slot_box()`：边框是 1px 黑描边（圆角处透明）+ 左上 2px 白高光 + 右下 2px 灰阴影，槽位是 18×18 三面倒角。该脚本带 `--verify` 开关，会用本模组既有的干净容器界面回放校验边框规则，正常输出 `边框差异像素数 = 0`；改过规则就跑一次。
 
 ### 3. 贴图风格
 
@@ -245,6 +248,7 @@ public class XxxItem extends BlockItem {
 - 状态同步走 `DataSlot`：`long` 必须拆成高/低两个 int（`ClientboundContainerSetDataPacket` 用 `writeShort`，单槽只有 16 位，否则 ≥32768 的值会显示成 4.29M）。
 - 交互走 `clickMenuButton` + 按钮 ID 常量，常量集中声明在 Menu 顶部；右键反向循环的区间取 `BUTTON_DIR_REVERSE_BASE`，值为紧邻各菜单 `BUTTON_OUTPUT` 之后。
 - 六面输出按钮一律走 `gui/FaceTooltip.java`，不要各自拼装；图标与点击行为见上方三条「六面按钮」小节。
+- **凡是 JEI 看不到的参考数据，都要在标题栏右侧放一个 `?` 帮助卡**（抄 `InstantInscriberScreen` / `CreativeTransmuterScreen`）：`init()` 里把位置右对齐到内边距 8，`renderLabels` 画黄色 `?`，hover 自绘半透明卡片（`HELP_Z = 400` 盖住槽位物品），`mouseClicked` 点击翻页，空态给一句"未安装 X"。写死的配方表、由配置推导的接受范围都属于这一类。
 - 语言键：`screen.alltheimbaium.<name>.*`，六面提示共用 `screen.alltheimbaium.output.*`，只有物品 GUI 才有 `screen.alltheimbaium.<name>.title`。
 
 ### 7. 数据文件
@@ -269,6 +273,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 │   ├── InstantFurnaceBlock.java        # 零刻熔炉
 │   ├── InstantInscriberBlock.java      # 零刻压印器
 │   ├── ExtractionInterfaceBlock.java   # 取出接口
+│   ├── CreativeTransmuterBlock.java    # 创造物品质变器
 │   ├── MobFarmBlock.java               # 生物农场
 │   └── ResourceFarmBlock.java          # 资源农场
 ├── entity/                     # BlockEntity 类（与上方方块一一对应）
@@ -277,6 +282,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 │   ├── StorageFountainEntity.java / LiquidFountainEntity.java
 │   ├── InstantFurnaceEntity.java / InstantInscriberEntity.java
 │   ├── ExtractionInterfaceEntity.java
+│   ├── CreativeTransmuterEntity.java
 │   └── MobFarmEntity.java / ResourceFarmEntity.java
 ├── item/                       # 物品类
 │   ├── Tip.java                        # tooltip 规范构建器（所有物品共用）
@@ -284,6 +290,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 │   ├── FarmlandItem.java / AutoFarmlandItem.java / ClockItem.java
 │   ├── PlatformItem.java / SupplyCrateItem.java / ExtractionInterfaceItem.java
 │   ├── StorageFountainItem.java / LiquidFountainItem.java
+│   ├── CreativeTransmuterItem.java
 │   ├── InstantFurnaceItem.java / InstantInscriberItem.java
 │   ├── MobFarmItem.java / ResourceFarmItem.java
 │   ├── EternalTotemItem.java / EternalSwordItem.java
@@ -292,6 +299,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 │   ├── AutoFarmlandConnection.java / MobFarmConnection.java / ResourceFarmConnection.java
 │   ├── StorageFountainConnection.java / LiquidFountainConnection.java
 │   ├── InstantFurnaceConnection.java / InstantInscriberConnection.java
+│   ├── CreativeTransmuterConnection.java    # 输入栏可插不可抽、输出栏可抽不可插
 │   └── ExtractionInterfaceConnection.java   # 聚合连通范围内的机器，只读
 ├── gui/                        # Menu / Screen / Renderer / 客户端事件
 │   ├── <机器>Menu.java / <机器>Screen.java
@@ -306,6 +314,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
     ├── Registration.java                # 所有方块/物品/实体/菜单的注册
     ├── Config.java                      # ForgeConfigSpec 服务端配置
     ├── Tool.java                        # 工具方法 (NBT, 数量裁剪, DE 反射)
+    ├── TransmuteCatalog.java            # 创造物品质变器的固定配方表（注册名解析，可选联动）
     ├── MobFarmCatalog.java / MobFarmDefaultData.java / MobFarmInteraction.java
     ├── MobFarmMarkerIndex.java / MobFarmWhitelist.java / KillLootEstimator.java
     ├── ResourceData.java / ResourceDefaultData.java
@@ -360,8 +369,8 @@ src/main/java/cn/sd/jrz/alltheimbaium/
   - 先判 `isExcluded(block)` 决定是否整面跳过（在 randomTick 之前）
   - 对 `block.isRandomlyTicking(state)` 的方块**额外调用 1 次** `randomTick()`（与倍速无关）
   - 仅当方块实现 `EntityBlock` 时，额外调用 ticker `(speed - 1)` 次（加上原版自身的 1 次 = 共 speed 次）
-- **不参与加速的方块**（`ClockEntity.isExcluded`）：`ClockBlock`、`FarmlandBlock`、`ExtractionInterfaceBlock`、`SupplyCrateBlock`、`InstantFurnaceBlock`、`InstantInscriberBlock`。
-  - 时钟与耕地是为了避免互相叠加；取出接口与补给箱的 tick 本身不产生进度；熔炉与压印器每 tick 已按当前电量整批结算完，重复调用只有性能开销没有额外产出。
+- **不参与加速的方块**（`ClockEntity.isExcluded`）：`ClockBlock`、`FarmlandBlock`、`ExtractionInterfaceBlock`、`SupplyCrateBlock`、`InstantFurnaceBlock`、`InstantInscriberBlock`、`CreativeTransmuterBlock`。
+  - 时钟与耕地是为了避免互相叠加；取出接口与补给箱的 tick 本身不产生进度；熔炉与压印器每 tick 已按当前电量整批结算完，质变器九格凑齐即转化、转完输入栏必空，重复调用只有性能开销没有额外产出。
   - 新增方块时若它"每 tick 结算一次就够了"，应加进这个列表。
 - `ClockRenderer`（BER）：在方块四周侧面居中渲染当前倍速数值（`Font.drawInBatch`）
 - 战利品表含 `copy_nbt`，拆下时保留 `enabled` / `directionEnabled` / `speed`
@@ -536,6 +545,22 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 - `package_material_x1` — 打包材料：本模组所有机器与材料的通用合成基底，由木板与圆石互相合成，一次产出 8 个
 
+### 17. 创造物品质变器 (`CreativeTransmuterBlock` / `CreativeTransmuterEntity`)
+
+布局参考工作台的三段式转化机器，**不耗能、无耗时**。
+
+- 内部就是一个 10 格 `ItemStackHandler`：槽 0~8 是 3×3 输入栏、槽 9 是输出栏，**每格上限都是 1**
+- 每 tick 检查：九格填满、为同一种材料、命中配方表，且输出栏为空 → 一次清空九格并写入 1 个产物；输出栏被占用时停产
+- **输入输出都持久化在机器里**（与工作台不同）：关界面、拆下重放都不丢，靠 `inventory` 一个 NBT 键存取
+- **只收配方材料**：`TransmuteCatalog.isValidInput` 同时管住 GUI 槽位的 `mayPlace` 与管道插入，无关物品既放不进也塞不进，不会把九格堵死
+- 对外 `IItemHandler`（`CreativeTransmuterConnection`，**方向无关**）两个方向不对称：输入栏可插不可抽、输出栏可抽不可插，每格上限 1，管道推入一组会自动摊到九格
+- GUI 是工作台式布局（3×3 → 箭头 → 输出），**没有按钮也没有数据槽**——界面展示的就是机器真实物品栏，变更随容器自动同步
+- 标题栏右侧有一个 **`?` 配方帮助卡**（参考零刻压印器 / 生物农场的同款卡片）：hover 弹出 `产物 ← 材料 ×N` 的逐行对齐列表，点击翻页，未装 Mekanism 时显示空态文案。配方不在 JEI 里，这里是游戏内唯一的查询入口，改动配方时**不要漏掉它**
+- 配方见 `setup/TransmuteCatalog`：**写死在代码里**（不是数据包配方，因此 JEI 与配方书里都没有），用注册名书写并延迟解析，联动模组未安装时对应条目静默跳过、tooltip 显示"未安装 …"。当前仅一条：`9 × 终极化学品储罐 → 创造化学品储罐`
+- `TransmuteCatalog.summaries()` 返回结构化的 `Summary`（产物 / 材料 / 个数）供帮助卡按列对齐绘制，`tooltipLines()` 在此基础上拼出带颜色码的 tooltip 行——两处共用同一份数据，新增配方只改配方表
+- 每条配方固定是"**9 个同种材料 → 1 个产物**"，匹配逻辑要求九格物品完全同种
+- 已加入 `ClockEntity.isExcluded`：九格凑齐即转化、转完输入栏必空，加速它只有性能开销
+
 ## NBT 数据存储
 
 各 Entity 通过 `saveAdditional`/`load` 持久化数据：
@@ -547,9 +572,10 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - **ClockEntity**: `enabled`(boolean), `directionEnabled`(int[6]), `speed`(int)
 - **MobFarmEntity**: `entityTag`(CompoundTag), `level`(long), `tickCount`(long), `rows`(ListTag: 物品NBT + `Stock` + `Weight` + `Tool`), `directionState`(int[6]), `outputEnabled`(bool), `specialSlot`(CompoundTag)
 - **ResourceFarmEntity**: `marker`(string), `level`(long), `tickCount`(long), `rows`(ListTag: 物品NBT + `Stock` + `Weight`), `directionState`(int[6]), `outputEnabled`(bool)
+- **CreativeTransmuterEntity**: `inventory`(CompoundTag: `ItemStackHandler` 的序列化结果，槽 0~8 输入栏、槽 9 输出栏)
 - 所有数值加载时经过 `Tool.suit()` 防负数处理
 
-**战利品表**：`auto_farmland` / `instant_furnace` / `instant_inscriber` / `liquid_fountain` / `mob_farm` / `resource_farm` / `storage_fountain` / `clock` 均使用 `copy_name` + `copy_nbt` 把上述 BlockEntity 数据存进 `BlockEntityTag`，拆下后重放即可恢复；`platform` / `supply_crate` / `extraction_interface` 无持久数据，用普通战利品表。
+**战利品表**：`auto_farmland` / `instant_furnace` / `instant_inscriber` / `liquid_fountain` / `mob_farm` / `resource_farm` / `storage_fountain` / `clock` / `creative_transmuter` 均使用 `copy_name` + `copy_nbt` 把上述 BlockEntity 数据存进 `BlockEntityTag`，拆下后重放即可恢复；`platform` / `supply_crate` / `extraction_interface` 无持久数据，用普通战利品表。
 
 ## Tool 工具方法
 

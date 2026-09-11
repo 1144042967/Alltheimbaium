@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
 import cn.sd.jrz.alltheimbaium.block.ClockBlock;
+import cn.sd.jrz.alltheimbaium.block.CreativeTransmuterBlock;
 import cn.sd.jrz.alltheimbaium.block.ExtractionInterfaceBlock;
 import cn.sd.jrz.alltheimbaium.block.FarmlandBlock;
 import cn.sd.jrz.alltheimbaium.block.InstantFurnaceBlock;
@@ -189,6 +190,7 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
      * 一是避免互相叠加：加速时钟、ATI 耕地都不会被其它时钟加速；
      * 二是避免无意义的重复 tick：取出接口靠连通搜索、补给箱靠玩家数据，
      * 它们的 tick 本身不产生进度；零刻熔炉与零刻压印器每 tick 就按当前电量整批结算完，
+     * 创造物品质变器九格凑齐就立即转化、转完输入栏必定是空的，
      * 重复调用不会有额外产出，只会白白消耗性能。
      */
     private static boolean isExcluded(@Nonnull Block block) {
@@ -197,7 +199,8 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
                 || block instanceof ExtractionInterfaceBlock
                 || block instanceof SupplyCrateBlock
                 || block instanceof InstantFurnaceBlock
-                || block instanceof InstantInscriberBlock;
+                || block instanceof InstantInscriberBlock
+                || block instanceof CreativeTransmuterBlock;
     }
 
     // ==================== 菜单提供 ====================

@@ -26,6 +26,7 @@ public class ClientHandler {
             MenuScreens.register(Registration.INSTANT_FURNACE_MENU.get(), InstantFurnaceScreen::new);
             MenuScreens.register(Registration.INSTANT_INSCRIBER_MENU.get(), InstantInscriberScreen::new);
             MenuScreens.register(Registration.CLOCK_MENU.get(), ClockScreen::new);
+            MenuScreens.register(Registration.CREATIVE_TRANSMUTER_MENU.get(), CreativeTransmuterScreen::new);
             MenuScreens.register(Registration.PLATFORM_MENU.get(), PlatformScreen::new);
             MenuScreens.register(Registration.SUPPLY_CRATE_MENU.get(), SupplyCrateScreen::new);
             MenuScreens.register(Registration.MOB_FARM_MENU.get(), MobFarmScreen::new);
