@@ -146,6 +146,113 @@ protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
 
 类型键 `tip.alltheimbaium.type.*`：material / farmland / building / accelerator / agriculture / processing / resource / logistics / supply / combat / survival。
 
+## 物品创建规则
+
+新增物品时逐项对照本节。上方「物品品级与 tooltip 规范」管**文案与配色**，本节管**要产出哪些文件、每个文件长什么样**——后者是硬约束，漏一个文件游戏里就是紫黑块或缺图。
+
+### 1. 文件清单
+
+带 GUI 的机器（完整链路）：
+
+| # | 文件 | 要点 |
+|---|------|------|
+| 1 | `block/XxxBlock.java` | `extends Block implements EntityBlock`，含 `newBlockEntity` 与 `getTicker` |
+| 2 | `entity/XxxEntity.java` | `extends BlockEntity implements ICapabilityProvider, MenuProvider` |
+| 3 | `connection/XxxConnection.java` | 仅当对外暴露 `IItemHandler` / `IFluidHandler` 时 |
+| 4 | `item/XxxItem.java` | `extends BlockItem` |
+| 5 | `gui/XxxMenu.java` + `gui/XxxScreen.java` | 有界面时 |
+| 6 | `gui/XxxRenderer.java` | 仅当要在方块表面渲染文字或标记物（BER）时 |
+| 7 | `setup/Registration.java` | BLOCKS / ITEMS / ENTITIES / MENUS 各加一条，并补进 `displayItems` |
+| 8 | `setup/Config.java` | 有可调数值时；同时接进 `Config.onConfigLoad()` 同步到方块类的静态缓存 |
+
+纯物品（永恒之剑 / 永恒图腾 / 打包材料）只有 4、7、8 与资源文件，没有 1~3、5、6。
+
+### 2. 资源清单
+
+全部落在 `src/main/resources/`，键名用同一个 `<name>`：
+
+```
+assets/alltheimbaium/textures/block/<name>_top.png    16×16  顶面
+assets/alltheimbaium/textures/block/<name>_side.png   16×16  侧面
+assets/alltheimbaium/textures/block/<name>_btm.png    16×16  底面（后缀是 btm，不是 bottom）
+assets/alltheimbaium/textures/gui/<name>_gui.png      176×N  GUI 背景
+assets/alltheimbaium/models/block/<name>.json         方块模型
+assets/alltheimbaium/models/item/<name>.json          物品模型（继承方块模型）
+assets/alltheimbaium/blockstates/<name>.json          variants 通常只有 "" 一个分支
+data/alltheimbaium/loot_tables/blocks/<name>.json
+data/alltheimbaium/recipes/main/<name>.json
+assets/alltheimbaium/lang/zh_cn.json + en_us.json
+```
+
+- 机器模型统一 `minecraft:block/cube_bottom_top` + `top` / `bottom` / `side` / `particle` 四个槽；单面贴图的方块（platform）用 `cube_all`；耕地类用 `minecraft:block/block` 手写 15/16 高的 `elements`（见 `models/block/farmland.json`），两者的 elements 结构完全一致，复制即可。
+- 物品模型的父级只有三种：方块物品继承 `alltheimbaium:block/<name>`（**不需要** item 贴图）；手持/武器用 `minecraft:item/handheld` + `layer0`；纯图标物品用 `minecraft:item/generated` + `layer0`。
+- 材料级方块的贴图**直接复用物品贴图**（`cube_all` 指向 `alltheimbaium:item/package_material`），不另画一份 block 贴图。
+- 有方块状态的方块才在 `variants` 里多列分支（只有 `platform` 的 `disguised`），其余一律单分支。
+- 别照抄的遗留文件：`textures/block/storage_fountain.png` 没有任何模型或代码引用（该方块用的是 `_top/_side/_btm` 三张），多画这样一张纯属浪费。
+
+### 3. 贴图风格
+
+- 贴图一律 **16×16 手绘像素画**。
+- **机器类**共用一套视觉语言：「**深蓝灰金属机身 + 亮蓝描边 + 四角亮蓝角标**」，四角角标是机器贴图的统一识别标记，新机器必须沿用。三面分工固定：顶面/侧面承担功能标识（开口、格栅、图案），底面是统一的深色底座；功能色按用途走——熔炉橙、压印器黄、生物与资源农场蓝绿、存储青白（深蓝底 + 青白格）。玻璃罐体类（存储 / 液体 / 生物 / 资源农场）用深色半透明罐体 + 玻璃外壳，并在客户端注册 `RenderType.cutout()`。
+- **不套这套的**：耕地 / 自动耕地走草色与土色（`farmland_*` / `farmland_auto_*`），打包材料走木箱色，纯物品（剑 / 图腾）按各自的物品造型画。
+- 物品贴图同规格同画风，放 `textures/item/`。
+- GUI 贴图是**标准原版容器外观**：浅灰（`0xC6C6C6`）底 + 圆角斜面边框 + 斜面槽位方框。机器在顶部加一块**黑色信息面板**放进度条与数值；物品 GUI（剑 / 图腾 / 补给箱）不加。
+
+### 4. 物品类骨架
+
+```java
+public class XxxItem extends BlockItem {
+
+    public XxxItem(Block block) {
+        // 品级见上方对照表；RARE 与 EPIC 一律再 .fireResistant()
+        super(block, new Properties().rarity(Rarity.RARE).fireResistant());
+    }
+
+    @Override
+    @OnlyIn(Dist.CLIENT)
+    public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level level,
+                                @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);   // 硬性：必须先调 super
+        Tip.of(tooltip)
+                .head(stack, "tip.alltheimbaium.type.xxx")     // 品级行，类型键见上
+                .summary("item.alltheimbaium.xxx.summary")
+                .usage("item.alltheimbaium.xxx.usage.1")
+                .params("item.alltheimbaium.xxx.param.1")      // 有数值才写
+                .warn("item.alltheimbaium.xxx.warn.1");        // 有限制才写
+    }
+}
+```
+
+- 读 NBT 取动态状态（存量、标记物等）的 `appendHoverText` 要 `try-catch` 兜底，状态行走 `state()`。
+- 材料级物品没有可配置项，**只留 `head` + `summary`**，不写用法（配方由 JEI 呈现）。
+
+### 5. 注册与创造标签
+
+- `Registration.java` 里**声明顺序 = 注册顺序 = 创造标签顺序**，三者必须一致：按品级升序（材料 → 便利 → 高效 → 破坏平衡），同级内按用途排。加物品时同时改 `displayItems` 与下方声明区两处。
+- 方块与物品同名注册（`<name>`），方块用 `BLOCKS.register`、物品用 `ITEMS.register`。
+- 菜单一律 `IForgeMenuType.create`：方块 GUI 在工厂里读 `data.readBlockPos()`，物品 GUI（剑 / 图腾）不读。
+- 客户端还要在 `gui/ClientHandler.java` 补三处：`MenuScreens.register`、`EntityRenderersEvent.RegisterRenderers`（有 BER 时）、`ItemBlockRenderTypes.setRenderLayer`（罐体类 cutout）。
+
+### 6. GUI 规范
+
+- **`imageHeight` 必须等于 GUI 贴图高度**，`imageWidth` 固定 176（`platform` 是唯一例外，用 152）。绘制用 8 参 `blit`，纹理尺寸传 `imageWidth` / `imageHeight` 本身，不做 UV 缩放：
+
+  ```java
+  guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
+  ```
+- 玩家背包采用标准四行布局时，`inventoryLabelY = this.imageHeight - 94`；布局特殊（剑 / 图腾）才手填。
+- **每个 Screen 都必须覆写 `renderLabels`**，标题传 `true`、`playerInventoryTitle` 传 `false`。标题颜色由 `Tip.rarityColor(...)` 给的样式色决定，`drawString` 的颜色参数只是样式缺失时的兜底（详见上方「GUI 标题颜色」）。
+- 状态同步走 `DataSlot`：`long` 必须拆成高/低两个 int（`ClientboundContainerSetDataPacket` 用 `writeShort`，单槽只有 16 位，否则 ≥32768 的值会显示成 4.29M）。
+- 交互走 `clickMenuButton` + 按钮 ID 常量，常量集中声明在 Menu 顶部；右键反向循环的区间取 `BUTTON_DIR_REVERSE_BASE`，值为紧邻各菜单 `BUTTON_OUTPUT` 之后。
+- 六面输出按钮一律走 `gui/FaceTooltip.java`，不要各自拼装；图标与点击行为见上方三条「六面按钮」小节。
+- 语言键：`screen.alltheimbaium.<name>.*`，六面提示共用 `screen.alltheimbaium.output.*`，只有物品 GUI 才有 `screen.alltheimbaium.<name>.title`。
+
+### 7. 数据文件
+
+- 配方统一放 `recipes/main/<name>.json`，`group` 固定 `alltheimbaium`，成本随品级递增（便利级铁锭 / 高效级铁块 / 破坏平衡钻石块 / 永恒系列下界合金块）。
+- **有持久数据的机器**：战利品表要 `copy_name` + `copy_nbt`，把 `saveAdditional` 写下的每个键逐个搬到 `BlockEntityTag.<键>`，拆下重放才不丢数据。**无持久数据的机器**（platform / supply_crate / extraction_interface）用普通战利品表即可。
+- 语言文件 `zh_cn.json` 与 `en_us.json` **键集必须完全一致、段落顺序逐行对齐**，改完用脚本比对一次（键数相等且差集为空）。
+
 ## 项目架构
 
 ```
