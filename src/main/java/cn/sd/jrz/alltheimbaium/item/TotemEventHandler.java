@@ -1,44 +1,23 @@
 package cn.sd.jrz.alltheimbaium.item;
 
-import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.CuriosHelper;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
-import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.ForgeRegistries;
 
 /**
  * 永恒图腾事件处理：
  * - 死亡时触发复活（基础效果 + 药水槽效果）
- * - 右键 Mekanism 终极化学品储罐升级为创造化学品储罐（保留原功能）
  */
 @Mod.EventBusSubscriber(modid = "alltheimbaium")
 public class TotemEventHandler {
-
-    // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
-    private static boolean tankConversion;
-
-    /**
-     * 由 Config.onConfigLoad() 在配置文件加载完成后调用
-     */
-    public static void loadConfig() {
-        tankConversion = Config.ETERNAL_TOTEM_TANK_CONVERSION.get();
-    }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onLivingDeath(LivingDeathEvent event) {
@@ -51,38 +30,6 @@ public class TotemEventHandler {
                 applyPotionEffects(player);
             }
         }
-    }
-
-    @SubscribeEvent
-    public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        if (!tankConversion) {
-            return;
-        }
-        if (event.getHand() != InteractionHand.MAIN_HAND) {
-            return;
-        }
-        if (!event.getItemStack().is(Registration.ETERNAL_TOTEM.get())) {
-            return;
-        }
-        Level level = event.getLevel();
-        BlockPos pos = event.getPos();
-        BlockState state = level.getBlockState(pos);
-        ResourceLocation blockId = ForgeRegistries.BLOCKS.getKey(state.getBlock());
-        if (blockId == null || !blockId.equals(EternalTotemItem.ULTIMATE_CHEMICAL_TANK)) {
-            return;
-        }
-        if (level.isClientSide) {
-            event.setCanceled(true);
-            event.setCancellationResult(InteractionResult.SUCCESS);
-            return;
-        }
-        Block creativeTank = ForgeRegistries.BLOCKS.getValue(EternalTotemItem.CREATIVE_CHEMICAL_TANK);
-        if (creativeTank == null) {
-            return;
-        }
-        level.setBlock(pos, creativeTank.defaultBlockState(), 3);
-        event.setCanceled(true);
-        event.setCancellationResult(InteractionResult.SUCCESS);
     }
 
     /**

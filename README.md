@@ -148,7 +148,7 @@
 - 触发时清除全部状态效果，并给予 40 秒抗火 / 45 秒生命恢复 II / 5 秒伤害吸收 II
 - 27 格药水/食物槽：药水效果会逐个生效，食物会被挨个食用（如金苹果的生命恢复与伤害吸收）
 - 药水与食物都只读取、不消耗，每次复活都能再用
-- 按住 ALT 右键打开配置界面：药水与食物槽，以及「终极化学品储罐 → 创造化学品储罐」的转化
+- 按住 ALT 右键打开配置界面：27 格药水与食物槽
 
 ### 永恒之剑
 
@@ -343,7 +343,7 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 - On trigger it clears every effect, then grants 40 s Fire Resistance / 45 s Regeneration II / 5 s Absorption II
 - The 27 potion/food slots: potions apply one by one, and food is eaten one by one (e.g. a golden apple's Regeneration and Absorption)
 - Neither potions nor food are consumed — every revive can reuse them
-- ALT+right-click opens the config GUI: the potion and food slots, and the Ultimate → Creative Chemical Tank conversion
+- ALT+right-click opens the config GUI: the 27 potion and food slots
 
 ### Eternal Sword
 

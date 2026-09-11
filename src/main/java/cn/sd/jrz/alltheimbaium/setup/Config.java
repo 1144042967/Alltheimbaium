@@ -9,7 +9,6 @@ import cn.sd.jrz.alltheimbaium.entity.ClockEntity;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.item.EternalTotemItem;
 import cn.sd.jrz.alltheimbaium.item.StorageFountainItem;
-import cn.sd.jrz.alltheimbaium.item.TotemEventHandler;
 import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -41,7 +40,6 @@ public class Config {
 
     // ==================== 永恒图腾 ====================
     public static ForgeConfigSpec.BooleanValue ETERNAL_TOTEM_DEFAULT_ENABLED;
-    public static ForgeConfigSpec.BooleanValue ETERNAL_TOTEM_TANK_CONVERSION;
 
     // ==================== 液体无限制造机 ====================
     public static ForgeConfigSpec.LongValue LIQUID_FOUNTAIN_INFINITE_THRESHOLD;
@@ -120,9 +118,6 @@ public class Config {
         ETERNAL_TOTEM_DEFAULT_ENABLED = builder
                 .comment("永恒图腾的初始开关状态。true=启用，false=禁用")
                 .define("default_enabled", true);
-        ETERNAL_TOTEM_TANK_CONVERSION = builder
-                .comment("是否允许永恒图腾右键 Mekanism 终极化学品储罐升级为创造化学品储罐")
-                .define("tank_conversion", true);
         builder.pop();
 
 
@@ -256,7 +251,6 @@ public class Config {
             FarmlandBlock.loadConfig();
             ClockEntity.loadConfig();
             EternalTotemItem.loadConfig();
-            TotemEventHandler.loadConfig();
             LiquidFountainBlock.loadConfig();
             PlatformBlock.loadConfig();
             SupplyRoll.loadConfig();

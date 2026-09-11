@@ -510,9 +510,9 @@ src/main/java/cn/sd/jrz/alltheimbaium/
   - 槽位名为药水 / 食物槽：`EternalTotemMenu.PotionFoodSlot.mayPlace` 接受 `PotionItem` 或 `isEdible()`
   - 食用走 `EternalTotemItem.eatStoredFood()`：对每个可食用物品调 `ItemStack.finishUsingItem(level, player)`，因此营养与原版食物效果（金苹果的生命恢复 / 伤害吸收等）都按原版逻辑生效；**忽略返回值、不消耗**，每次复活都能再用
   - NBT 键仍叫 `potion_items`：槽位含义已扩展，改键会让旧存档里的药水丢失
-- ALT+右键打开配置界面（`RightClickHandler` → `OpenEternalTotemGuiPacket`）
-- 手持图腾右键 Mekanism 终极化学品储罐 → 变为创造化学品储罐（受配置 `eternal_totem.tank_conversion` 控制）
+- ALT+右键打开配置界面（`RightClickHandler` → `OpenEternalTotemGuiPacket`）：27 格药水 / 食物槽 + 玩家背包，贴图 176×167，`inventoryLabelY = imageHeight - 94`
 - **已移除右键开关功能**，`use()` 仅保留挥手动画
+- **已移除 Mekanism 化学品储罐转化**（含右键升级与配置项 `eternal_totem.tank_conversion`）：贴图高度由 192 缩到 167，原 y=75 上的输入/输出两个槽位（x=8 / x=152）连同 `InputTankSlot` / `OutputTankSlot` 一起删除，玩家背包整体上移 25px（110→85、168→143）。改动这版 GUI 时注意对称：**贴图槽位坐标、`EternalTotemMenu` 的 addSlot 参数、`wouldMoveTotem` 里的快捷栏起算下标三者必须同步**
 
 ### 14. 永恒之剑 (`EternalSwordItem` / `EternalSwordEventHandler`)
 

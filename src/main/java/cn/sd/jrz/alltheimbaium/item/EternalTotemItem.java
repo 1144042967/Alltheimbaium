@@ -5,7 +5,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.SimpleContainer;
@@ -31,7 +30,7 @@ import java.util.List;
  * - 默认配置启用状态，无右键开关
  * - 死亡后：清除效果、血量变为 1，获得 40 秒抗火 / 45 秒生命恢复 II / 5 秒伤害吸收 II
  * - 基础效果之后，再逐个应用 27 格药水槽位中药水的效果
- * - ALT+右击打开配置界面（药水槽 + 输入/输出化学品储罐）
+ * - ALT+右击打开配置界面（27 格药水 / 食物槽）
  */
 public class EternalTotemItem extends Item {
 
@@ -49,16 +48,6 @@ public class EternalTotemItem extends Item {
      * 名字保留 {@code potion_items}：槽位含义已扩为"药水 + 食物"，但改键会让旧存档里的药水丢失。
      */
     public static final String TAG_POTION_ITEMS = "potion_items";
-    /**
-     * Mekanism 终极化学品储罐
-     */
-    public static final ResourceLocation ULTIMATE_CHEMICAL_TANK =
-            new ResourceLocation("mekanism", "ultimate_chemical_tank");
-    /**
-     * Mekanism 创造化学品储罐
-     */
-    public static final ResourceLocation CREATIVE_CHEMICAL_TANK =
-            new ResourceLocation("mekanism", "creative_chemical_tank");
 
     /**
      * 由 Config.onConfigLoad() 在配置文件加载完成后调用，设置永恒图腾初始开关状态
