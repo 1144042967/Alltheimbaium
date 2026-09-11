@@ -164,6 +164,8 @@
 
 ## 额外配方
 
+> 逐条完整清单（产物 ← 材料、用哪台机器、需要装什么）见 [RECIPES.md](RECIPES.md)。
+
 - ATM：添加了三种模板的合成
 - AE2：增加了相关水晶的简单合成方式，多种产物的更高效合成配方
 - Blood Magic：增加了血命果合成，增加了 Mek 肉汤转换血液配方
@@ -358,6 +360,9 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 - Cannot be enchanted, smithed, or used as a crafting material
 
 ## Additional Formulas
+
+> The full item-by-item list (result ← ingredients, which machine, which mods are required) lives in
+> [RECIPES.md](RECIPES.md) (Chinese only).
 
 - ATM: adds synthesis of three templates
 - AE2: adds a simple synthesis method for related crystals and more efficient synthesis formulas for various products

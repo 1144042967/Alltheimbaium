@@ -254,6 +254,7 @@ public class XxxItem extends BlockItem {
 ### 7. 数据文件
 
 - 配方统一放 `recipes/main/<name>.json`，`group` 固定 `alltheimbaium`，成本随品级递增（便利级铁锭 / 高效级铁块 / 破坏平衡钻石块 / 永恒系列下界合金块）。
+- **改完配方必须同步配方总表**：执行 `python tools/gen_recipe_docs.py` 重新生成根目录的 `RECIPES.md`。该文件由脚本扫描全部配方 JSON 生成（按目录分类、自动列出内层配方类型与生效前置 MOD），**不要手改**——它是全项目配方的唯一索引，漏同步会导致文档与实际不符。
 - **有持久数据的机器**：战利品表要 `copy_name` + `copy_nbt`，把 `saveAdditional` 写下的每个键逐个搬到 `BlockEntityTag.<键>`，拆下重放才不丢数据。**无持久数据的机器**（platform / supply_crate / extraction_interface）用普通战利品表即可。
 - 语言文件 `zh_cn.json` 与 `en_us.json` **键集必须完全一致、段落顺序逐行对齐**，改完用脚本比对一次（键数相等且差集为空）。
 
@@ -589,9 +590,12 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 - `src/main/resources/assets/alltheimbaium/blockstates/`、`models/block/`、`models/item/`、`textures/block/`、`textures/item/`
 - `src/main/resources/assets/alltheimbaium/lang/zh_cn.json` + `en_us.json` — 两份键集必须完全一致
-- `src/main/resources/data/alltheimbaium/recipes/`（复数，1.20.1 正确）— 按来源分子目录：`main/` 本模组机器、`crafting/` 原版简化、`ae2/`、`mek/`、`mystical/`、`thermal/`、`blood/`、`create/`、`draconicevolution/`、`salvaging/`
+- `src/main/resources/data/alltheimbaium/recipes/`（复数，1.20.1 正确）— 按来源分子目录：`main/` 本模组机器、`crafting/` 原版简化、`ae2/`、`mek/`、`mystical/`、`thermal/`、`blood/`、`create/`、`draconicevolution/`、`salvaging/`；**根目录下还有三个无子目录的 `.json`**，是代码驱动配方的类型标记（`smelting_craft` / `brewing_craft` / `potion_combine`）
 - `src/main/resources/data/alltheimbaium/loot_tables/blocks/`（复数）
 - 本模组机器配方统一写在 `recipes/main/`，`group` 统一为 `alltheimbaium`；成本随品级递增
+- **配方总表 `RECIPES.md`（项目根目录）由 `tools/gen_recipe_docs.py` 生成**，不是手写文档：它扫描上面的目录，按目录分类列出每条配方的产物/材料/机器/生效前置。配方有增删改后重跑该脚本即可同步（见「物品创建规则」第 7 节）
+  - 目录名是**本模组自己的联动分类**，与配方实际涉及的 MOD **不是一一对应**：例如 `thermal/` 里放的多是"用热力机器做的血魔法物品"、`ae2/` 里混了 `advanced_ae` 与 `megacells`。要查某条配方到底需要装什么，看总表里逐条列出的「前置」而非目录名
+  - 生效条件有两个来源，脚本两处都认：`forge:conditional` 外层条目的 `conditions`，以及直接写在配方对象上的顶层 `conditions`（Forge 会对每条配方调 `processConditions`）
 
 ## 依赖
 

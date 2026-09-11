@@ -9,7 +9,7 @@
         },
         {
           "type": "forge:mod_loaded",
-          "modid": "`allthemodium`"
+          "modid": "allthemodium"
         }
       ],
       "recipe": {
