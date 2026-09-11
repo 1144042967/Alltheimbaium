@@ -103,13 +103,14 @@
 
 ### ATI 取出接口
 
-- 沿本模组方块连通搜索，把搜到的产物机器汇总成一个只读视图，交给管道抽取
-- 不必紧贴机器：中间隔着本模组方块，隔多远都能搜到，搜索可以穿过机器继续往外找
+- 沿本模组与 AutoResource 的方块连通搜索，把搜到的产物机器汇总成一个只读视图，交给管道抽取
+- 不必紧贴机器：中间隔着本模组或 AutoResource 的方块，隔多远都能搜到，搜索可以穿过机器继续往外找
 - 可抽取：存储方块制造机 / 液体无限制造机 / 生物农场 / 资源农场 / 自动耕地
-- 只传导不抽取：ATI 耕地 / 零刻熔炉 / 零刻压印器，以及取出接口自身
+- 装上 AutoResource 时，它的方块生成机 / 流体生成机 / FE 发电机也一并纳入（FE 发电机只输出电力，没有物品与流体可抽）
+- 只传导不抽取：ATI 耕地 / 零刻熔炉 / 零刻压印器 / AutoResource 水车马达，以及取出接口自身
 - 六个面访问到的都是同一份聚合内容；只读，无法向机器回灌
-- 搜索止于非本模组方块：生成平台铺出的地面是原版方块，会断开连通
-- 原版箱子与本模组以外的容器不会被聚合
+- 搜索只沿本模组与 AutoResource 的方块走：生成平台铺出的地面是原版方块，会断开连通
+- 原版箱子与其他模组的容器不会被聚合
 - 每 1 秒重新搜索一次连通范围，新增机器最多 1 秒后生效
 - 连通的方块超过 4096 个时会截断搜索，并在日志中告警
 
@@ -142,8 +143,10 @@
 ### 永恒之剑
 
 - 右击对范围内的生物结算三段伤害：剑自身伤害 + 剑附魔的命中效果 + 槽位内每把武器各打一次
+- 三段在同一 tick 内结算，每段都会清掉目标的受击无敌帧，因此三段伤害是**累加**的，不会只剩最大的一段
 - 剑自身伤害 = 槽位中所有 ID 不同的带伤害物品的攻击力之和，最低 1
 - 槽位里的每把武器还会用**自己**的伤害与附魔效果各命中一次
+- 附魔效果按原版规则生效，含火焰附加（点燃 等级 × 4 秒）与击退（沿使用者朝向推开）
 - 附魔来自槽位里的附魔书：等级 1~10 各计 1/2/4/8/16/32/64/128/256/512 点，累加到哪一档就是哪一级，上限 10 级
 - 按住 ALT 右键打开配置界面：击杀模式 / 攻击距离 / 27 格物品槽
 - 命中 Draconic-Evolution 的混沌守卫时可突破其免伤
@@ -285,12 +288,13 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 
 ### ATI Extraction Interface
 
-- Searches along this mod's blocks and merges every machine it reaches into one read-only view for pipes to pull from
-- No need to touch the machine — it is found as long as ATI blocks bridge the gap, and the search passes straight through machines
+- Searches along this mod's blocks and AutoResource's, merging every machine it reaches into one read-only view for pipes to pull from
+- No need to touch the machine — it is found as long as ATI or AutoResource blocks bridge the gap, and the search passes straight through machines
 - Extracted: Storage Block Fountain / Liquid Infinity Fountain / Mob Farm / Resource Farm / Auto Farmland
-- Conducts only, never extracted: ATI Farmland / Instant Furnace / Instant Inscriber, and the interface itself
+- With AutoResource installed its Block Generator, Liquid Generators and FE Generator are picked up too (the FE Generator only outputs power, so it has no items or fluids to pull)
+- Conducts only, never extracted: ATI Farmland / Instant Furnace / Instant Inscriber / AutoResource Water Wheel Motor, and the interface itself
 - All six faces expose the same merged view; read-only, so nothing can be pushed back
-- The search stops at blocks from other mods — the floor a Generation Platform lays down is vanilla blocks and breaks the link
+- The search only follows this mod's blocks and AutoResource's — the floor a Generation Platform lays down is vanilla blocks and breaks the link
 - Vanilla chests and containers from other mods are never aggregated
 - The connected range is rescanned every 1 s, so a new machine is picked up within a second
 - Beyond 4096 connected blocks the search is truncated and a warning is written to the log
@@ -324,8 +328,10 @@ Every machine with a GUI titles it in the same colour as its item name (that ite
 ### Eternal Sword
 
 - Right-click settles three layers on every mob in range: the sword's own damage, the sword's on-hit enchantments, then each weapon in its slots striking once
+- All three layers land in the same tick, and each one clears the target's invulnerability frames, so the damage **adds up** instead of collapsing into the single largest hit
 - The sword's own damage is the summed attack of every distinct damage item in its slots, minimum 1
 - Each weapon in its slots also strikes once with its own damage and on-hit enchantments
+- Enchantment effects follow vanilla rules, Fire Aspect (sets the target alight for level × 4 s) and Knockback (pushes the target away from the user) included
 - Enchantments come from books in its slots: levels 1~10 are worth 1/2/4/8/16/32/64/128/256/512 points, and the summed points decide the level, capped at 10
 - ALT+right-click opens the config GUI: kill mode / range / 27 item slots
 - Strikes bypass the damage immunity of Draconic-Evolution's Chaos Guardian

@@ -135,6 +135,8 @@ public class EternalSwordItem extends SwordItem {
      *     <li>剑上附魔的命中效果（火焰附加、击退、节肢杀手的迟缓等）；</li>
      *     <li>槽位里每把武器各对目标做一次近战命中，用<b>那把武器自己的伤害</b>与命中附魔。</li>
      * </ol>
+     * 三段都在同一 tick 内结算，因此每次命中前都要清掉目标的受击无敌帧（见
+     * {@link #clearInvulnerable}），否则第 2 段起会被原版受击冷却吞掉。
      * 混沌守卫走反射免伤突破。
      */
     private void doAttack(Level level, Player player, ItemStack stack) {
@@ -157,9 +159,9 @@ public class EternalSwordItem extends SwordItem {
                 float damage = baseDamage + EnchantmentHelper.getDamageBonus(stack, living.getMobType());
                 // 混沌守卫本体：反射突破免伤，命中则跳过普通伤害
                 if (Tool.bypassGuardianDamage(living, source, damage)) continue;
+                clearInvulnerable(living);
                 living.hurt(source, damage);
-                // 第二段：剑上附魔的命中效果（原版的 doPostHurt / doPostAttack 钩子，
-                // 覆盖火焰附加、击退、节肢杀手的迟缓，无需再手写火焰附加）
+                // 第二段：剑上附魔的命中效果（火焰附加 / 击退显式补，其余走 doPostHurt / doPostAttack 钩子）
                 applyWeaponEffects(stack, player, living);
                 // 第三段：槽位里每把武器各打一次
                 for (ItemStack weapon : slotWeapons) {
@@ -208,8 +210,23 @@ public class EternalSwordItem extends SwordItem {
         if (Tool.bypassGuardianDamage(target, source, damage)) {
             return;
         }
+        clearInvulnerable(target);
         target.hurt(source, damage);
         applyWeaponEffects(weapon, player, target);
+    }
+
+    /**
+     * 清除目标的受击无敌帧，让同一 tick 内的多段伤害真正叠加。
+     * <p>
+     * 原版 {@code LivingEntity.hurt} 在 {@code invulnerableTime > 10} 时，会直接丢弃
+     * 不高于 {@code lastHurt} 的伤害（只补上超出的差额），而三段结算全部发生在同一 tick、
+     * 第一段就已经把无敌帧顶到 20 刻，于是第 2 段起基本被整段吃掉，最终只有最大的一段生效。
+     * 每段命中前把无敌帧归零，下一段就会走完整伤害分支。
+     * <p>
+     * 目标已死亡时后续段本就不会结算（{@code hurt} 开头即返回），因此不会打出超额伤害。
+     */
+    private static void clearInvulnerable(@Nonnull LivingEntity target) {
+        target.invulnerableTime = 0;
     }
 
     /**
@@ -217,12 +234,28 @@ public class EternalSwordItem extends SwordItem {
      * <p>
      * 原版 {@code EnchantmentHelper} 的两个入口都从"攻击者主手"读附魔，这里改为按附魔逐条调用
      * {@link Enchantment#doPostHurt} / {@link Enchantment#doPostAttack}，就能指定任意一把武器，
-     * 也不必临时替换玩家的主手物品。
+     * 也不必临时替换玩家的主手物品。节肢杀手的迟缓就走这条路径。
+     * <p>
+     * <b>火焰附加与击退必须单独补</b>：原版把这两项直接写在 {@code Player.attack} 里
+     * （{@code getFireAspect} / {@code getKnockbackBonus} 配 {@code setSecondsOnFire} / {@code knockback}），
+     * 而 {@code FireAspectEnchantment} 与 {@code KnockbackEnchantment} 都不覆写上面两个钩子——
+     * 只把附魔挂到剑上再调钩子，这两项不会有任何效果，必须在这里显式复刻原版行为。
      */
     private static void applyWeaponEffects(ItemStack weapon, Player player, LivingEntity target) {
         Map<Enchantment, Integer> enchantments = EnchantmentHelper.getEnchantments(weapon);
         if (enchantments.isEmpty()) {
             return;
+        }
+        // 火焰附加：原版点燃时长就是 等级 × 4 秒
+        int fireAspect = enchantments.getOrDefault(Enchantments.FIRE_ASPECT, 0);
+        if (fireAspect > 0) {
+            target.setSecondsOnFire(fireAspect * 4);
+        }
+        // 击退：按原版那样沿攻击者朝向推开（强度 = 等级 × 0.5）
+        int knockback = enchantments.getOrDefault(Enchantments.KNOCKBACK, 0);
+        if (knockback > 0) {
+            double angle = Math.toRadians(player.getYRot());
+            target.knockback(knockback * 0.5D, Math.sin(angle), -Math.cos(angle));
         }
         for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
             try {

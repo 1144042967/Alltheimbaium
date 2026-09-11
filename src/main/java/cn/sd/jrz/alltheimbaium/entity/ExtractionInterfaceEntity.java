@@ -36,13 +36,14 @@ import java.util.Set;
  * ATI 取出接口实体：向任意方向暴露 {@link ExtractionInterfaceConnection}
  * （只读 IItemHandler + IFluidHandler），方向无关。
  * <p>
- * 聚合范围不是"相邻六面"，而是从本方块出发、沿<b>本模组方块</b>连通搜索到的全部产出机器：
+ * 聚合范围不是"相邻六面"，而是从本方块出发、沿<b>本模组与联动模组的方块</b>连通搜索到的全部产出机器：
  * <ul>
- *     <li><b>导体</b>：任何 {@code alltheimbaium} 命名空间的方块，搜索可以穿过它继续往外找。
- *         生成平台铺出的平滑石/石砖地面是原版方块，会自然断开连通。</li>
- *     <li><b>产出源</b>：存储方块制造机、生物农场、资源农场、自动耕地、液体无限制造机。</li>
- *     <li><b>只传导不产出</b>：ATI 耕地、零刻熔炉、零刻压印器，以及取出接口自身——
- *         它们让网络穿过去，但其中的物品不会被抽走。</li>
+ *     <li><b>导体</b>：任何 {@code alltheimbaium} 或 {@code autoresource} 命名空间的方块，
+ *         搜索可以穿过它继续往外找。生成平台铺出的平滑石/石砖地面是原版方块，会自然断开连通。</li>
+ *     <li><b>产出源</b>：存储方块制造机、生物农场、资源农场、自动耕地、液体无限制造机，
+ *         以及 AutoResource 的全部机器（{@link #isLinkedSource}）。</li>
+ *     <li><b>只传导不产出</b>：ATI 耕地、零刻熔炉、零刻压印器、AutoResource 水车马达，
+ *         以及取出接口自身——它们让网络穿过去，但其中的物品不会被抽走。</li>
  * </ul>
  * 搜索仅限已加载的区块，结果缓存 {@link #RESCAN_INTERVAL} 刻后重算，因此新增机器最多 1 秒后生效。
  */
@@ -53,6 +54,15 @@ public class ExtractionInterfaceEntity extends BlockEntity implements ICapabilit
     private static final int RESCAN_INTERVAL = 20;
     /** 单次搜索最多访问的方块数，防止超大建筑把服务端拖垮 */
     private static final int MAX_SCAN_BLOCKS = 4096;
+
+    /**
+     * 联动模组 AutoResource 的命名空间。该模组是可选依赖，这里只比对注册名字符串，不做任何编译期引用。
+     */
+    private static final String AUTORESOURCE_MODID = "autoresource";
+    /**
+     * AutoResource 里的水车马达：只向外输出旋转动力，不产出物品与流体，因此只传导不作为产出源
+     */
+    private static final String WATER_WHEEL_MOTOR = "water_wheel_motor";
 
     private final LazyOptional<ExtractionInterfaceConnection> capability =
             LazyOptional.of(() -> new ExtractionInterfaceConnection(this));
@@ -125,7 +135,7 @@ public class ExtractionInterfaceEntity extends BlockEntity implements ICapabilit
                     continue;
                 }
                 // 不加载未加载的区块：那些位置的机器本来也取不到
-                if (!level.isLoaded(next) || !isModBlock(level, next)) {
+                if (!level.isLoaded(next) || !isConductor(level, next)) {
                     continue;
                 }
                 if (isSource(level.getBlockEntity(next))) {
@@ -145,22 +155,47 @@ public class ExtractionInterfaceEntity extends BlockEntity implements ICapabilit
     }
 
     /**
-     * 是否为本模组方块——只要命名空间是 {@code alltheimbaium} 就能传导
+     * 是否为可传导的方块——命名空间是 {@code alltheimbaium}（本模组）或 {@code autoresource}（联动模组）
+     * 就能传导
      */
-    private static boolean isModBlock(@Nonnull Level level, @Nonnull BlockPos pos) {
+    private static boolean isConductor(@Nonnull Level level, @Nonnull BlockPos pos) {
         ResourceLocation id = ForgeRegistries.BLOCKS.getKey(level.getBlockState(pos).getBlock());
-        return id != null && Alltheimbaium.MODID.equals(id.getNamespace());
+        if (id == null) {
+            return false;
+        }
+        String namespace = id.getNamespace();
+        return Alltheimbaium.MODID.equals(namespace) || AUTORESOURCE_MODID.equals(namespace);
     }
 
     /**
      * 是否为可抽取的产出机器。零刻熔炉与零刻压印器刻意不在此列：它们只传导，物品需另行抽取。
      */
     private static boolean isSource(@Nullable BlockEntity be) {
+        if (be == null) {
+            return false;
+        }
         return be instanceof StorageFountainEntity
                 || be instanceof MobFarmEntity
                 || be instanceof ResourceFarmEntity
                 || be instanceof AutoFarmlandEntity
-                || be instanceof LiquidFountainEntity;
+                || be instanceof LiquidFountainEntity
+                || isLinkedSource(be);
+    }
+
+    /**
+     * 是否为联动模组 AutoResource 的产出机器：方块实体注册名落在 {@code autoresource} 命名空间下，
+     * 且不是水车马达。
+     * <p>
+     * 用注册名判断而不是 {@code instanceof}，是因为本模组对 AutoResource 只做可选联动，不能有编译期依赖。
+     * 至于具体能抽出物品还是流体，由各机器自己暴露的 Capability 决定——例如 FE 发电机只暴露能量，
+     * 因此它虽然在此列，却抽不出任何物品与流体。
+     */
+    public static boolean isLinkedSource(@Nonnull BlockEntity be) {
+        ResourceLocation id = ForgeRegistries.BLOCK_ENTITY_TYPES.getKey(be.getType());
+        if (id == null || !AUTORESOURCE_MODID.equals(id.getNamespace())) {
+            return false;
+        }
+        return !WATER_WHEEL_MOTOR.equals(id.getPath());
     }
 
     // ==================== 能力 ====================

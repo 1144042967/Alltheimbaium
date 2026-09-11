@@ -16,7 +16,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * ATI 取出接口：沿本 MOD 方块连通搜索，聚合范围内全部产物/流体机器，供管道被动抽取。
+ * ATI 取出接口：沿本模组与联动模组（AutoResource）的方块连通搜索，
+ * 聚合范围内全部产物/流体机器，供管道被动抽取。
  * 无 GUI（不覆写 use）、无主动输出；仅提供只读能力，见 {@link ExtractionInterfaceEntity}。
  */
 public class ExtractionInterfaceBlock extends Block implements EntityBlock {

@@ -344,13 +344,17 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 ### 10. 取出接口 (`ExtractionInterfaceBlock` / `ExtractionInterfaceEntity`)
 
-**聚合范围不是"相邻六面"，而是从本方块出发沿本模组方块做的连通搜索。** 分类规则：
+**聚合范围不是"相邻六面"，而是从本方块出发沿本模组方块与联动模组 AutoResource 的方块做的连通搜索。** 分类规则：
 
 | 角色 | 方块 | 行为 |
 |------|------|------|
-| 导体 | 任何 `alltheimbaium` 命名空间的方块 | 搜索可以穿过它继续往外找 |
-| 产出源 | StorageFountain / MobFarm / ResourceFarm / AutoFarmland / LiquidFountain | 被纳入聚合，可被抽走 |
-| 只传导不产出 | Farmland / InstantFurnace / InstantInscriber / Clock / Platform / SupplyCrate / **取出接口自身** | 网络能穿过，但其中的物品不被抽走 |
+| 导体 | 任何 `alltheimbaium` 或 `autoresource` 命名空间的方块 | 搜索可以穿过它继续往外找 |
+| 产出源 | StorageFountain / MobFarm / ResourceFarm / AutoFarmland / LiquidFountain，以及 AutoResource 除水车马达外的全部机器 | 被纳入聚合，可被抽走 |
+| 只传导不产出 | Farmland / InstantFurnace / InstantInscriber / Clock / Platform / SupplyCrate / **取出接口自身** / **AutoResource 水车马达** | 网络能穿过，但其中的物品不被抽走 |
+
+- AutoResource 是**可选依赖**，判定只比对注册名（`ExtractionInterfaceEntity.isLinkedSource` 读 `BlockEntityType` 的注册名），**不能**写成 `instanceof`——那需要编译期依赖，本模组对 AutoResource 只做可选联动。方块侧的导体判定同理，读 `Block` 的注册名命名空间
+- 判定"能抽出什么"的是机器自己暴露的 Capability：AutoResource 的方块生成机 / 流体生成机（物品 + 流体，液体机只从输出槽抽出）、FE 发电机（**只暴露能量**，因此它虽在产出源名单里，却抽不出任何物品与流体）
+- 同一套判定被 `ExtractionInterfaceConnection.isItemSource` / `isFluidSource` 复用；产出源名单（`isSource`）只是 BFS 的粗筛，具体槽位仍由 Capability 解析结果决定
 
 - 生成平台铺出的平滑石/石砖地面是**原版方块**，因此会自然断开连通——不需要特判
 - 搜索只走已加载区块；不加载新区块
@@ -405,7 +409,9 @@ src/main/java/cn/sd/jrz/alltheimbaium/
   1. 剑自身伤害 = 所有 ID 不同的带伤害物品 `ATTACK_DAMAGE` modifier 之和（`calcDamage()`，同 ID 只计一次）+ `EnchantmentHelper.getDamageBonus`，最低 1；
   2. 剑上附魔的命中效果；
   3. 槽位里每把武器各做一次近战命中，用**那把武器自己**的伤害与命中附魔。
-- 命中附魔效果统一走 `applyWeaponEffects()`：原版 `EnchantmentHelper.doPostHurtEffects/doPostDamageEffects` 都从"攻击者主手"读附魔，这里改为按附魔逐条调 `Enchantment#doPostHurt` / `#doPostAttack`（两者都是 public），既能指定任意一把武器，也不必临时替换玩家主手。火焰附加因此不再手写。
+- 三段都在**同一 tick** 内结算，因此每次命中前必须清掉目标的受击无敌帧（`clearInvulnerable()` 直接置 `Entity.invulnerableTime = 0`）。原版 `LivingEntity.hurt()` 在 `invulnerableTime > 10` 时会丢弃不高于 `lastHurt` 的伤害、只补差额，而第一段就已把无敌帧顶到 20 刻——不清理的话第 2 段起基本被整段吞掉，三段只剩最大的一段生效
+- 命中附魔效果统一走 `applyWeaponEffects()`：原版 `EnchantmentHelper.doPostHurtEffects/doPostDamageEffects` 都从"攻击者主手"读附魔，这里改为按附魔逐条调 `Enchantment#doPostHurt` / `#doPostAttack`（两者都是 public），既能指定任意一把武器，也不必临时替换玩家主手。原版走这两个钩子的只有 `ThornsEnchantment.doPostHurt` 与 `DamageEnchantment.doPostAttack`（节肢杀手的迟缓）
+- **火焰附加与击退必须在这个方法里单独显式补**：原版把这两项硬编码在 `Player.attack()` 里（`getFireAspect` / `getKnockbackBonus` 配 `setSecondsOnFire(等级 × 4)` / `knockback(等级 × 0.5, 朝玩家朝向)`），`FireAspectEnchantment` 与 `KnockbackEnchantment` **都不覆写上面两个钩子**——只把附魔挂到剑上再调钩子，这两项完全不会有任何效果（曾因此出现"放了火焰附加 2 但生物不着火"）。新增附魔效果时，先确认它是走钩子还是像这两项一样被硬编码在原版攻击路径里
 - 槽位武器按**物品 ID 去重**（`collectSlotWeapons()`），与剑伤害的"同 ID 只计一次"一致，避免塞满同一把武器刷命中次数
 - **附魔 = 槽位中所有附魔书按点数累加后换算回等级**（`calcEnchantments()` / `levelForPoints()`）：
   - 等级 1~10 分别计 `2^0`~`2^9` 点，即 1/2/4/8/16/32/64/128/256/512；每类附魔各自累加

@@ -25,12 +25,13 @@ import java.util.List;
 /**
  * ATI 取出接口对外能力（只读聚合，方向无关）。
  * <p>
- * 聚合范围由 {@link ExtractionInterfaceEntity#getSources()} 给出——那是沿本模组方块连通搜索
- * 得到的产出机器位置，因此隔着多台机器也能取到，不再限于相邻六面。
- * 物品以 {@code direction = null}（全量只读）解析；液体来自液体无限制造机。
+ * 聚合范围由 {@link ExtractionInterfaceEntity#getSources()} 给出——那是沿本模组与联动模组方块
+ * 连通搜索得到的产出机器位置，因此隔着多台机器也能取到，不再限于相邻六面。
+ * 物品以 {@code direction = null}（全量只读）解析；液体来自液体无限制造机与 AutoResource 的流体生成器。
  * <p>
  * 零刻熔炉与零刻压印器不是产出源（见 {@code ExtractionInterfaceEntity.isSource}），
- * 它们只让网络穿过，其中的物品不会被抽走。
+ * 它们只让网络穿过，其中的物品不会被抽走。AutoResource 的机器由
+ * {@link ExtractionInterfaceEntity#isLinkedSource} 判定，水车马达同样只传导不产出。
  * <p>
  * 槽位列表按游戏刻缓存：管道一次取物会连续调用 {@code getSlots} / {@code getStackInSlot} /
  * {@code extractItem}，逐次重扫连通范围会带来数量级的多余开销。
@@ -75,12 +76,19 @@ public class ExtractionInterfaceConnection implements IItemHandler, IFluidHandle
         return level != null && !level.isClientSide;
     }
 
-    /** 产出物品的机器 */
+    /** 产出物品的机器（联动模组的机器按其自身能力判定，抽不到物品的自然被下面的空 handler 过滤掉） */
     private static boolean isItemSource(BlockEntity be) {
         return be instanceof StorageFountainEntity
                 || be instanceof MobFarmEntity
                 || be instanceof ResourceFarmEntity
-                || be instanceof AutoFarmlandEntity;
+                || be instanceof AutoFarmlandEntity
+                || ExtractionInterfaceEntity.isLinkedSource(be);
+    }
+
+    /** 产出流体的机器 */
+    private static boolean isFluidSource(BlockEntity be) {
+        return be instanceof LiquidFountainEntity
+                || ExtractionInterfaceEntity.isLinkedSource(be);
     }
 
     // ==================== 聚合槽位构建（按刻缓存） ====================
@@ -142,7 +150,7 @@ public class ExtractionInterfaceConnection implements IItemHandler, IFluidHandle
         for (BlockPos pos : owner.getSources()) {
             try {
                 BlockEntity be = level.getBlockEntity(pos);
-                if (!(be instanceof LiquidFountainEntity)) {
+                if (be == null || !isFluidSource(be)) {
                     continue;
                 }
                 LazyOptional<IFluidHandler> opt = be.getCapability(ForgeCapabilities.FLUID_HANDLER, null);
