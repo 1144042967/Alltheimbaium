@@ -51,7 +51,7 @@ public final class ResourceData {
     // ==================== 树苗扫描参数 ====================
 
     /** 树苗识别兜底：模组树苗多半会加入 minecraft:saplings 标签，但也有只继承 SaplingBlock 的 */
-    private static final TagKey<Item> SAPLINGS_TAG = TagKey.create(Registries.ITEM, new ResourceLocation("minecraft", "saplings"));
+    private static final TagKey<Item> SAPLINGS_TAG = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("minecraft", "saplings"));
 
     /** 树干 id 后缀，按优先级逐个尝试（X_sapling → X_log / X_wood / X_stem…） */
     private static final String[] STEM_SUFFIXES = {"_log", "_wood", "_stem", "_hyphae", "_trunk"};

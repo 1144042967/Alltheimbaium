@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "advanced_ae"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "justdirethings"
+    }
+  ],
+  "type": "advanced_ae:reaction",
+  "input_energy": 1000,
+  "input_fluid": {
+    "amount": 1000,
+    "ingredient": {
+      "fluid": "justdirethings:refined_t2_fluid_source"
+    }
+  },
+  "input_items": [
+    {
+      "amount": 1,
+      "ingredient": {
+        "item": "justdirethings:coal_t3"
+      }
+    }
+  ],
+  "output": {
+    "#": 1000,
+    "#t": "ae2:f",
+    "id": "justdirethings:unrefined_t3_fluid_source"
+  }
+}

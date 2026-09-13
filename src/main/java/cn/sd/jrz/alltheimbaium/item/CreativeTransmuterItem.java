@@ -1,5 +1,6 @@
 package cn.sd.jrz.alltheimbaium.item;
 
+import net.minecraft.world.item.Item;
 import cn.sd.jrz.alltheimbaium.setup.TransmuteCatalog;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
@@ -8,8 +9,8 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -29,8 +30,8 @@ public class CreativeTransmuterItem extends BlockItem {
 
     @Override
     @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, worldIn, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, tooltip, flagIn);
         List<String> recipes = TransmuteCatalog.tooltipLines();
         Tip tip = Tip.of(tooltip)
                 .head(stack, "tip.alltheimbaium.type.processing")

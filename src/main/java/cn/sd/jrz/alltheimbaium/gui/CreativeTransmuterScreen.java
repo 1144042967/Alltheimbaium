@@ -8,8 +8,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -26,7 +26,7 @@ import java.util.List;
  */
 @OnlyIn(Dist.CLIENT)
 public class CreativeTransmuterScreen extends AbstractContainerScreen<CreativeTransmuterMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/creative_transmuter_gui.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/creative_transmuter_gui.png");
 
     // ==================== "?" 配方帮助卡 ====================
     /** 帮助卡每页行数 */
@@ -87,7 +87,8 @@ public class CreativeTransmuterScreen extends AbstractContainerScreen<CreativeTr
 
     @Override
     public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics);
+        // 1.21：背景由 AbstractContainerScreen#render 内部统一绘制，这里不能再手动调
+        // renderBackground(GuiGraphics)（它已改为 4 参并会回调 renderBg，直接递归）
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         if (isHoverHelp(mouseX, mouseY)) {
             renderRecipeCard(guiGraphics, mouseX, mouseY);

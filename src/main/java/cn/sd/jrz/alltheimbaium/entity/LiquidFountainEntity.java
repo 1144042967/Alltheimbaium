@@ -9,6 +9,7 @@ import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
@@ -30,15 +31,13 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidUtil;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidUtil;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,13 +55,22 @@ import javax.annotation.Nullable;
  *   <li>管道输入输出：IFluidHandler 未无限时可输入/输出存量，无限后只可输出</li>
  * </ul>
  */
-public class LiquidFountainEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
+public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(LiquidFountainEntity.class);
-    private final LazyOptional<LiquidFountainConnection> fecOptional = LazyOptional.of(() -> new LiquidFountainConnection(this));
+
+    /** 对外流体能力（方向无关） */
+    private final LiquidFountainConnection fluidHandler = new LiquidFountainConnection(this);
+
+    @Nonnull
+    public LiquidFountainConnection getFluidHandler(@Nullable Direction side) {
+        return fluidHandler;
+    }
+
     /**
-     * 物品管道能力：+ 槽可插入、- 槽可抽取，保证管道单向流动
+     * 物品管道能力：+ 槽可插入、- 槽可抽取，保证管道单向流动。
+     * NeoForge 不再实现 ICapabilityProvider，由 {@code Registration.registerCapabilities} 拉取。
      */
-    private final LazyOptional<IItemHandler> itemOptional = LazyOptional.of(() -> new IItemHandler() {
+    private final IItemHandler itemHandler = new IItemHandler() {
         @Override
         public int getSlots() {
             return 2;
@@ -95,7 +103,12 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
         public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
             return slot == 0 && inputSlot.isItemValid(0, stack);
         }
-    });
+    };
+
+    @Nonnull
+    public IItemHandler getItemHandler(@Nullable Direction side) {
+        return itemHandler;
+    }
 
     /**
      * 机器内部流体（无限后 amount = Integer.MAX_VALUE）
@@ -111,16 +124,19 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
                 return true;
             }
             // 带液容器：机器为空或容器内流体与机器同种才接受
-            return stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).map(handler -> {
-                for (int tank = 0; tank < handler.getTanks(); tank++) {
-                    FluidStack fluid = handler.getFluidInTank(tank);
-                    if (fluid.isEmpty()) {
-                        return true;
-                    }
-                    return getStack() == FluidStack.EMPTY || fluid.isFluidEqual(getStack());
-                }
+            // 1.21.1：ItemStack 的能力查询改走 FluidUtil.getFluidHandler（返回可空），不再有 resolve()/orElse()
+            IFluidHandlerItem handler = FluidUtil.getFluidHandler(stack).orElse(null);
+            if (handler == null) {
                 return false;
-            }).orElse(false);
+            }
+            for (int tank = 0; tank < handler.getTanks(); tank++) {
+                FluidStack fluid = handler.getFluidInTank(tank);
+                if (fluid.isEmpty()) {
+                    return true;
+                }
+                return getStack().isEmpty() || FluidStack.isSameFluidSameComponents(fluid, getStack());
+            }
+            return false;
         }
 
         @Override
@@ -182,22 +198,6 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
         super(Registration.LIQUID_FOUNTAIN_ENTITY.get(), pos, state);
     }
 
-    @Override
-    @Nonnull
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        try {
-            if (capability == ForgeCapabilities.FLUID_HANDLER) {
-                return fecOptional.cast();
-            }
-            if (capability == ForgeCapabilities.ITEM_HANDLER) {
-                return itemOptional.cast();
-            }
-            return super.getCapability(capability, direction);
-        } catch (Throwable e) {
-            log.error("LiquidFountainEntity.getCapability error", e);
-        }
-        return super.getCapability(capability, direction);
-    }
 
     /**
      * 服务端每 tick 调用（由方块的 ticker 触发）
@@ -302,12 +302,14 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
             return;
         }
         // 带 FLUID_HANDLER_ITEM 能力的容器
-        input.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).resolve().ifPresent(handler -> {
+        // 1.21.1：同上，改成可空获取 + if 块（原来的 lambda 会把 handler 捕获在外层作用域之外）
+        IFluidHandlerItem handler = FluidUtil.getFluidHandler(input).orElse(null);
+        if (handler != null) {
             boolean changed = false;
             FluidStack inTank = handler.getTanks() > 0 ? handler.getFluidInTank(0) : FluidStack.EMPTY;
             if (!inTank.isEmpty()) {
                 // 带液容器：把液体输入机器（机器为空或同种且未无限）
-                if (!isInfinity() && (stack == FluidStack.EMPTY || inTank.isFluidEqual(stack))) {
+                if (!isInfinity() && (stack == FluidStack.EMPTY || FluidStack.isSameFluidSameComponents(inTank, stack))) {
                     int accepted = fillMachine(inTank.copy());
                     if (accepted > 0) {
                         handler.drain(accepted, IFluidHandler.FluidAction.EXECUTE);
@@ -344,7 +346,7 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
                 }
                 setChanged();
             }
-        });
+        }
     }
 
     /**
@@ -354,7 +356,7 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
         if (fs.isEmpty() || isInfinity()) {
             return 0;
         }
-        if (stack != FluidStack.EMPTY && !stack.isFluidEqual(fs)) {
+        if (stack != FluidStack.EMPTY && !FluidStack.isSameFluidSameComponents(stack, fs)) {
             return 0;
         }
         int maxInput = (int) Math.min(fs.getAmount(), Tool.suitInt(getMax() - stack.getAmount()));
@@ -387,7 +389,7 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
                 if (entity == null) {
                     continue;
                 }
-                IFluidHandler handler = entity.getCapability(ForgeCapabilities.FLUID_HANDLER, direction.getOpposite()).resolve().orElse(null);
+                IFluidHandler handler = level.getCapability(Capabilities.FluidHandler.BLOCK, entity.getBlockPos(), direction.getOpposite());
                 if (handler == null) {
                     continue;
                 }
@@ -509,8 +511,8 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
     }
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
         try {
             if (stack != FluidStack.EMPTY) {
                 //noinspection deprecation
@@ -525,16 +527,16 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
                 nbt.putBoolean(TRANSFER_KEYS[direction.ordinal()], isTransferEnabled(direction));
             }
             nbt.putBoolean("outputEnabled", outputEnabled);
-            nbt.put("inputSlot", inputSlot.serializeNBT());
-            nbt.put("outputSlot", outputSlot.serializeNBT());
+            nbt.put("inputSlot", inputSlot.serializeNBT(registries));
+            nbt.put("outputSlot", outputSlot.serializeNBT(registries));
         } catch (Throwable e) {
             log.error("LiquidFountainEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void load(@Nonnull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         try {
             if (nbt.contains("fluid_id", Tag.TAG_STRING)) {
                 Fluid fluid = null;
@@ -562,10 +564,10 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
                 outputEnabled = nbt.getBoolean("outputEnabled");
             }
             if (nbt.contains("inputSlot", Tag.TAG_COMPOUND)) {
-                inputSlot.deserializeNBT(nbt.getCompound("inputSlot"));
+                inputSlot.deserializeNBT(registries, nbt.getCompound("inputSlot"));
             }
             if (nbt.contains("outputSlot", Tag.TAG_COMPOUND)) {
-                outputSlot.deserializeNBT(nbt.getCompound("outputSlot"));
+                outputSlot.deserializeNBT(registries, nbt.getCompound("outputSlot"));
             }
         } catch (Throwable e) {
             log.error("LiquidFountainEntity.load error", e);
@@ -578,13 +580,13 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
      */
     @Override
     @Nonnull
-    public CompoundTag getUpdateTag() {
-        return this.saveWithoutMetadata();
+    public CompoundTag getUpdateTag(@Nonnull HolderLookup.Provider registries) {
+        return this.saveWithoutMetadata(registries);
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag) {
-        this.load(tag);
+    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
+        this.loadAdditional(tag, registries);
     }
 
     /**
@@ -597,7 +599,8 @@ public class LiquidFountainEntity extends BlockEntity implements ICapabilityProv
     }
 
     @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
-        this.load(pkt.getTag());
+    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
+        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
+        this.loadAdditional(pkt.getTag(), registries);
     }
 }

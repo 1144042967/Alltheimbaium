@@ -1,0 +1,29 @@
+{
+  "type": "thermal:bottler",
+  "ingredients": [
+    {
+      "tag": "c:string"
+    },
+    {
+      "fluid": "bloodmagic:life_essence_fluid",
+      "amount": 500
+    }
+  ],
+  "result": [
+    {
+      "item": "bloodmagic:soulsnare"
+    }
+  ],
+  "energy": 2000,
+  "experience": 0.1,
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "thermal"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "bloodmagic"
+    }
+  ]
+}

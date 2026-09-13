@@ -10,6 +10,7 @@ import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -27,11 +28,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,27 +38,29 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class StorageFountainEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
+public class StorageFountainEntity extends BlockEntity implements MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(StorageFountainEntity.class);
-    /** 六面 + 无方向(任意) 的对外能力缓存：索引 0~5 与 Direction.values() 顺序一致，索引 6 表示不限定方向 */
-    private final LazyOptional<StorageFountainConnection>[] fecOptionals = createDirectionalOptionals();
+
+    /**
+     * 六面 + 无方向(任意) 的对外能力缓存：索引 0~5 与 Direction.values() 顺序一致，索引 6 表示不限定方向。
+     * NeoForge 不再实现 ICapabilityProvider，由 {@code Registration.registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取。
+     */
+    private final StorageFountainConnection[] itemHandlers = new StorageFountainConnection[7];
+
+    @Nullable
+    public StorageFountainConnection getItemHandler(@Nullable Direction side) {
+        int idx = side == null ? 6 : side.ordinal();
+        if (itemHandlers[idx] == null) {
+            itemHandlers[idx] = new StorageFountainConnection(this, side);
+        }
+        return itemHandlers[idx];
+    }
     public int findIndex = 0;
 
     /**
      * 为每个方向缓存一个能力实例（被动抽取会按该方向配置过滤物品），另缓存一个不限定方向的实例。
      */
     @SuppressWarnings("unchecked")
-    private LazyOptional<StorageFountainConnection>[] createDirectionalOptionals() {
-        LazyOptional<StorageFountainConnection>[] optionals = new LazyOptional[7];
-        Direction[] directions = Direction.values();
-        for (int i = 0; i < directions.length; i++) {
-            final Direction direction = directions[i];
-            optionals[i] = LazyOptional.of(() -> new StorageFountainConnection(this, direction));
-        }
-        // 无方向查询（部分管道/逻辑不传方向）时按随机全量处理
-        optionals[6] = LazyOptional.of(() -> new StorageFountainConnection(this, null));
-        return optionals;
-    }
 
     // ==================== 方向输出状态 ====================
     /** 随机：输出任意有存量的物品 */
@@ -155,7 +155,8 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
         ItemStack single = stack.copy();
         single.setCount(1);
         for (int i = 0; i < itemList.size(); i++) {
-            if (itemList.get(i).equals(single, true)) {
+            // 1.21：ItemStack.matches(other, true) 已移除，改用具名静态方法（物品 + 数据组件全等）
+            if (ItemStack.isSameItemSameComponents(itemList.get(i), single)) {
                 return i;
             }
         }
@@ -320,40 +321,24 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
         return new StorageFountainMenu(id, inv, worldPosition);
     }
 
-    @Override
-    @Nonnull
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        try {
-            if (capability == ForgeCapabilities.ITEM_HANDLER) {
-                int idx = direction == null ? 6 : direction.ordinal();
-                if (idx >= 0 && idx < fecOptionals.length) {
-                    return fecOptionals[idx].cast();
-                }
-            }
-            return super.getCapability(capability, direction);
-        } catch (Throwable e) {
-            log.error("StorageFountainEntity.getCapability error", e);
-        }
-        return super.getCapability(capability, direction);
-    }
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
         try {
             nbt.putLong("output", output);
             nbt.put("save_stick", Tool.toJsonArray(itemList, blockList));
             nbt.putIntArray("directionState", directionState);
             nbt.putBoolean("outputEnabled", outputEnabled);
-            nbt.put("markerSlot", markerSlot.serializeNBT());
+            nbt.put("markerSlot", markerSlot.serializeNBT(registries));
         } catch (Throwable e) {
             log.error("StorageFountainEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void load(@Nonnull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         try {
             if (nbt.contains("output", Tag.TAG_LONG)) {
                 this.output = Tool.suit(nbt.getLong("output"));
@@ -376,7 +361,7 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
                 outputEnabled = nbt.getBoolean("outputEnabled");
             }
             if (nbt.contains("markerSlot", Tag.TAG_COMPOUND)) {
-                markerSlot.deserializeNBT(nbt.getCompound("markerSlot"));
+                markerSlot.deserializeNBT(registries, nbt.getCompound("markerSlot"));
             }
         } catch (Throwable e) {
             log.error("StorageFountainEntity.load error", e);
@@ -390,13 +375,13 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
      */
     @Override
     @Nonnull
-    public CompoundTag getUpdateTag() {
-        return this.saveWithoutMetadata();
+    public CompoundTag getUpdateTag(@Nonnull HolderLookup.Provider registries) {
+        return this.saveWithoutMetadata(registries);
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag) {
-        this.load(tag);
+    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
+        this.loadAdditional(tag, registries);
     }
 
     @Override
@@ -406,8 +391,9 @@ public class StorageFountainEntity extends BlockEntity implements ICapabilityPro
     }
 
     @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
-        this.load(pkt.getTag());
+    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
+        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
+        this.loadAdditional(pkt.getTag(), registries);
     }
 
     /**

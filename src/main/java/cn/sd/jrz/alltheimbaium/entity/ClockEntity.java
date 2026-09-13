@@ -14,6 +14,7 @@ import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
@@ -157,7 +158,7 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
             if (isExcluded(block)) {
                 continue;
             }
-            if (level instanceof ServerLevel && block.isRandomlyTicking(blockState)) {
+            if (level instanceof ServerLevel && blockState.isRandomlyTicking()) {
                 blockState.randomTick((ServerLevel) level, pos, level.getRandom());
             }
             if (!(block instanceof EntityBlock entityBlock)) {
@@ -220,8 +221,8 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
     // ==================== NBT 持久化 ====================
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
         try {
             nbt.putBoolean("enabled", enabled);
             int[] dirArr = new int[6];
@@ -236,8 +237,8 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
     }
 
     @Override
-    public void load(@Nonnull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         try {
             if (nbt.contains("enabled")) {
                 enabled = nbt.getBoolean("enabled");
@@ -263,13 +264,13 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
      */
     @Override
     @Nonnull
-    public CompoundTag getUpdateTag() {
-        return this.saveWithoutMetadata();
+    public CompoundTag getUpdateTag(@Nonnull HolderLookup.Provider registries) {
+        return this.saveWithoutMetadata(registries);
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag) {
-        this.load(tag);
+    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
+        this.loadAdditional(tag, registries);
     }
 
     @Override
@@ -279,8 +280,9 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
     }
 
     @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
-        this.load(pkt.getTag());
+    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
+        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
+        this.loadAdditional(pkt.getTag(), registries);
     }
 
     /**

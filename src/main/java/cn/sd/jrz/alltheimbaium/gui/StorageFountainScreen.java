@@ -19,8 +19,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
@@ -38,7 +38,7 @@ import java.util.Optional;
  */
 @OnlyIn(Dist.CLIENT)
 public class StorageFountainScreen extends AbstractContainerScreen<StorageFountainMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/storage_fountain_gui.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/storage_fountain_gui.png");
     /** 黑色信息面板上的浅色文字 */
     private static final int TEXT_COLOR = 0xC6C6C6;
 
@@ -165,7 +165,6 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
 
     @Override
     protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        renderBackground(guiGraphics);
         // 主背景（槽位框、黑色信息面板、标记槽、物品栏槽位均已绘制在图上）
         guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
         // 第一行：增长进度条

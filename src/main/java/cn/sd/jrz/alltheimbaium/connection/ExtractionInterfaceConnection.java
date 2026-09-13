@@ -10,11 +10,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.items.IItemHandler;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,8 +127,9 @@ public class ExtractionInterfaceConnection implements IItemHandler, IFluidHandle
                 if (be == null || !isItemSource(be)) {
                     continue;
                 }
-                LazyOptional<IItemHandler> opt = be.getCapability(ForgeCapabilities.ITEM_HANDLER, null);
-                IItemHandler handler = opt.resolve().orElse(null);
+                // 1.21：能力查询改走 level.getCapability（无 LazyOptional，直接返回可空实例）；
+                // null 作为 context 表示"未知面"，与本模组机器 getItemHandler(null) 的语义一致
+                IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
                 if (handler == null) {
                     continue;
                 }
@@ -153,8 +153,8 @@ public class ExtractionInterfaceConnection implements IItemHandler, IFluidHandle
                 if (be == null || !isFluidSource(be)) {
                     continue;
                 }
-                LazyOptional<IFluidHandler> opt = be.getCapability(ForgeCapabilities.FLUID_HANDLER, null);
-                IFluidHandler handler = opt.resolve().orElse(null);
+                // 同上：null 面查询，液体机对 null 面返回同一聚合实例
+                IFluidHandler handler = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null);
                 if (handler == null) {
                     continue;
                 }

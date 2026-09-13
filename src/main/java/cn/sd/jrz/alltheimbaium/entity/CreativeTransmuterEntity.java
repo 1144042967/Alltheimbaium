@@ -7,6 +7,7 @@ import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.TransmuteCatalog;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
@@ -20,12 +21,9 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +41,7 @@ import java.util.List;
  * <p>
  * 对外能力见 {@link CreativeTransmuterConnection}：方向无关，输入栏可插不可抽、输出栏可抽不可插。
  */
-public class CreativeTransmuterEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
+public class CreativeTransmuterEntity extends BlockEntity implements MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(CreativeTransmuterEntity.class);
 
     /** 输入栏格数（槽 0~8） */
@@ -76,8 +74,17 @@ public class CreativeTransmuterEntity extends BlockEntity implements ICapability
     };
 
     /** 对外物品能力（方向无关） */
-    private final LazyOptional<IItemHandler> itemCapability =
-            LazyOptional.of(() -> new CreativeTransmuterConnection(this));
+
+    /**
+     * 对外物品能力（方向无关）。NeoForge 不再实现 ICapabilityProvider，
+     * 由 {@code Registration.registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取。
+     */
+    private final CreativeTransmuterConnection itemHandler = new CreativeTransmuterConnection(this);
+
+    @Nonnull
+    public CreativeTransmuterConnection getItemHandler(@Nullable Direction side) {
+        return itemHandler;
+    }
 
     public CreativeTransmuterEntity(BlockPos pos, BlockState state) {
         super(Registration.CREATIVE_TRANSMUTER_ENTITY.get(), pos, state);
@@ -128,26 +135,9 @@ public class CreativeTransmuterEntity extends BlockEntity implements ICapability
     }
 
     // ==================== 能力 ====================
-
-    @Override
-    @Nonnull
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        try {
-            if (capability == ForgeCapabilities.ITEM_HANDLER) {
-                return this.itemCapability.cast();
-            }
-            return super.getCapability(capability, direction);
-        } catch (Throwable e) {
-            log.error("CreativeTransmuterEntity.getCapability error", e);
-        }
-        return super.getCapability(capability, direction);
-    }
-
-    @Override
-    public void invalidateCaps() {
-        super.invalidateCaps();
-        this.itemCapability.invalidate();
-    }
+    // 1.21：方块实体不再实现 ICapabilityProvider、也没有 LazyOptional，
+    // 因此旧版 invalidateCaps() 里"让能力缓存失效"这件事整个消失——
+    // 能力由 Registration.registerCapabilities 按方块实体类型静态注册，无需逐实例失效。
 
     // ==================== 菜单提供 ====================
 
@@ -167,21 +157,21 @@ public class CreativeTransmuterEntity extends BlockEntity implements ICapability
     // ==================== NBT 持久化 ====================
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
         try {
-            nbt.put(TAG_INVENTORY, inventory.serializeNBT());
+            nbt.put(TAG_INVENTORY, inventory.serializeNBT(registries));
         } catch (Throwable e) {
             log.error("CreativeTransmuterEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void load(@Nonnull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         try {
             if (nbt.contains(TAG_INVENTORY)) {
-                inventory.deserializeNBT(nbt.getCompound(TAG_INVENTORY));
+                inventory.deserializeNBT(registries, nbt.getCompound(TAG_INVENTORY));
             }
         } catch (Throwable e) {
             log.error("CreativeTransmuterEntity.load error", e);
@@ -192,13 +182,13 @@ public class CreativeTransmuterEntity extends BlockEntity implements ICapability
 
     @Override
     @Nonnull
-    public CompoundTag getUpdateTag() {
-        return this.saveWithoutMetadata();
+    public CompoundTag getUpdateTag(@Nonnull HolderLookup.Provider registries) {
+        return this.saveWithoutMetadata(registries);
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag) {
-        this.load(tag);
+    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
+        this.loadAdditional(tag, registries);
     }
 
     @Override
@@ -208,10 +198,10 @@ public class CreativeTransmuterEntity extends BlockEntity implements ICapability
     }
 
     @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
+    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
         CompoundTag tag = pkt.getTag();
         if (tag != null) {
-            this.load(tag);
+            this.loadAdditional(tag, registries);
         }
     }
 }

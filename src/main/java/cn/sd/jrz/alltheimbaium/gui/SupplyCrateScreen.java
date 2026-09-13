@@ -10,8 +10,8 @@ import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -30,7 +30,7 @@ import java.util.Optional;
 @OnlyIn(Dist.CLIENT)
 public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> {
     /** GUI 背景贴图（占位图，可直接用 PS 修改替换） */
-    private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/supply_crate_gui.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/supply_crate_gui.png");
     private static final int IMAGE_W = 176;
     private static final int IMAGE_H = 150;
     // 两排物品按钮
@@ -99,7 +99,6 @@ public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> 
 
     @Override
     protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        renderBackground(guiGraphics);
         // 背景用贴图绘制（尺寸 = imageWidth × imageHeight），按钮等控件绘制在贴图之上
         guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
     }

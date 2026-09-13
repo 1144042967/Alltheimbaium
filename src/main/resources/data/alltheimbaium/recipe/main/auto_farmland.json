@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "alltheimbaium",
+  "pattern": [
+    "FFF",
+    "XRX",
+    "FFF"
+  ],
+  "key": {
+    "X": {
+      "item": "alltheimbaium:package_material"
+    },
+    "F": {
+      "item": "alltheimbaium:farmland"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "id": "alltheimbaium:auto_farmland"
+  }
+}

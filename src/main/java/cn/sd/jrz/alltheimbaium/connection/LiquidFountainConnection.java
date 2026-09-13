@@ -3,8 +3,8 @@ package cn.sd.jrz.alltheimbaium.connection;
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +42,7 @@ public class LiquidFountainConnection implements IFluidHandler {
     @Override
     public boolean isFluidValid(int i, @Nonnull FluidStack fluidStack) {
         try {
-            return !isInfinity() && (owner.stack == FluidStack.EMPTY || fluidStack.isFluidEqual(owner.stack));
+            return !isInfinity() && (owner.stack == FluidStack.EMPTY || FluidStack.isSameFluidSameComponents(fluidStack, owner.stack));
         } catch (Throwable e) {
             log.error("LiquidFountainConnection.isFluidValid error", e);
         }
@@ -58,7 +58,7 @@ public class LiquidFountainConnection implements IFluidHandler {
             if (fluidStack.getAmount() <= 0) {
                 return 0;
             }
-            if (owner.stack != FluidStack.EMPTY && !owner.stack.isFluidEqual(fluidStack)) {
+            if (owner.stack != FluidStack.EMPTY && !FluidStack.isSameFluidSameComponents(owner.stack, fluidStack)) {
                 return 0;
             }
             int maxInput = Math.min(fluidStack.getAmount(), Tool.suitInt(LiquidFountainBlock.getMax() - owner.stack.getAmount()));
@@ -80,7 +80,7 @@ public class LiquidFountainConnection implements IFluidHandler {
     @Override
     public @Nonnull FluidStack drain(FluidStack fluidStack, FluidAction fluidAction) {
         try {
-            if (!owner.stack.isFluidEqual(fluidStack)) {
+            if (!FluidStack.isSameFluidSameComponents(owner.stack, fluidStack)) {
                 return FluidStack.EMPTY;
             }
             return drain(fluidStack.getAmount(), fluidAction);

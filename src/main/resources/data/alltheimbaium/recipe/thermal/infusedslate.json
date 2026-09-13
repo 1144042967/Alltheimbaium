@@ -1,0 +1,29 @@
+{
+  "type": "thermal:bottler",
+  "ingredients": [
+    {
+      "item": "bloodmagic:reinforcedslate"
+    },
+    {
+      "fluid": "bloodmagic:life_essence_fluid",
+      "amount": 5000
+    }
+  ],
+  "result": [
+    {
+      "item": "bloodmagic:infusedslate"
+    }
+  ],
+  "energy": 2000,
+  "experience": 0.1,
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "thermal"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "bloodmagic"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "group": "template",
+  "key": {
+    "A": {
+      "item": "allthemodium:vibranium_ingot"
+    },
+    "B": {
+      "item": "minecraft:gilded_blackstone"
+    },
+    "#": {
+      "item": "allthemodium:allthemodium_ingot"
+    }
+  },
+  "pattern": [
+    "#A#",
+    "#B#",
+    "###"
+  ],
+  "result": {
+    "id": "allthemodium:vibranium_upgrade_smithing_template"
+  }
+}

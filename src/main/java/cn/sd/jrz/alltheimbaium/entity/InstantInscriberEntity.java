@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -31,14 +32,11 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.energy.EnergyStorage;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemHandlerHelper;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.energy.EnergyStorage;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +67,7 @@ import java.util.Set;
  * {@link #ENERGY_PER_OP} FE（上限 {@link #MAX_ENERGY}），合成完成后执行输出推送；
  * 被动输入/输出只收发货，不触发配方计算。
  */
-public class InstantInscriberEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
+public class InstantInscriberEntity extends BlockEntity implements MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(InstantInscriberEntity.class);
 
     /**
@@ -151,9 +149,23 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
     public final List<Row> outputRows = new ArrayList<>();
 
     public final SmeltEnergy energy = new SmeltEnergy(this);
-    private final LazyOptional<InstantInscriberConnection> itemOptional =
-            LazyOptional.of(() -> new InstantInscriberConnection(this));
-    private final LazyOptional<EnergyStorage> energyOptional = LazyOptional.of(() -> energy);
+
+    /**
+     * 对外 IItemHandler 能力（行为方向无关：插入进输入区、抽取自输出区）。
+     * NeoForge 不再实现 ICapabilityProvider，由 {@code Registration.registerCapabilities} 拉取。
+     */
+    private final InstantInscriberConnection itemHandler = new InstantInscriberConnection(this);
+
+    @Nonnull
+    public InstantInscriberConnection getItemHandler(@Nullable Direction side) {
+        return itemHandler;
+    }
+
+    /** 对外能量能力（任意方向均返回同一存储） */
+    @Nonnull
+    public EnergyStorage getEnergyStorage(@Nullable Direction side) {
+        return energy;
+    }
 
     public InstantInscriberEntity(BlockPos pos, BlockState state) {
         super(Registration.INSTANT_INSCRIBER_ENTITY.get(), pos, state);
@@ -512,7 +524,7 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
                 return null;
             }
             for (String id : new String[]{"ae2:inscriber", "appliedenergistics2:inscriber"}) {
-                RecipeType<?> type = registry.get(new ResourceLocation(id));
+                RecipeType<?> type = registry.get(ResourceLocation.parse(id));
                 if (type != null) {
                     return type;
                 }
@@ -672,7 +684,7 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
     /** 物品的注册名，用于去重与排序 */
     @Nonnull
     private static String itemKey(@Nonnull ItemStack stack) {
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         return id == null ? "" : id.toString();
     }
 
@@ -718,7 +730,7 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
      */
     private static void sortByOutput(@Nonnull List<RecipeSummary> summaries) {
         summaries.sort(Comparator.comparing(s -> {
-            ResourceLocation id = ForgeRegistries.ITEMS.getKey(s.output().getItem());
+            ResourceLocation id = BuiltInRegistries.ITEM.getKey(s.output().getItem());
             return id == null ? "" : id.toString();
         }));
     }
@@ -770,7 +782,7 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
             if (neighbor == null) {
                 continue;
             }
-            IItemHandler handler = neighbor.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite()).resolve().orElse(null);
+            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
             if (handler == null) {
                 continue;
             }
@@ -864,22 +876,6 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
         return new InstantInscriberMenu(id, inv, worldPosition);
     }
 
-    @Override
-    @Nonnull
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        try {
-            if (capability == ForgeCapabilities.ITEM_HANDLER) {
-                return itemOptional.cast();
-            }
-            if (capability == ForgeCapabilities.ENERGY) {
-                return energyOptional.cast();
-            }
-            return super.getCapability(capability, direction);
-        } catch (Throwable e) {
-            log.error("InstantInscriberEntity.getCapability error", e);
-        }
-        return super.getCapability(capability, direction);
-    }
 
     // ==================== NBT ====================
 
@@ -890,11 +886,11 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
     private static final String KEY_MODE = "mode";
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
         try {
-            nbt.put(KEY_INPUT, saveRows(inputRows));
-            nbt.put(KEY_OUTPUT, saveRows(outputRows));
+            nbt.put(KEY_INPUT, saveRows(inputRows, registries));
+            nbt.put(KEY_OUTPUT, saveRows(outputRows, registries));
             nbt.putInt(KEY_ENERGY, energy.getEnergyStored());
             nbt.putIntArray(KEY_DIR, directionState);
             nbt.putInt(KEY_MODE, mode);
@@ -904,15 +900,15 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
     }
 
     @Override
-    public void load(@Nonnull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         try {
             // 反序列化只恢复状态；合成由每 tick 统一执行
             if (nbt.contains(KEY_INPUT, Tag.TAG_LIST)) {
-                loadRows(inputRows, (ListTag) nbt.get(KEY_INPUT));
+                loadRows(inputRows, (ListTag) nbt.get(KEY_INPUT), registries);
             }
             if (nbt.contains(KEY_OUTPUT, Tag.TAG_LIST)) {
-                loadRows(outputRows, (ListTag) nbt.get(KEY_OUTPUT));
+                loadRows(outputRows, (ListTag) nbt.get(KEY_OUTPUT), registries);
             }
             if (nbt.contains(KEY_ENERGY, Tag.TAG_INT)) {
                 energy.setEnergyStored(nbt.getInt(KEY_ENERGY));
@@ -931,23 +927,23 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
         }
     }
 
-    private static ListTag saveRows(List<Row> rows) {
+    private static ListTag saveRows(List<Row> rows, @Nonnull HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (Row row : rows) {
-            CompoundTag c = new CompoundTag();
-            new ItemStack(row.item, 1).save(c);
+            // 1.21：save 需要注册表访问器，且一律以返回值为准
+            CompoundTag c = (CompoundTag) new ItemStack(row.item, 1).save(registries, new CompoundTag());
             c.putLong("Stock", row.stock);
             list.add(c);
         }
         return list;
     }
 
-    private static void loadRows(List<Row> target, ListTag list) {
+    private static void loadRows(List<Row> target, ListTag list, @Nonnull HolderLookup.Provider registries) {
         target.clear();
         for (int i = 0; i < list.size(); i++) {
             try {
                 CompoundTag c = list.getCompound(i);
-                ItemStack stack = ItemStack.of(c);
+                ItemStack stack = ItemStack.parseOptional(registries, c);
                 if (stack.isEmpty()) {
                     continue;
                 }
@@ -965,13 +961,13 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
 
     @Override
     @Nonnull
-    public CompoundTag getUpdateTag() {
-        return this.saveWithoutMetadata();
+    public CompoundTag getUpdateTag(@Nonnull HolderLookup.Provider registries) {
+        return this.saveWithoutMetadata(registries);
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag) {
-        this.load(tag);
+    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
+        this.loadAdditional(tag, registries);
     }
 
     @Override
@@ -981,7 +977,8 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
     }
 
     @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
-        this.load(pkt.getTag());
+    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
+        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
+        this.loadAdditional(pkt.getTag(), registries);
     }
 }

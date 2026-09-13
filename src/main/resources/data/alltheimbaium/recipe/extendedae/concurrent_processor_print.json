@@ -1,0 +1,18 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "extendedae"
+    }
+  ],
+  "type": "extendedae:circuit_cutter",
+  "input": {
+    "ingredient": {
+      "item": "extendedae:entro_budding_half"
+    }
+  },
+  "output": {
+    "count": 64,
+    "id": "extendedae:concurrent_processor_print"
+  }
+}

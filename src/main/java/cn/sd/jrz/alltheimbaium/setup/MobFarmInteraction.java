@@ -80,7 +80,7 @@ public final class MobFarmInteraction {
         String[] dyeNames = {"white", "orange", "magenta", "light_blue", "yellow", "lime", "pink",
                 "gray", "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"};
         try {
-            Item wool = BuiltInRegistries.ITEM.get(new ResourceLocation("minecraft", dyeNames[id] + "_wool"));
+            Item wool = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("minecraft", dyeNames[id] + "_wool"));
             if (wool != null && wool != Items.AIR) {
                 return wool;
             }

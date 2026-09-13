@@ -1,21 +1,22 @@
 package cn.sd.jrz.alltheimbaium.gui;
 
-import cn.sd.jrz.alltheimbaium.network.Network;
 import cn.sd.jrz.alltheimbaium.network.OpenEternalSwordGuiPacket;
 import cn.sd.jrz.alltheimbaium.network.OpenEternalTotemGuiPacket;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.InteractionResult;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 
 /**
  * ALT+右击永恒之剑 / 永恒图腾时，取消默认行为并请求服务端打开配置界面。
  */
-@Mod.EventBusSubscriber(modid = "alltheimbaium", value = Dist.CLIENT)
+@EventBusSubscriber(modid = "alltheimbaium", value = Dist.CLIENT)
 public class RightClickHandler {
 
     @SubscribeEvent
@@ -24,11 +25,11 @@ public class RightClickHandler {
             if (event.getItemStack().is(Registration.ETERNAL_SWORD.get())) {
                 event.setCanceled(true);
                 event.setCancellationResult(InteractionResult.SUCCESS);
-                Network.CHANNEL.sendToServer(new OpenEternalSwordGuiPacket());
+                PacketDistributor.sendToServer(new OpenEternalSwordGuiPacket());
             } else if (event.getItemStack().is(Registration.ETERNAL_TOTEM.get())) {
                 event.setCanceled(true);
                 event.setCancellationResult(InteractionResult.SUCCESS);
-                Network.CHANNEL.sendToServer(new OpenEternalTotemGuiPacket());
+                PacketDistributor.sendToServer(new OpenEternalTotemGuiPacket());
             }
         }
     }

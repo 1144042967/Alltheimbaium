@@ -114,11 +114,13 @@ public final class KillLootEstimator {
     private static List<SampledDrop> doEstimate(ServerLevel serverLevel, EntityType<?> type, int rolls) {
         List<SampledDrop> result = new ArrayList<>();
         try {
-            ResourceLocation lootId = type.getDefaultLootTable();
-            if (lootId == null) {
+            // 1.21：getDefaultLootTable 返回 ResourceKey<LootTable>（不再是 ResourceLocation），
+            // 且 MinecraftServer#getLootData 已删除，改走 reloadableRegistries()
+            net.minecraft.resources.ResourceKey<LootTable> lootKey = type.getDefaultLootTable();
+            if (lootKey == null) {
                 return result;
             }
-            LootTable table = serverLevel.getServer().getLootData().getLootTable(lootId);
+            LootTable table = serverLevel.getServer().reloadableRegistries().getLootTable(lootKey);
             int kills = Math.max(1, rolls);
             Entity probe = null;
             try {

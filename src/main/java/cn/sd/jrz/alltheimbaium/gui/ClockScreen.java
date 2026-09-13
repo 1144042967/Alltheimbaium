@@ -10,8 +10,8 @@ import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -28,7 +28,7 @@ import java.util.Optional;
  */
 @OnlyIn(Dist.CLIENT)
 public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/clock_gui.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/clock_gui.png");
 
     // 顶部两个开关按钮
     private static final int SWITCH_W = 78;
@@ -94,7 +94,6 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
 
     @Override
     protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        renderBackground(guiGraphics);
         // 主背景（标题条、开关按钮区域、方向按钮区域、速度档位区域均已绘制在图上）
         guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
     }

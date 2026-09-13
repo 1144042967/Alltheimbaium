@@ -1,0 +1,29 @@
+{
+  "type": "thermal:bottler",
+  "ingredients": [
+    {
+      "item": "bloodmagic:rawdemoniteblock"
+    },
+    {
+      "fluid": "bloodmagic:life_essence_fluid",
+      "amount": 10000
+    }
+  ],
+  "result": [
+    {
+      "item": "bloodmagic:bleedingedge"
+    }
+  ],
+  "energy": 2000,
+  "experience": 0.1,
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "thermal"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "bloodmagic"
+    }
+  ]
+}

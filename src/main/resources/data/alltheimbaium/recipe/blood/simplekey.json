@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "A": {
+      "tag": "c:storage_blocks/redstone"
+    },
+    "#": {
+      "tag": "c:ingots/iron"
+    },
+    "B": {
+      "item": "bloodmagic:infusedslate"
+    }
+  },
+  "pattern": [
+    "#A",
+    "# ",
+    "B "
+  ],
+  "result": {
+    "id": "bloodmagic:simplekey"
+  },
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "bloodmagic"
+    }
+  ]
+}

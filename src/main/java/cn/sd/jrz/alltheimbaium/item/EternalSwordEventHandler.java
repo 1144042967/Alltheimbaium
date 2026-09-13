@@ -2,14 +2,15 @@ package cn.sd.jrz.alltheimbaium.item;
 
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.event.AnvilUpdateEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.AnvilUpdateEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
 
 /**
  * 永恒之剑事件处理：禁止铁砧锻造 / 改名 / 附魔书合成。
  */
-@Mod.EventBusSubscriber(modid = "alltheimbaium")
+@EventBusSubscriber(modid = "alltheimbaium")
 public class EternalSwordEventHandler {
 
     @SubscribeEvent

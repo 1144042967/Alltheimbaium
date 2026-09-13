@@ -10,6 +10,7 @@ import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -28,12 +29,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.ItemHandlerHelper;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +50,7 @@ import java.util.Map;
  * 即永久确定该资源的白名单产物表；每 tick 按 权重×等级 平滑累计、按 CARRY 进位成整数物品；
  * 产物行长期保存、可六面输出、GUI 内取物。每台机器只能标记一次。
  */
-public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
+public class ResourceFarmEntity extends BlockEntity implements MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(ResourceFarmEntity.class);
 
     // ==================== 方向输出状态 ====================
@@ -91,18 +89,19 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
     /** 载入含标记但无产物行时，首个服务端 tick 补建 */
     private boolean needRebuild = false;
 
-    @SuppressWarnings("unchecked")
-    private final LazyOptional<ResourceFarmConnection>[] fecOptionals = createDirectionalOptionals();
+    /**
+     * 对外物品能力：按面懒建并缓存。NeoForge 不再实现 ICapabilityProvider，
+     * 由 {@code Registration.registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取（下标 6 = 无方向查询）。
+     */
+    private final ResourceFarmConnection[] itemHandlers = new ResourceFarmConnection[7];
 
-    private LazyOptional<ResourceFarmConnection>[] createDirectionalOptionals() {
-        LazyOptional<ResourceFarmConnection>[] optionals = new LazyOptional[7];
-        Direction[] directions = Direction.values();
-        for (int i = 0; i < directions.length; i++) {
-            final Direction direction = directions[i];
-            optionals[i] = LazyOptional.of(() -> new ResourceFarmConnection(this, direction));
+    @Nullable
+    public ResourceFarmConnection getItemHandler(@Nullable Direction side) {
+        int idx = side == null ? 6 : side.ordinal();
+        if (itemHandlers[idx] == null) {
+            itemHandlers[idx] = new ResourceFarmConnection(this, side);
         }
-        optionals[6] = LazyOptional.of(() -> new ResourceFarmConnection(this, null));
-        return optionals;
+        return itemHandlers[idx];
     }
 
     public ResourceFarmEntity(BlockPos pos, BlockState state) {
@@ -472,8 +471,7 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
         if (neighbor == null) {
             return;
         }
-        var optional = neighbor.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite());
-        var handler = optional.resolve().orElse(null);
+        var handler = level.getCapability(Capabilities.ItemHandler.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
         if (handler == null) {
             return;
         }
@@ -495,7 +493,7 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
         }
     }
 
-    private void pushRow(net.minecraftforge.items.IItemHandler handler, int index) {
+    private void pushRow(net.neoforged.neoforge.items.IItemHandler handler, int index) {
         Row row = rows.get(index);
         int maxStack = new ItemStack(row.item).getMaxStackSize();
         if (maxStack <= 0) {
@@ -518,22 +516,6 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
 
     // ==================== capability / 菜单 ====================
 
-    @Override
-    @Nonnull
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        try {
-            if (capability == ForgeCapabilities.ITEM_HANDLER) {
-                int idx = direction == null ? 6 : direction.ordinal();
-                if (idx >= 0 && idx < fecOptionals.length) {
-                    return fecOptionals[idx].cast();
-                }
-            }
-            return super.getCapability(capability, direction);
-        } catch (Throwable e) {
-            log.error("ResourceFarmEntity.getCapability error", e);
-        }
-        return super.getCapability(capability, direction);
-    }
 
     @Override
     @Nonnull
@@ -557,15 +539,15 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
     private static final String KEY_OUTPUT = "outputEnabled";
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
         try {
             if (markerItem != null) {
                 nbt.putString(KEY_MARKER, BuiltInRegistries.ITEM.getKey(markerItem).toString());
             }
             nbt.putLong(KEY_LEVEL, level);
             nbt.putLong(KEY_TICK, tickCount);
-            nbt.put(KEY_ROWS, saveRows());
+            nbt.put(KEY_ROWS, saveRows(registries));
             nbt.putIntArray(KEY_DIR, directionState);
             nbt.putBoolean(KEY_OUTPUT, outputEnabled);
         } catch (Throwable e) {
@@ -574,11 +556,14 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
     }
 
     @Override
-    public void load(@Nonnull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         try {
             if (nbt.contains(KEY_MARKER, Tag.TAG_STRING)) {
-                markerItem = BuiltInRegistries.ITEM.get(new net.minecraft.resources.ResourceLocation(nbt.getString(KEY_MARKER)));
+                // 1.21：ResourceLocation 构造器已私有化，改用 tryParse（非法 id 视同未标记，
+                // 避免抛 ResourceLocationException 把整段加载打断）
+                net.minecraft.resources.ResourceLocation markerId = net.minecraft.resources.ResourceLocation.tryParse(nbt.getString(KEY_MARKER));
+                markerItem = markerId == null ? net.minecraft.world.item.Items.AIR : BuiltInRegistries.ITEM.get(markerId);
                 if (markerItem == net.minecraft.world.item.Items.AIR) {
                     markerItem = null;
                 }
@@ -592,7 +577,7 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
                 tickCount = Tool.suit(nbt.getLong(KEY_TICK));
             }
             if (nbt.contains(KEY_ROWS, Tag.TAG_LIST)) {
-                loadRows((ListTag) nbt.get(KEY_ROWS));
+                loadRows((ListTag) nbt.get(KEY_ROWS), registries);
             }
             if (nbt.contains(KEY_DIR)) {
                 int[] arr = nbt.getIntArray(KEY_DIR);
@@ -620,11 +605,11 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
         }
     }
 
-    private ListTag saveRows() {
+    private ListTag saveRows(@Nonnull HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (Row row : rows) {
-            CompoundTag c = new CompoundTag();
-            new ItemStack(row.item, 1).save(c);
+            // 1.21：save 需要注册表访问器，且一律以返回值为准
+            CompoundTag c = (CompoundTag) new ItemStack(row.item, 1).save(registries, new CompoundTag());
             c.putLong("Stock", row.stock);
             c.putLong("Weight", row.weight);
             list.add(c);
@@ -632,12 +617,12 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
         return list;
     }
 
-    private void loadRows(ListTag list) {
+    private void loadRows(ListTag list, @Nonnull HolderLookup.Provider registries) {
         rows.clear();
         for (int i = 0; i < list.size(); i++) {
             try {
                 CompoundTag c = list.getCompound(i);
-                ItemStack stack = ItemStack.of(c);
+                ItemStack stack = ItemStack.parseOptional(registries, c);
                 if (stack.isEmpty()) {
                     continue;
                 }
@@ -656,13 +641,13 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
 
     @Override
     @Nonnull
-    public CompoundTag getUpdateTag() {
-        return this.saveWithoutMetadata();
+    public CompoundTag getUpdateTag(@Nonnull HolderLookup.Provider registries) {
+        return this.saveWithoutMetadata(registries);
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag) {
-        this.load(tag);
+    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
+        this.loadAdditional(tag, registries);
     }
 
     @Override
@@ -672,8 +657,9 @@ public class ResourceFarmEntity extends BlockEntity implements ICapabilityProvid
     }
 
     @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
-        this.load(pkt.getTag());
+    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
+        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
+        this.loadAdditional(pkt.getTag(), registries);
     }
 
     public void sendUpdatePacket() {

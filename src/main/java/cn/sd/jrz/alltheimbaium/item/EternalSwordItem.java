@@ -1,42 +1,48 @@
 package cn.sd.jrz.alltheimbaium.item;
 
 import cn.sd.jrz.alltheimbaium.setup.Tool;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.enchantment.EnchantedItemInUse;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.EnchantmentTarget;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.common.ForgeTier;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * 永恒之剑。
@@ -51,12 +57,43 @@ import java.util.*;
 public class EternalSwordItem extends SwordItem {
 
     /**
-     * 自定义工具等级：攻击力加成 0、耐久 0、附魔等级 0，保证剑本身攻击伤害为 0
+     * 自定义工具等级：攻击力加成 0、耐久 0、附魔等级 0，保证剑本身攻击伤害为 0。
+     * <p>
+     * 1.21 删除了 {@code ForgeTier}，直接实现 {@link Tier}；原 {@code getLevel()} 改名为
+     * {@link Tier#getIncorrectBlocksForDrops()}，返回的是"本等级挖了也不掉落的方块"标签。
+     * 剑的 Tool 组件由 {@link SwordItem} 自己写入，因此这里的取值不影响任何行为。
      */
-    private static final Tier SWORD_TIER = new ForgeTier(
-            0, 0, 0.0F, 0.0F, 0,
-            BlockTags.NEEDS_STONE_TOOL,
-            () -> Ingredient.of(Items.AIR));
+    private static final Tier SWORD_TIER = new Tier() {
+        @Override
+        public int getUses() {
+            return 0;
+        }
+
+        @Override
+        public float getSpeed() {
+            return 0.0F;
+        }
+
+        @Override
+        public float getAttackDamageBonus() {
+            return 0.0F;
+        }
+
+        @Override
+        public TagKey<Block> getIncorrectBlocksForDrops() {
+            return BlockTags.INCORRECT_FOR_WOODEN_TOOL;
+        }
+
+        @Override
+        public int getEnchantmentValue() {
+            return 0;
+        }
+
+        @Override
+        public Ingredient getRepairIngredient() {
+            return Ingredient.of(Items.AIR);
+        }
+    };
 
     /**
      * 物品槽位数量
@@ -77,32 +114,58 @@ public class EternalSwordItem extends SwordItem {
     public static final String TAG_ITEMS = "items";
     public static final String TAG_DAMAGE = "sword_damage";
 
+    /**
+     * 主手攻击速度：与原版剑一致
+     */
+    private static final float ATTACK_SPEED = -2.4F;
+
     public EternalSwordItem() {
-        super(SWORD_TIER, 0, -2.4F, new Item.Properties()
+        // 1.21 的 SwordItem 只有 (Tier, Properties)：伤害/攻速不再走构造器参数，
+        // 而是由下面的 getDefaultAttributeModifiers 动态给出（伤害随槽位内容变化，写死进属性组件反而会被覆盖）
+        super(SWORD_TIER, new Item.Properties()
                 .stacksTo(1)
                 .rarity(Rarity.EPIC)
                 .fireResistant());
     }
 
     // ==================== 无耐久条 ====================
+    /**
+     * 1.21 删除了 {@code canBeDepleted()}，是否耗耐久完全由 MAX_DAMAGE / DAMAGE 数据组件决定，
+     * 而 {@code TieredItem} 一定会用 {@code getUses()}（0）写进 MAX_DAMAGE。这里从两个口子掐掉耐久：
+     * 一是不再产生任何耐久消耗，二是让"伤害值 ≥ 上限即损毁"的判定永远不成立。
+     */
     @Override
-    public boolean canBeDepleted() {
-        return false;
+    public <T extends LivingEntity> int damageItem(ItemStack stack, int amount, @Nullable T entity, Consumer<Item> onBroken) {
+        return 0;
+    }
+
+    @Override
+    public int getMaxDamage(ItemStack stack) {
+        // 伤害值恒为 0，若上限也为 0 则 "0 >= 0" 会直接把剑销毁，这里给一个正值规避
+        return 1;
     }
 
     // ==================== 属性：面板直接显示实际伤害 ====================
+    /**
+     * 1.21 删除了 {@code IItemStackExtension#getAttributeModifiers(EquipmentSlot, ItemStack)}，
+     * 改为覆写 NeoForge 的 {@link Item#getDefaultAttributeModifiers(ItemStack)}（仅在物品没有
+     * ATTRIBUTE_MODIFIERS 组件时生效，所以构造器里不能写 {@code .attributes(...)}）。
+     */
     @Override
-    public Multimap<Attribute, AttributeModifier> getAttributeModifiers(EquipmentSlot slot, ItemStack stack) {
-        Multimap<Attribute, AttributeModifier> map = ArrayListMultimap.create();
-        map.putAll(super.getAttributeModifiers(slot, stack));
-        if (slot == EquipmentSlot.MAINHAND) {
-            map.removeAll(Attributes.ATTACK_DAMAGE);
-            // 玩家基础攻击 1 + modifier = 面板伤害 = 实际伤害
-            map.put(Attributes.ATTACK_DAMAGE, new AttributeModifier(
-                    BASE_ATTACK_DAMAGE_UUID, "Weapon modifier",
-                    getSwordDamage(stack) - 1F, AttributeModifier.Operation.ADDITION));
-        }
-        return map;
+    public ItemAttributeModifiers getDefaultAttributeModifiers(ItemStack stack) {
+        return ItemAttributeModifiers.builder()
+                // 玩家基础攻击 1 + modifier = 面板伤害 = 实际伤害
+                .add(Attributes.ATTACK_DAMAGE,
+                        new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID,
+                                getSwordDamage(stack) - 1F,
+                                AttributeModifier.Operation.ADD_VALUE),
+                        EquipmentSlotGroup.MAINHAND)
+                .add(Attributes.ATTACK_SPEED,
+                        new AttributeModifier(Item.BASE_ATTACK_SPEED_ID,
+                                ATTACK_SPEED,
+                                AttributeModifier.Operation.ADD_VALUE),
+                        EquipmentSlotGroup.MAINHAND)
+                .build();
     }
 
     // ==================== 禁止附魔 ====================
@@ -140,14 +203,18 @@ public class EternalSwordItem extends SwordItem {
      * 混沌守卫走反射免伤突破。
      */
     private void doAttack(Level level, Player player, ItemStack stack) {
+        // 附魔伤害加成 / 命中效果都要求服务端世界（EnchantmentHelper 的 1.21 入口签名里带 ServerLevel）
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return;
+        }
         int range = getRange(stack);
         boolean killAll = getKillAll(stack) == 1;
         float baseDamage = getSwordDamage(stack);
-        DamageSource source = level.damageSources().playerAttack(player);
+        DamageSource source = serverLevel.damageSources().playerAttack(player);
         AABB aabb = player.getBoundingBox().inflate(range);
-        List<ItemStack> slotWeapons = collectSlotWeapons(stack);
+        List<ItemStack> slotWeapons = collectSlotWeapons(stack, serverLevel.registryAccess());
         // 只取可能的目标：活着的生物 或 混沌守卫（本体/部位）
-        List<Entity> targets = level.getEntities(player, aabb,
+        List<Entity> targets = serverLevel.getEntities(player, aabb,
                 e -> e.isAlive() && (e instanceof LivingEntity || Tool.isGuardian(e)));
         for (Entity target : targets) {
             if (target instanceof Player) continue;
@@ -155,17 +222,17 @@ public class EternalSwordItem extends SwordItem {
                 if (living instanceof ArmorStand) continue;
                 // 敌对模式：只攻击敌对生物（Enemy 接口：僵尸、骷髅、苦力怕、末影龙、守卫者等）
                 if (!killAll && !(living instanceof Enemy)) continue;
-                // 第一段：剑自身伤害
-                float damage = baseDamage + EnchantmentHelper.getDamageBonus(stack, living.getMobType());
+                // 第一段：剑自身伤害（modifyDamage 就是原版给主手武器算锋利/亡灵杀手/节肢杀手加成的那一步）
+                float damage = EnchantmentHelper.modifyDamage(serverLevel, stack, living, source, baseDamage);
                 // 混沌守卫本体：反射突破免伤，命中则跳过普通伤害
                 if (Tool.bypassGuardianDamage(living, source, damage)) continue;
                 clearInvulnerable(living);
                 living.hurt(source, damage);
-                // 第二段：剑上附魔的命中效果（火焰附加 / 击退显式补，其余走 doPostHurt / doPostAttack 钩子）
-                applyWeaponEffects(stack, player, living);
+                // 第二段：剑上附魔的命中效果（火焰附加 / 击退 / 节肢杀手的迟缓）
+                applyWeaponEffects(serverLevel, stack, player, living, source);
                 // 第三段：槽位里每把武器各打一次
                 for (ItemStack weapon : slotWeapons) {
-                    meleeHit(weapon, player, living, source);
+                    meleeHit(serverLevel, weapon, player, living, source);
                 }
             } else if (Tool.isGuardian(target)) {
                 // 混沌守卫部位（非 LivingEntity）：反射突破免伤
@@ -178,20 +245,21 @@ public class EternalSwordItem extends SwordItem {
      * 收集槽位里所有能造成伤害的武器，按物品 ID 去重（与剑伤害的"同 ID 只计一次"规则一致，
      * 否则在槽位里塞满同一把武器就能把近战命中次数刷上去）。
      */
-    private static List<ItemStack> collectSlotWeapons(ItemStack sword) {
+    private static List<ItemStack> collectSlotWeapons(ItemStack sword, @Nonnull HolderLookup.Provider registries) {
         List<ItemStack> weapons = new ArrayList<>();
-        CompoundTag tag = sword.getTag();
+        CompoundTag tag = Tool.getCustomTag(sword);
         if (tag == null || !tag.contains(TAG_ITEMS)) {
             return weapons;
         }
         Set<String> seen = new HashSet<>();
         ListTag list = tag.getList(TAG_ITEMS, Tag.TAG_COMPOUND);
         for (Tag t : list) {
-            ItemStack s = ItemStack.of((CompoundTag) t);
+            if (!(t instanceof CompoundTag ct)) continue;
+            ItemStack s = ItemStack.parseOptional(registries, ct);
             if (s.isEmpty() || getDamageContribution(s) <= 0F) {
                 continue;
             }
-            ResourceLocation key = ForgeRegistries.ITEMS.getKey(s.getItem());
+            ResourceLocation key = BuiltInRegistries.ITEM.getKey(s.getItem());
             if (key != null && seen.add(key.toString())) {
                 weapons.add(s);
             }
@@ -202,8 +270,8 @@ public class EternalSwordItem extends SwordItem {
     /**
      * 用指定武器对目标做一次近战命中：伤害 = 该武器攻击力 + 它自己的附魔伤害加成，再触发其命中附魔效果。
      */
-    private static void meleeHit(ItemStack weapon, Player player, LivingEntity target, DamageSource source) {
-        float damage = getDamageContribution(weapon) + EnchantmentHelper.getDamageBonus(weapon, target.getMobType());
+    private static void meleeHit(ServerLevel level, ItemStack weapon, Player player, LivingEntity target, DamageSource source) {
+        float damage = EnchantmentHelper.modifyDamage(level, weapon, target, source, getDamageContribution(weapon));
         if (damage <= 0F) {
             return;
         }
@@ -212,7 +280,7 @@ public class EternalSwordItem extends SwordItem {
         }
         clearInvulnerable(target);
         target.hurt(source, damage);
-        applyWeaponEffects(weapon, player, target);
+        applyWeaponEffects(level, weapon, player, target, source);
     }
 
     /**
@@ -232,35 +300,39 @@ public class EternalSwordItem extends SwordItem {
     /**
      * 触发武器上附魔的命中效果。
      * <p>
-     * 原版 {@code EnchantmentHelper} 的两个入口都从"攻击者主手"读附魔，这里改为按附魔逐条调用
-     * {@link Enchantment#doPostHurt} / {@link Enchantment#doPostAttack}，就能指定任意一把武器，
-     * 也不必临时替换玩家的主手物品。节肢杀手的迟缓就走这条路径。
+     * 1.21 把"命中时附魔生效"整体改成了数据驱动的 {@code minecraft:post_attack} 效果组件
+     * （{@link Enchantment#doPostAttack}），原版 {@code Player.attack} 也是调它。逐条附魔调用就能
+     * 指定任意一把武器，不必临时替换玩家的主手物品。
      * <p>
-     * <b>火焰附加与击退必须单独补</b>：原版把这两项直接写在 {@code Player.attack} 里
-     * （{@code getFireAspect} / {@code getKnockbackBonus} 配 {@code setSecondsOnFire} / {@code knockback}），
-     * 而 {@code FireAspectEnchantment} 与 {@code KnockbackEnchantment} 都不覆写上面两个钩子——
-     * 只把附魔挂到剑上再调钩子，这两项不会有任何效果，必须在这里显式复刻原版行为。
+     * 参数里的 {@link EnchantmentTarget} 过滤的是原版 JSON 里的 <b>enchanted</b> 字段（"附魔挂在谁身上"）。
+     * 武器命中类的附魔全部写的是 {@code enchanted: attacker}——火焰附加的点燃、节肢杀手的迟缓、
+     * 引雷与风爆都是；只有 {@code enchanted: victim} 的荆棘是"被打时反伤"，挂在剑上会让剑反伤自己，
+     * 因此这里只按 {@link EnchantmentTarget#ATTACKER} 调用一次。
+     * <p>
+     * <b>击退必须单独补</b>：它走的是 {@code minecraft:knockback} 效果组件，由
+     * {@link EnchantmentHelper#modifyKnockback} 取值（原版写在 {@code Player.attack} 里，
+     * 取到的值再乘 0.5 沿攻击者朝向推开），不在 post_attack 里，所以这里显式复刻原版行为。
      */
-    private static void applyWeaponEffects(ItemStack weapon, Player player, LivingEntity target) {
-        Map<Enchantment, Integer> enchantments = EnchantmentHelper.getEnchantments(weapon);
+    private static void applyWeaponEffects(ServerLevel level, ItemStack weapon, Player player, LivingEntity target, DamageSource source) {
+        // 附魔书的附魔在 STORED_ENCHANTMENTS 组件里，统一走 getEnchantmentsForCrafting
+        ItemEnchantments enchantments = EnchantmentHelper.getEnchantmentsForCrafting(weapon);
         if (enchantments.isEmpty()) {
             return;
         }
-        // 火焰附加：原版点燃时长就是 等级 × 4 秒
-        int fireAspect = enchantments.getOrDefault(Enchantments.FIRE_ASPECT, 0);
-        if (fireAspect > 0) {
-            target.setSecondsOnFire(fireAspect * 4);
-        }
-        // 击退：按原版那样沿攻击者朝向推开（强度 = 等级 × 0.5）
-        int knockback = enchantments.getOrDefault(Enchantments.KNOCKBACK, 0);
-        if (knockback > 0) {
+        // 击退：基准传 0 即"只算附魔带来的那一份"，强度与附魔等级成正比（与原版一致）
+        float knockback = EnchantmentHelper.modifyKnockback(level, weapon, target, source, 0.0F);
+        if (knockback > 0.0F) {
             double angle = Math.toRadians(player.getYRot());
             target.knockback(knockback * 0.5D, Math.sin(angle), -Math.cos(angle));
         }
-        for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
+        EnchantedItemInUse inUse = new EnchantedItemInUse(weapon, EquipmentSlot.MAINHAND, player);
+        for (Holder<Enchantment> holder : enchantments.keySet()) {
+            int enchantmentLevel = enchantments.getLevel(holder);
+            if (enchantmentLevel <= 0) {
+                continue;
+            }
             try {
-                entry.getKey().doPostHurt(target, player, entry.getValue());
-                entry.getKey().doPostAttack(player, target, entry.getValue());
+                holder.value().doPostAttack(level, enchantmentLevel, inUse, EnchantmentTarget.ATTACKER, target, source);
             } catch (Throwable ignored) {
                 // 单个附魔出错不影响其余
             }
@@ -270,8 +342,8 @@ public class EternalSwordItem extends SwordItem {
     // ==================== tooltip ====================
     @Override
     @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level level, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flag) {
-        super.appendHoverText(stack, level, tooltip, flag);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flag) {
+        super.appendHoverText(stack, context, tooltip, flag);
         // 伤害由原版"在主手时"属性行给出，这里不再重复
         Tip.of(tooltip)
                 .head(stack, "tip.alltheimbaium.type.combat")
@@ -288,13 +360,15 @@ public class EternalSwordItem extends SwordItem {
                         "item.alltheimbaium.eternal_sword.warn.2");
     }
 
-    // ==================== NBT 读写 ====================
+    // ==================== 自定义数据读写 ====================
+    // 1.20.1 的 getTag()/getOrCreateTag() 已删除，改走 CUSTOM_DATA 数据组件（见 Tool）。
+    // 组件里的 tag 是副本，改完必须 Tool.setCustomTag 写回。
 
     /**
      * 击杀模式：0=敌对生物，1=所有生物
      */
     public static int getKillAll(ItemStack stack) {
-        CompoundTag tag = stack.getTag();
+        CompoundTag tag = Tool.getCustomTag(stack);
         return tag != null && tag.getInt(TAG_KILL_ALL) == 1 ? 1 : 0;
     }
 
@@ -302,7 +376,7 @@ public class EternalSwordItem extends SwordItem {
      * 攻击距离：默认 8
      */
     public static int getRange(ItemStack stack) {
-        CompoundTag tag = stack.getTag();
+        CompoundTag tag = Tool.getCustomTag(stack);
         if (tag == null || !tag.contains(TAG_RANGE)) return RANGES[0];
         int range = tag.getInt(TAG_RANGE);
         for (int r : RANGES) {
@@ -315,33 +389,37 @@ public class EternalSwordItem extends SwordItem {
      * 剑的实际伤害（由 GUI 槽位固化）：所有 ID 不同的带伤害物品伤害总和，最低 1
      */
     public static float getSwordDamage(ItemStack stack) {
-        CompoundTag tag = stack.getTag();
+        CompoundTag tag = Tool.getCustomTag(stack);
         float damage = tag == null ? 0F : tag.getFloat(TAG_DAMAGE);
         return Math.max(1F, damage);
     }
 
     /**
-     * 从剑 NBT 加载 27 格槽位
+     * 从剑的自定义数据加载 27 格槽位
+     *
+     * @param registries 解析物品栈需要的注册表（1.21 的物品序列化带数据组件，取世界注册表）
      */
-    public static void loadInventory(ItemStack sword, SimpleContainer inv) {
-        CompoundTag tag = sword.getTag();
+    public static void loadInventory(ItemStack sword, SimpleContainer inv, @Nonnull HolderLookup.Provider registries) {
+        CompoundTag tag = Tool.getCustomTag(sword);
         if (tag == null || !tag.contains(TAG_ITEMS)) return;
         ListTag list = tag.getList(TAG_ITEMS, Tag.TAG_COMPOUND);
         for (Tag t : list) {
-            CompoundTag ct = (CompoundTag) t;
+            if (!(t instanceof CompoundTag ct)) continue;
             int slot = ct.getByte("Slot");
             if (slot >= 0 && slot < INVENTORY_SIZE) {
-                inv.setItem(slot, ItemStack.of(ct));
+                inv.setItem(slot, ItemStack.parseOptional(registries, ct));
             }
         }
     }
 
     /**
-     * 保存 27 格槽位到剑 NBT，并重新计算伤害与附魔
+     * 保存 27 格槽位到剑的自定义数据，并重新计算伤害与附魔
+     *
+     * @param registries 序列化物品栈需要的注册表
      */
-    public static void saveInventory(ItemStack sword, SimpleContainer inv) {
+    public static void saveInventory(ItemStack sword, SimpleContainer inv, @Nonnull HolderLookup.Provider registries) {
         if (sword == null || sword.isEmpty()) return;
-        CompoundTag tag = sword.getOrCreateTag();
+        CompoundTag tag = Tool.getCustomTagOrEmpty(sword);
         ListTag list = new ListTag();
         List<ItemStack> stacks = new ArrayList<>();
         for (int i = 0; i < INVENTORY_SIZE; i++) {
@@ -349,24 +427,31 @@ public class EternalSwordItem extends SwordItem {
             if (!s.isEmpty()) {
                 CompoundTag ct = new CompoundTag();
                 ct.putByte("Slot", (byte) i);
-                s.save(ct);
+                // 1.21 的物品 NBT 必须由带注册表的 save 产生（附魔书等组件要查数据包注册表）
+                ct.merge((CompoundTag) s.save(registries));
                 list.add(ct);
                 stacks.add(s);
             }
         }
         tag.put(TAG_ITEMS, list);
         tag.putFloat(TAG_DAMAGE, calcDamage(stacks));
-        EnchantmentHelper.setEnchantments(calcEnchantments(stacks), sword);
+        Tool.setCustomTag(sword, tag);
+        // 附魔写进数据组件：SHARPNESS 之类现在是数据包注册表里的条目，键类型是 Holder<Enchantment>
+        ItemEnchantments.Mutable mutable = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+        calcEnchantments(stacks).forEach(mutable::set);
+        EnchantmentHelper.setEnchantments(sword, mutable.toImmutable());
     }
 
     /**
-     * 单个物品对剑伤害的贡献（ATTACK_DAMAGE modifier 之和）
+     * 单个物品对剑伤害的贡献（主手 ATTACK_DAMAGE modifier 之和）
      */
     public static float getDamageContribution(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return 0F;
         float damage = 0F;
-        for (AttributeModifier modifier : stack.getAttributeModifiers(EquipmentSlot.MAINHAND).get(Attributes.ATTACK_DAMAGE)) {
-            damage += modifier.getAmount();
+        for (ItemAttributeModifiers.Entry entry : stack.getAttributeModifiers().modifiers()) {
+            if (entry.slot() == EquipmentSlotGroup.MAINHAND && entry.attribute().is(Attributes.ATTACK_DAMAGE)) {
+                damage += entry.modifier().amount();
+            }
         }
         return damage;
     }
@@ -379,14 +464,10 @@ public class EternalSwordItem extends SwordItem {
         Set<String> seen = new HashSet<>();
         for (ItemStack s : stacks) {
             if (s == null || s.isEmpty()) continue;
-            ResourceLocation key = ForgeRegistries.ITEMS.getKey(s.getItem());
+            ResourceLocation key = BuiltInRegistries.ITEM.getKey(s.getItem());
             if (key == null) continue;
             if (!seen.add(key.toString())) continue;
-            Collection<AttributeModifier> modifiers =
-                    s.getAttributeModifiers(EquipmentSlot.MAINHAND).get(Attributes.ATTACK_DAMAGE);
-            for (AttributeModifier modifier : modifiers) {
-                damage += modifier.getAmount();
-            }
+            damage += getDamageContribution(s);
         }
         return damage;
     }
@@ -398,16 +479,18 @@ public class EternalSwordItem extends SwordItem {
      * 累加值够到哪一档就是哪一级，最高 {@link #MAX_ENCHANT_LEVEL} 级。
      * 例如：锋利 V + 锋利 V = 16 + 16 = 32 点 → 锋利 VI；锋利 V + 锋利 I = 17 点 → 仍是锋利 V。
      */
-    public static Map<Enchantment, Integer> calcEnchantments(List<ItemStack> stacks) {
-        Map<Enchantment, Long> points = new HashMap<>();
+    public static Map<Holder<Enchantment>, Integer> calcEnchantments(List<ItemStack> stacks) {
+        Map<Holder<Enchantment>, Long> points = new HashMap<>();
         for (ItemStack s : stacks) {
             if (s == null || s.isEmpty() || !s.is(Items.ENCHANTED_BOOK)) continue;
-            for (Map.Entry<Enchantment, Integer> e : EnchantmentHelper.getEnchantments(s).entrySet()) {
-                int level = Math.max(1, Math.min(MAX_ENCHANT_LEVEL, e.getValue()));
-                points.merge(e.getKey(), 1L << (level - 1), Long::sum);
+            // 附魔书的附魔在 STORED_ENCHANTMENTS 组件里，必须走 getEnchantmentsForCrafting
+            ItemEnchantments enchantments = EnchantmentHelper.getEnchantmentsForCrafting(s);
+            for (Holder<Enchantment> holder : enchantments.keySet()) {
+                int level = Math.max(1, Math.min(MAX_ENCHANT_LEVEL, enchantments.getLevel(holder)));
+                points.merge(holder, 1L << (level - 1), Long::sum);
             }
         }
-        Map<Enchantment, Integer> result = new HashMap<>();
+        Map<Holder<Enchantment>, Integer> result = new HashMap<>();
         points.forEach((enchantment, point) -> result.put(enchantment, levelForPoints(point)));
         return result;
     }

@@ -1,16 +1,16 @@
 package cn.sd.jrz.alltheimbaium.recipe;
 
 import cn.sd.jrz.alltheimbaium.setup.Config;
-import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
@@ -66,14 +66,14 @@ public class PotionCombineRecipe extends CustomRecipe {
      */
     private ItemStack cachedResult = ItemStack.EMPTY;
 
-    public PotionCombineRecipe(ResourceLocation id, CraftingBookCategory category) {
-        super(id, category);
+    public PotionCombineRecipe(CraftingBookCategory category) {
+        super(category);
     }
 
     // ==================== 配方方法覆写 ====================
 
     @Override
-    public boolean matches(@Nonnull CraftingContainer container, @Nonnull Level level) {
+    public boolean matches(@Nonnull CraftingInput input, @Nonnull Level level) {
         // 每次匹配都先清空缓存，以本次网格为准，避免旧结果残留被 assemble/getResultItem 读到
         this.cachedResult = ItemStack.EMPTY;
         // 统计非空格子数量，必须恰好为 2
@@ -81,8 +81,8 @@ public class PotionCombineRecipe extends CustomRecipe {
         ItemStack itemB = ItemStack.EMPTY;
         int count = 0;
 
-        for (int i = 0; i < container.getContainerSize(); i++) {
-            ItemStack stack = container.getItem(i);
+        for (int i = 0; i < input.size(); i++) {
+            ItemStack stack = input.getItem(i);
             if (!stack.isEmpty()) {
                 count++;
                 if (count > 2) {
@@ -121,15 +121,33 @@ public class PotionCombineRecipe extends CustomRecipe {
     // ==================== 效果读取 ====================
 
     /**
+     * 读取药水堆的 {@link PotionContents} 数据组件。没有该组件时返回空内容。
+     */
+    private static PotionContents contentsOf(ItemStack potion) {
+        return potion.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
+    }
+
+    /**
      * 获取药水的效果列表。混合药水取自定义效果，原版药水取基础类型效果。
      * 不做任何缩放，直接使用存储的原始值。
      */
     private static List<MobEffectInstance> getResolvedEffects(ItemStack potion) {
-        List<MobEffectInstance> customEffects = PotionUtils.getCustomEffects(potion);
+        PotionContents contents = contentsOf(potion);
+        List<MobEffectInstance> customEffects = new ArrayList<>(contents.customEffects());
         if (!customEffects.isEmpty()) {
-            return new ArrayList<>(customEffects);
+            return customEffects;
         }
-        return new ArrayList<>(PotionUtils.getPotion(potion).getEffects());
+        if (contents.potion().isPresent()) {
+            return new ArrayList<>(contents.potion().get().value().getEffects());
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * 判断是否为混合药水（即存有自定义效果的药水）。
+     */
+    private static boolean isMixedPotion(ItemStack potion) {
+        return !contentsOf(potion).customEffects().isEmpty();
     }
 
     // ==================== 类型转换：混合药水 + 火药/龙息/奶桶 ====================
@@ -140,7 +158,7 @@ public class PotionCombineRecipe extends CustomRecipe {
      */
     @javax.annotation.Nullable
     private static ItemStack tryConvertType(ItemStack potionCandidate, ItemStack otherCandidate) {
-        if (!isPotionItem(potionCandidate) || PotionUtils.getCustomEffects(potionCandidate).isEmpty()) {
+        if (!isPotionItem(potionCandidate) || !isMixedPotion(potionCandidate)) {
             return null; // 不是混合药水，不处理
         }
 
@@ -151,16 +169,16 @@ public class PotionCombineRecipe extends CustomRecipe {
 
         List<MobEffectInstance> resolved = getResolvedEffects(potionCandidate);
 
+        ItemStack result = new ItemStack(targetType);
         if (resolved.isEmpty()) {
-            ItemStack result = new ItemStack(targetType);
-            PotionUtils.setPotion(result, Potions.MUNDANE);
-            result.setHoverName(Component.translatable("item.alltheimbaium.potion_combine.mundane"));
+            result.set(DataComponents.POTION_CONTENTS, new PotionContents(Potions.MUNDANE));
+            result.set(DataComponents.CUSTOM_NAME,
+                    Component.translatable("item.alltheimbaium.potion_combine.mundane"));
             return result;
         }
 
-        ItemStack result = new ItemStack(targetType);
-        PotionUtils.setCustomEffects(result, resolved);
-        result.setHoverName(buildPotionName(resolved, targetType));
+        result.set(DataComponents.POTION_CONTENTS, customEffectsOnly(resolved));
+        result.set(DataComponents.CUSTOM_NAME, buildPotionName(resolved, targetType));
         return result;
     }
 
@@ -194,14 +212,14 @@ public class PotionCombineRecipe extends CustomRecipe {
         List<MobEffectInstance> effectsB = getResolvedEffects(stackB);
 
         // 合并效果
-        Map<MobEffect, MobEffectInstance> combined = new LinkedHashMap<>();
+        Map<Holder<MobEffect>, MobEffectInstance> combined = new LinkedHashMap<>();
 
         for (MobEffectInstance effect : effectsA) {
             combined.put(effect.getEffect(), new MobEffectInstance(effect));
         }
 
         for (MobEffectInstance effectB : effectsB) {
-            MobEffect key = effectB.getEffect();
+            Holder<MobEffect> key = effectB.getEffect();
             MobEffectInstance existing = combined.get(key);
             if (existing == null) {
                 combined.put(key, new MobEffectInstance(effectB));
@@ -215,14 +233,23 @@ public class PotionCombineRecipe extends CustomRecipe {
         ItemStack result = new ItemStack(outputType);
 
         if (combined.isEmpty()) {
-            PotionUtils.setPotion(result, Potions.MUNDANE);
-            result.setHoverName(Component.translatable("item.alltheimbaium.potion_combine.mundane"));
+            result.set(DataComponents.POTION_CONTENTS, new PotionContents(Potions.MUNDANE));
+            result.set(DataComponents.CUSTOM_NAME,
+                    Component.translatable("item.alltheimbaium.potion_combine.mundane"));
         } else {
-            PotionUtils.setCustomEffects(result, combined.values());
-            result.setHoverName(buildPotionName(combined.values(), outputType));
+            result.set(DataComponents.POTION_CONTENTS, customEffectsOnly(combined.values()));
+            result.set(DataComponents.CUSTOM_NAME, buildPotionName(combined.values(), outputType));
         }
 
         return result;
+    }
+
+    /**
+     * 构造"只有自定义效果、没有基础药水类型"的 {@link PotionContents}。
+     * 对应旧版的 {@code PotionUtils.setCustomEffects}。
+     */
+    private static PotionContents customEffectsOnly(Collection<MobEffectInstance> effects) {
+        return new PotionContents(Optional.empty(), Optional.empty(), List.copyOf(effects));
     }
 
     /**
@@ -233,7 +260,7 @@ public class PotionCombineRecipe extends CustomRecipe {
      * </ul>
      */
     private static MobEffectInstance mergeEffect(MobEffectInstance a, MobEffectInstance b) {
-        MobEffect effect = a.getEffect();
+        Holder<MobEffect> effect = a.getEffect();
         int ampA = a.getAmplifier();
         int ampB = b.getAmplifier();
         int bestAmp = Math.max(ampA, ampB);
@@ -277,11 +304,11 @@ public class PotionCombineRecipe extends CustomRecipe {
         }
 
         if (sorted.size() == 1) {
-            return Component.translatable(langKey, sorted.get(0).getEffect().getDisplayName());
+            return Component.translatable(langKey, sorted.get(0).getEffect().value().getDisplayName());
         } else {
             return Component.translatable(langKey,
-                    sorted.get(0).getEffect().getDisplayName(),
-                    sorted.get(1).getEffect().getDisplayName());
+                    sorted.get(0).getEffect().value().getDisplayName(),
+                    sorted.get(1).getEffect().value().getDisplayName());
         }
     }
 
@@ -313,7 +340,7 @@ public class PotionCombineRecipe extends CustomRecipe {
 
     @Nonnull
     @Override
-    public ItemStack assemble(@Nonnull CraftingContainer container, @Nonnull RegistryAccess registryAccess) {
+    public ItemStack assemble(@Nonnull CraftingInput input, @Nonnull HolderLookup.Provider registries) {
         // 只读取 matches() 缓存的结果，不再清空。
         // 原因：Polymorph / FastWorkbench 等 mod 会在一次合成流程中对本配方多次调用
         // getResultItem()/assemble()，若这里清空缓存，后续 getResultItem() 会读到空物品，
@@ -324,7 +351,7 @@ public class PotionCombineRecipe extends CustomRecipe {
 
     @Nonnull
     @Override
-    public ItemStack getResultItem(@Nonnull RegistryAccess registryAccess) {
+    public ItemStack getResultItem(@Nonnull HolderLookup.Provider registries) {
         return ItemStack.EMPTY;
     }
 

@@ -1,5 +1,7 @@
 package cn.sd.jrz.alltheimbaium.block;
 
+import cn.sd.jrz.alltheimbaium.setup.Tool;
+import net.minecraft.world.ItemInteractionResult;
 import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.BlockPos;
@@ -19,11 +21,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.fluids.FluidActionResult;
-import net.minecraftforge.fluids.FluidUtil;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.network.NetworkHooks;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.fluids.FluidActionResult;
+import net.neoforged.neoforge.fluids.FluidUtil;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,12 +110,12 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
                 drops.add(output);
             }
         }
-        return drops;
+        // 1.21：BE 数据改由 getDrops 写进 block_entity_data 组件（替代 1.20.1 战利品表的 copy_nbt）
+        return Tool.withBlockEntityData(drops, builder);
     }
 
     @SuppressWarnings("deprecation")
-    @Override
-    public @Nonnull InteractionResult use(@Nonnull BlockState state, Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+    private InteractionResult doUse(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         try {
             if (level.isClientSide) {
                 return InteractionResult.SUCCESS;
@@ -124,7 +125,8 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
                 return InteractionResult.FAIL;
             }
             ItemStack held = player.getItemInHand(handIn);
-            IFluidHandler machine = generator.getCapability(ForgeCapabilities.FLUID_HANDLER).resolve().orElse(null);
+            // 1.21：本机自己的流体能力直接从实体取（无 LazyOptional，null 面即"不区分方向"）
+            IFluidHandler machine = generator.getFluidHandler(null);
             if (machine != null && !held.isEmpty()) {
                 // 空桶/空容器：从机器装取液体
                 FluidActionResult filled = FluidUtil.tryFillContainer(held, machine, 1000, player, true);
@@ -141,12 +143,34 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
             }
             // 其他情况打开 GUI
             if (player instanceof ServerPlayer serverPlayer) {
-                NetworkHooks.openScreen(serverPlayer, generator, pos);
+                serverPlayer.openMenu(generator, pos);
             }
             return InteractionResult.SUCCESS;
         } catch (Throwable e) {
             log.error("LiquidFountainBlock.use error", e);
         }
-        return super.use(state, level, pos, player, handIn, hit);
+        return InteractionResult.PASS;
     }
+
+    /**
+     * 1.21：原版的 Block#use 拆成了空手的 useWithoutItem 与持物的 useItemOn，
+     * 这里两个都覆写并统一转到 doUse，行为与 1.20.1 保持一致。
+     */
+    @Override
+    protected @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
+        return doUse(state, level, pos, player, InteractionHand.MAIN_HAND, hit);
+    }
+
+    @Override
+    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+        InteractionResult result = doUse(state, level, pos, player, handIn, hit);
+        if (result == InteractionResult.SUCCESS) {
+            return ItemInteractionResult.SUCCESS;
+        }
+        if (result == InteractionResult.FAIL) {
+            return ItemInteractionResult.FAIL;
+        }
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
 }

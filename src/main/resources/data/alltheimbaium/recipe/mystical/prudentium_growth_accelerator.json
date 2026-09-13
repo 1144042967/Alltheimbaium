@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "mystical_agriculture_growth_accelerator",
+  "key": {
+    "#": {
+      "item": "mysticalagriculture:inferium_essence"
+    },
+    "S": {
+      "item": "mysticalagriculture:inferium_growth_accelerator"
+    }
+  },
+  "pattern": [
+    "# #",
+    "#S#",
+    "# #"
+  ],
+  "result": {
+    "id": "mysticalagriculture:prudentium_growth_accelerator"
+  },
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "mysticalagriculture"
+    }
+  ]
+}

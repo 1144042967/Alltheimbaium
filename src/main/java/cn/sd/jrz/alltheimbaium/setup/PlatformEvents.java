@@ -4,12 +4,14 @@ import cn.sd.jrz.alltheimbaium.block.PlatformBlock;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.event.level.ChunkEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +26,7 @@ import java.util.Deque;
  * - 平台方块被放置/破坏时维护追踪集合；
  * - 服务端关闭时清空追踪与待处理队列。
  */
-@Mod.EventBusSubscriber(modid = "alltheimbaium")
+@EventBusSubscriber(modid = "alltheimbaium")
 public class PlatformEvents {
     private static final Logger log = LoggerFactory.getLogger(PlatformEvents.class);
     /** 每个服务端 tick 最多处理的待纠正区块数（避免一次性积压太多造成卡顿） */
@@ -51,8 +53,9 @@ public class PlatformEvents {
     }
 
     @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || PENDING.isEmpty()) {
+    public static void onServerTick(ServerTickEvent.Post event) {
+        // 1.21：TickEvent 拆成了 Pre/Post 两个类，订阅 Post 即原来的 Phase.END
+        if (PENDING.isEmpty()) {
             return;
         }
         try {

@@ -1,0 +1,22 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "extendedae"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "group": "entro",
+  "key": {
+    "#": {
+      "item": "extendedae:entro_budding_mostly"
+    }
+  },
+  "pattern": [
+    "##",
+    "##"
+  ],
+  "result": {
+    "id": "extendedae:entro_budding_fully"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "type": "thermal:bottler",
+  "ingredients": [
+    {
+      "tag": "c:gems/quartz"
+    },
+    {
+      "fluid": "bloodmagic:life_essence_fluid",
+      "amount": 1000
+    }
+  ],
+  "result": [
+    {
+      "item": "bloodmagic:defaultcrystal"
+    }
+  ],
+  "energy": 2000,
+  "experience": 0.1,
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "thermal"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "bloodmagic"
+    }
+  ]
+}

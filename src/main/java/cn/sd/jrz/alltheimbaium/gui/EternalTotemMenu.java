@@ -51,9 +51,9 @@ public class EternalTotemMenu extends AbstractContainerMenu {
         super(Registration.ETERNAL_TOTEM_MENU.get(), id);
         this.totem = totem;
         this.player = player;
-        // 服务端从图腾 NBT 加载 27 格药水槽位
-        if (totem != null && !totem.isEmpty()) {
-            EternalTotemItem.loadPotionItems(totem, container);
+        // 服务端从图腾的自定义数据加载 27 格药水槽位（客户端构造拿到的 totem 为 null，不会走到这里）
+        if (totem != null && !totem.isEmpty() && player != null) {
+            EternalTotemItem.loadPotionItems(totem, container, player.level().registryAccess());
         }
         // 槽位变化：保存药水 / 食物槽到图腾 NBT
         container.addListener(new ContainerListener() {
@@ -78,8 +78,9 @@ public class EternalTotemMenu extends AbstractContainerMenu {
     }
 
     private void savePotionItems() {
-        if (totem == null || totem.isEmpty()) return;
-        EternalTotemItem.savePotionItems(totem, container);
+        // 客户端构造没有 totem / player，直接跳过
+        if (totem == null || totem.isEmpty() || player == null) return;
+        EternalTotemItem.savePotionItems(totem, container, player.level().registryAccess());
     }
 
     @Override
@@ -158,7 +159,7 @@ public class EternalTotemMenu extends AbstractContainerMenu {
     private boolean isTotem(ItemStack stack) {
         if (stack == null || stack.isEmpty() || totem == null || totem.isEmpty()) return false;
         if (!stack.is(Registration.ETERNAL_TOTEM.get())) return false;
-        return stack == totem || ItemStack.isSameItemSameTags(stack, totem);
+        return stack == totem || ItemStack.isSameItemSameComponents(stack, totem);
     }
 
     @Override
@@ -178,7 +179,7 @@ public class EternalTotemMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return stack.getItem() instanceof PotionItem || stack.isEdible();
+            return stack.getItem() instanceof PotionItem || stack.has(net.minecraft.core.component.DataComponents.FOOD);
         }
     }
 }

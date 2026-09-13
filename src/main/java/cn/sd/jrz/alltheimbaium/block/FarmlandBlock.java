@@ -18,9 +18,7 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
-import net.minecraftforge.common.ForgeHooks;
-import net.minecraftforge.common.IPlantable;
-import net.minecraftforge.common.PlantType;
+import net.neoforged.neoforge.common.util.TriState;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +45,8 @@ public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock imp
     }
 
     public FarmlandBlock() {
-        super(Properties.copy(Blocks.FARMLAND));
+        // 1.21：Properties.copy(Block) 改名为 ofFullCopy(BlockBehaviour)
+        super(Properties.ofFullCopy(Blocks.FARMLAND));
     }
 
     @Override
@@ -114,9 +113,13 @@ public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock imp
                 } else {
                     newAge = Math.min(age + growthAmount, maxAge);
                 }
+                BlockState oldState = state;
                 state = state.setValue(CropBlock.AGE, newAge);
                 level.setBlock(pos, state, 2);
-                ForgeHooks.onCropsGrowPost(level, pos, state);
+                // 1.21：ForgeHooks.onCropsGrowPost 已移除，改发 NeoForge 的等效事件
+                // （原版 CropBlock 生长时也会发这个事件，这里补上以保持与其它 mod 的联动）
+                net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                        new net.neoforged.neoforge.event.level.block.CropGrowEvent.Post(level, pos, oldState, state));
             }
         }
     }
@@ -140,19 +143,21 @@ public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock imp
     }
 
     @Override
-    public boolean canSustainPlant(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull Direction facing, @Nonnull IPlantable plantable) {
+    public TriState canSustainPlant(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos soilPos, @Nonnull Direction facing, @Nonnull BlockState plant) {
         try {
             // 禁止树苗种在耕地上：树长大时原版机制会把耕地变回普通泥土
-            if (plantable instanceof SaplingBlock) {
-                return false;
+            if (plant.getBlock() instanceof SaplingBlock) {
+                return TriState.FALSE;
             }
-            BlockState plant = plantable.getPlant(level, pos.relative(facing));
-            var type = plantable.getPlantType(level, pos.relative(facing));
-            return type == PlantType.CROP || plant.getBlock() instanceof StemBlock;
+            // 作物与南瓜/西瓜的茎照常允许
+            if (plant.getBlock() instanceof CropBlock || plant.getBlock() instanceof StemBlock) {
+                return TriState.TRUE;
+            }
         } catch (Throwable e) {
             log.error("FarmlandBlock.canSustainPlant error", e);
         }
-        return super.canSustainPlant(state, level, pos, facing, plantable);
+        // 其余交给原版判断
+        return TriState.DEFAULT;
     }
 
     @Override

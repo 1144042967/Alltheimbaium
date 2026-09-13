@@ -8,7 +8,7 @@ import cn.sd.jrz.alltheimbaium.setup.SupplyData;
 import cn.sd.jrz.alltheimbaium.setup.SupplyRoll;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -18,7 +18,7 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -58,7 +58,7 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
     private int clientMax;
     private int clientUsed;
 
-    public SupplyCrateMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
+    public SupplyCrateMenu(int id, Inventory playerInventory, RegistryFriendlyByteBuf data) {
         this(id, playerInventory, data.readBlockPos(), null, -1,
                 readRolls(data), data.readVarInt() - 1, data.readVarInt(), data.readVarInt());
     }
@@ -89,11 +89,11 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
         addDataSlot(makeDataSlot(() -> clientUsed, v -> clientUsed = v));
     }
 
-    private static ItemStack[] readRolls(FriendlyByteBuf data) {
+    private static ItemStack[] readRolls(RegistryFriendlyByteBuf data) {
         ItemStack[] result = new ItemStack[ROLL_SLOTS];
         for (int i = 0; i < ROLL_SLOTS; i++) {
-            CompoundTag tag = data.readNbt();
-            result[i] = tag == null ? ItemStack.EMPTY : ItemStack.of(tag);
+            // 1.21：与服务端 writeOpenData 对称，走 STREAM_CODEC（数据组件 + 注册表访问都带上）
+            result[i] = ItemStack.OPTIONAL_STREAM_CODEC.decode(data);
         }
         return result;
     }
@@ -217,8 +217,7 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
         setRolls(SupplyRoll.roll(level, player));
         this.rollHour = currentHour(level);
         if (ownerPlayer != null) {
-            Network.CHANNEL.send(PacketDistributor.PLAYER.with(() -> ownerPlayer),
-                    new SupplyCrateRollsPacket(rolls.clone()));
+            PacketDistributor.sendToPlayer(ownerPlayer, new SupplyCrateRollsPacket(rolls.clone()));
         }
     }
 

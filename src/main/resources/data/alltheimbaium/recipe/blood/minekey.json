@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "A": {
+      "item": "bloodmagic:ingot_hellforged"
+    },
+    "#": {
+      "tag": "c:ingots/iron"
+    },
+    "B": {
+      "item": "bloodmagic:infusedslate"
+    }
+  },
+  "pattern": [
+    "#A",
+    "# ",
+    "B "
+  ],
+  "result": {
+    "id": "bloodmagic:minekey"
+  },
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "bloodmagic"
+    }
+  ]
+}

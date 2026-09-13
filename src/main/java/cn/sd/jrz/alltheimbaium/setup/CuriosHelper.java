@@ -4,7 +4,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 
 import java.lang.reflect.Method;
 import java.util.Optional;
@@ -39,10 +39,18 @@ public class CuriosHelper {
         initReflection();
         if (apiClass == null) return ItemStack.EMPTY;
         try {
-            // LazyOptional<ICuriosItemHandler>
-            Object lazyOptional = getInventory.invoke(null, (LivingEntity) player);
-            Optional<?> resolved = (Optional<?>) resolve.invoke(lazyOptional);
-            if (resolved == null || resolved.isEmpty()) return ItemStack.EMPTY;
+            Object raw = getInventory.invoke(null, (LivingEntity) player);
+            Optional<?> resolved;
+            if (raw instanceof Optional<?> direct) {
+                // 1.21 的 Curios（NeoForge）已去掉 LazyOptional，getCuriosInventory 直接返回 Optional
+                resolved = direct;
+            } else if (resolve != null && raw != null) {
+                // 旧版 Forge：LazyOptional -> resolve()
+                resolved = (Optional<?>) resolve.invoke(raw);
+            } else {
+                return ItemStack.EMPTY;
+            }
+            if (resolved.isEmpty()) return ItemStack.EMPTY;
             Object handler = resolved.get();
             // Optional<SlotResult>
             Optional<?> slotResult = (Optional<?>) findFirstCurio.invoke(handler, item);
@@ -64,7 +72,13 @@ public class CuriosHelper {
         try {
             apiClass = Class.forName("top.theillusivec4.curios.api.CuriosApi");
             getInventory = apiClass.getMethod("getCuriosInventory", LivingEntity.class);
-            resolve = Class.forName("net.minecraftforge.common.util.LazyOptional").getMethod("resolve");
+            // 旧版 Forge 的 LazyOptional 在 1.21 的 NeoForge 里已不存在，取不到就置空，
+            // 由 findCurioItem 直接走 Optional 分支（不能在这里抛异常，否则整个 Curios 联动被禁用）
+            try {
+                resolve = Class.forName("net.minecraftforge.common.util.LazyOptional").getMethod("resolve");
+            } catch (Throwable ignored) {
+                resolve = null;
+            }
             findFirstCurio = Class.forName("top.theillusivec4.curios.api.type.capability.ICuriosItemHandler")
                     .getMethod("findFirstCurio", Item.class);
             slotStack = Class.forName("top.theillusivec4.curios.api.SlotResult").getMethod("stack");

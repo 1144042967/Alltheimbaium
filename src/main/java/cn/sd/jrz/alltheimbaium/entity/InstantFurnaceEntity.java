@@ -8,6 +8,7 @@ import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -24,18 +25,16 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.energy.EnergyStorage;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.energy.EnergyStorage;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +60,7 @@ import java.util.Map;
  * </ul>
  * 输出行产物每 tick 向启用"推送"的面转给相邻机器/箱子；任意面开放 IItemHandler 供管道插入/抽取。
  */
-public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
+public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(InstantFurnaceEntity.class);
 
     /**
@@ -109,11 +108,23 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
     /** FE 能量存储：上限 2 亿、只接收不放出；合成由每 tick 按当前电量批量执行。 */
     public final SmeltEnergy energy = new SmeltEnergy(this);
 
-    /** 对外 IItemHandler 能力（行为方向无关：插入进输入区、抽取自输出区） */
-    private final LazyOptional<InstantFurnaceConnection> itemOptional =
-            LazyOptional.of(() -> new InstantFurnaceConnection(this));
+
+    /**
+     * 对外 IItemHandler 能力（行为方向无关：插入进输入区、抽取自输出区）。
+     * NeoForge 不再实现 ICapabilityProvider，由 {@code Registration.registerCapabilities} 拉取。
+     */
+    private final InstantFurnaceConnection itemHandler = new InstantFurnaceConnection(this);
+
+    @Nonnull
+    public InstantFurnaceConnection getItemHandler(@Nullable Direction side) {
+        return itemHandler;
+    }
+
     /** 对外能量能力（任意方向均返回同一存储） */
-    private final LazyOptional<EnergyStorage> energyOptional = LazyOptional.of(() -> energy);
+    @Nonnull
+    public EnergyStorage getEnergyStorage(@Nullable Direction side) {
+        return energy;
+    }
 
     public InstantFurnaceEntity(BlockPos pos, BlockState state) {
         super(Registration.INSTANT_FURNACE_ENTITY.get(), pos, state);
@@ -327,6 +338,13 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
         return moved;
     }
 
+    /** 通配 {@code RecipeType<? extends AbstractCookingRecipe>} 下的配方表读取（消除类型捕获带来的编译错误） */
+    @SuppressWarnings("unchecked")
+    public static List<RecipeHolder<? extends AbstractCookingRecipe>> getAllCookingRecipes(
+            @Nonnull RecipeManager manager, @Nonnull RecipeType<? extends AbstractCookingRecipe> type) {
+        return (List<RecipeHolder<? extends AbstractCookingRecipe>>) (List<?>) manager.getAllRecipesFor((RecipeType) type);
+    }
+
     /**
      * 查询物品的烧炼配方结果（仅在缓存 miss 时调用一次）：按 SMELTING→BLASTING→SMOKING 三级兜底。
      * 不可烧返回 EMPTY（同样入缓存作哨兵，避免反复查表）；客户端不查。
@@ -340,7 +358,10 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
             RecipeManager recipeManager = level.getRecipeManager();
             ItemStack single = new ItemStack(item, 1);
             for (RecipeType<? extends AbstractCookingRecipe> type : FURNACE_TYPES) {
-                for (AbstractCookingRecipe recipe : recipeManager.getAllRecipesFor(type)) {
+                // 1.21：getAllRecipesFor 的返回类型与 RecipeType 的类型参数绑定，
+                // 通配类型下用 RecipeHolder<? extends AbstractCookingRecipe> 接住
+                for (RecipeHolder<? extends AbstractCookingRecipe> __htype : getAllCookingRecipes(recipeManager, type)) {
+                    AbstractCookingRecipe recipe = __htype.value();
                     for (Ingredient ingredient : recipe.getIngredients()) {
                         if (ingredient.test(single)) {
                             return recipe.getResultItem(level.registryAccess()).copy();
@@ -401,7 +422,7 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
             if (neighbor == null) {
                 continue;
             }
-            IItemHandler handler = neighbor.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite()).resolve().orElse(null);
+            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
             if (handler == null) {
                 continue;
             }
@@ -533,22 +554,6 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
 
     // ==================== Capability ====================
 
-    @Override
-    @Nonnull
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        try {
-            if (capability == ForgeCapabilities.ITEM_HANDLER) {
-                return itemOptional.cast();
-            }
-            if (capability == ForgeCapabilities.ENERGY) {
-                return energyOptional.cast();
-            }
-            return super.getCapability(capability, direction);
-        } catch (Throwable e) {
-            log.error("InstantFurnaceEntity.getCapability error", e);
-        }
-        return super.getCapability(capability, direction);
-    }
 
     // ==================== NBT 存取 ====================
 
@@ -558,11 +563,11 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
     private static final String KEY_DIR = "directionState";
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
         try {
-            nbt.put(KEY_INPUT, saveRows(inputRows));
-            nbt.put(KEY_OUTPUT, saveRows(outputRows));
+            nbt.put(KEY_INPUT, saveRows(inputRows, registries));
+            nbt.put(KEY_OUTPUT, saveRows(outputRows, registries));
             nbt.putInt(KEY_ENERGY, energy.getEnergyStored());
             nbt.putIntArray(KEY_DIR, directionState);
         } catch (Throwable e) {
@@ -571,15 +576,15 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
     }
 
     @Override
-    public void load(@Nonnull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         try {
             // 反序列化只恢复状态；合成由每 tick 统一执行
             if (nbt.contains(KEY_INPUT, Tag.TAG_LIST)) {
-                loadRows(inputRows, (ListTag) nbt.get(KEY_INPUT));
+                loadRows(inputRows, (ListTag) nbt.get(KEY_INPUT), registries);
             }
             if (nbt.contains(KEY_OUTPUT, Tag.TAG_LIST)) {
-                loadRows(outputRows, (ListTag) nbt.get(KEY_OUTPUT));
+                loadRows(outputRows, (ListTag) nbt.get(KEY_OUTPUT), registries);
             }
             if (nbt.contains(KEY_ENERGY, Tag.TAG_INT)) {
                 energy.setEnergyStored(nbt.getInt(KEY_ENERGY));
@@ -595,23 +600,23 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
         }
     }
 
-    private static ListTag saveRows(List<Row> rows) {
+    private static ListTag saveRows(List<Row> rows, @Nonnull HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (Row row : rows) {
-            CompoundTag c = new CompoundTag();
-            new ItemStack(row.item, 1).save(c);
+            // 1.21：save 需要注册表访问器，且一律以返回值为准
+            CompoundTag c = (CompoundTag) new ItemStack(row.item, 1).save(registries, new CompoundTag());
             c.putLong("Stock", row.stock);
             list.add(c);
         }
         return list;
     }
 
-    private static void loadRows(List<Row> target, ListTag list) {
+    private static void loadRows(List<Row> target, ListTag list, @Nonnull HolderLookup.Provider registries) {
         target.clear();
         for (int i = 0; i < list.size(); i++) {
             try {
                 CompoundTag c = list.getCompound(i);
-                ItemStack stack = ItemStack.of(c);
+                ItemStack stack = ItemStack.parseOptional(registries, c);
                 if (stack.isEmpty()) {
                     continue;
                 }
@@ -629,13 +634,13 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
 
     @Override
     @Nonnull
-    public CompoundTag getUpdateTag() {
-        return this.saveWithoutMetadata();
+    public CompoundTag getUpdateTag(@Nonnull HolderLookup.Provider registries) {
+        return this.saveWithoutMetadata(registries);
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag) {
-        this.load(tag);
+    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
+        this.loadAdditional(tag, registries);
     }
 
     @Override
@@ -645,7 +650,8 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
     }
 
     @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
-        this.load(pkt.getTag());
+    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
+        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
+        this.loadAdditional(pkt.getTag(), registries);
     }
 }

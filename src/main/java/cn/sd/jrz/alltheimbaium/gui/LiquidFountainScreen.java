@@ -16,9 +16,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -33,7 +33,7 @@ import java.util.Optional;
  */
 @OnlyIn(Dist.CLIENT)
 public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountainMenu> {
-    private static final ResourceLocation TEXTURE_BASE = new ResourceLocation("alltheimbaium", "textures/gui/liquid_fountain_gui.png");
+    private static final ResourceLocation TEXTURE_BASE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/liquid_fountain_gui.png");
     private static final int TEXT_COLOR = 0xC6C6C6;
 
     // 右侧面板/进度条/信息（面板 x=39~168, y=17~56）
@@ -106,7 +106,6 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
 
     @Override
     protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        renderBackground(guiGraphics);
         // 主背景（槽位框、+/- 图标、信息面板、物品栏槽位均已绘制在图上）
         guiGraphics.blit(TEXTURE_BASE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
         // 面板顶部进度条（阈值 / 1 万桶进度），右侧留白显示百分比
@@ -187,7 +186,7 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
         if (fluid == null || fluid == Fluids.EMPTY) {
             return Component.translatable("screen.alltheimbaium.liquid_fountain.none");
         }
-        return new FluidStack(fluid, 1).getDisplayName();
+        return new FluidStack(fluid, 1).getHoverName();
     }
 
     /**

@@ -1,0 +1,22 @@
+{
+  "type": "mekanism:metallurgic_infusing",
+  "chemicalInput": {
+    "amount": 360,
+    "tag": "mekanism:refined_obsidian"
+  },
+  "itemInput": {
+    "ingredient": {
+      "tag": "c:storage_blocks/diamond"
+    }
+  },
+  "output": {
+    "count": 9,
+    "item": "mekanism:alloy_atomic"
+  },
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "mekanism"
+    }
+  ]
+}

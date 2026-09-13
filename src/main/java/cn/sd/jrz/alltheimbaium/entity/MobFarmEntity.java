@@ -14,6 +14,7 @@ import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -37,12 +38,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.ItemHandlerHelper;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +63,7 @@ import java.util.function.Function;
  * 产物行存量长期保存、可六面输出、GUI 内取物。
  * 标记槽放入刷怪蛋/特征掉落物收容生物；使用槽放入物品自动模拟"右击收容物"产出。
  */
-public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, MenuProvider {
+public class MobFarmEntity extends BlockEntity implements MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(MobFarmEntity.class);
 
     // ==================== 方向输出状态 ====================
@@ -116,18 +114,19 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
     private boolean needRebuild = false;
 
     /** 六面 + 无方向能力缓存（同 StorageFountainEntity） */
-    @SuppressWarnings("unchecked")
-    private final LazyOptional<MobFarmConnection>[] fecOptionals = createDirectionalOptionals();
+    /**
+     * 对外物品能力：按面懒建并缓存。NeoForge 不再实现 ICapabilityProvider，
+     * 由 {@code Registration.registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取（下标 6 = 无方向查询）。
+     */
+    private final MobFarmConnection[] itemHandlers = new MobFarmConnection[7];
 
-    private LazyOptional<MobFarmConnection>[] createDirectionalOptionals() {
-        LazyOptional<MobFarmConnection>[] optionals = new LazyOptional[7];
-        Direction[] directions = Direction.values();
-        for (int i = 0; i < directions.length; i++) {
-            final Direction direction = directions[i];
-            optionals[i] = LazyOptional.of(() -> new MobFarmConnection(this, direction));
+    @Nullable
+    public MobFarmConnection getItemHandler(@Nullable Direction side) {
+        int idx = side == null ? 6 : side.ordinal();
+        if (itemHandlers[idx] == null) {
+            itemHandlers[idx] = new MobFarmConnection(this, side);
         }
-        optionals[6] = LazyOptional.of(() -> new MobFarmConnection(this, null));
-        return optionals;
+        return itemHandlers[idx];
     }
 
     public MobFarmEntity(BlockPos pos, BlockState state) {
@@ -757,8 +756,7 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
         if (neighbor == null) {
             return;
         }
-        var optional = neighbor.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite());
-        var handler = optional.resolve().orElse(null);
+        var handler = level.getCapability(Capabilities.ItemHandler.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
         if (handler == null) {
             return;
         }
@@ -780,7 +778,7 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
         }
     }
 
-    private void pushRow(net.minecraftforge.items.IItemHandler handler, int index) {
+    private void pushRow(net.neoforged.neoforge.items.IItemHandler handler, int index) {
         Row row = rows.get(index);
         int maxStack = new ItemStack(row.item).getMaxStackSize();
         if (maxStack <= 0) {
@@ -803,22 +801,6 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
 
     // ==================== capability / 菜单 ====================
 
-    @Override
-    @Nonnull
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        try {
-            if (capability == ForgeCapabilities.ITEM_HANDLER) {
-                int idx = direction == null ? 6 : direction.ordinal();
-                if (idx >= 0 && idx < fecOptionals.length) {
-                    return fecOptionals[idx].cast();
-                }
-            }
-            return super.getCapability(capability, direction);
-        } catch (Throwable e) {
-            log.error("MobFarmEntity.getCapability error", e);
-        }
-        return super.getCapability(capability, direction);
-    }
 
     @Override
     @Nonnull
@@ -843,26 +825,26 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
     private static final String KEY_SPECIAL = "specialSlot";
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
         try {
             if (entityTag != null) {
                 nbt.put(KEY_ENTITY_TAG, entityTag);
             }
             nbt.putLong(KEY_LEVEL, level);
             nbt.putLong(KEY_TICK, tickCount);
-            nbt.put(KEY_ROWS, saveRows());
+            nbt.put(KEY_ROWS, saveRows(registries));
             nbt.putIntArray(KEY_DIR, directionState);
             nbt.putBoolean(KEY_OUTPUT, outputEnabled);
-            nbt.put(KEY_SPECIAL, specialSlot.serializeNBT());
+            nbt.put(KEY_SPECIAL, specialSlot.serializeNBT(registries));
         } catch (Throwable e) {
             log.error("MobFarmEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void load(@Nonnull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         cachedEntity = null;
         try {
             entityTag = nbt.contains(KEY_ENTITY_TAG, Tag.TAG_COMPOUND) ? nbt.getCompound(KEY_ENTITY_TAG) : null;
@@ -873,7 +855,7 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
                 tickCount = Tool.suit(nbt.getLong(KEY_TICK));
             }
             if (nbt.contains(KEY_ROWS, Tag.TAG_LIST)) {
-                loadRows((ListTag) nbt.get(KEY_ROWS));
+                loadRows((ListTag) nbt.get(KEY_ROWS), registries);
             }
             if (nbt.contains(KEY_DIR)) {
                 int[] arr = nbt.getIntArray(KEY_DIR);
@@ -885,7 +867,7 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
                 outputEnabled = nbt.getBoolean(KEY_OUTPUT);
             }
             if (nbt.contains(KEY_SPECIAL, Tag.TAG_COMPOUND)) {
-                specialSlot.deserializeNBT(nbt.getCompound(KEY_SPECIAL));
+                specialSlot.deserializeNBT(registries, nbt.getCompound(KEY_SPECIAL));
             }
             // 放置了含收容生物但尚无产物表的方块时，首个服务端 tick 补建产物表
             boolean hasWeight = false;
@@ -901,11 +883,11 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
         }
     }
 
-    private ListTag saveRows() {
+    private ListTag saveRows(@Nonnull HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (Row row : rows) {
-            CompoundTag c = new CompoundTag();
-            new ItemStack(row.item, 1).save(c);
+            // 1.21：save 需要注册表访问器，且一律以返回值为准
+            CompoundTag c = (CompoundTag) new ItemStack(row.item, 1).save(registries, new CompoundTag());
             c.putLong("Stock", row.stock);
             c.putLong("Weight", row.weight);
             c.putBoolean("Tool", row.fromTool);
@@ -914,12 +896,12 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
         return list;
     }
 
-    private void loadRows(ListTag list) {
+    private void loadRows(ListTag list, @Nonnull HolderLookup.Provider registries) {
         rows.clear();
         for (int i = 0; i < list.size(); i++) {
             try {
                 CompoundTag c = list.getCompound(i);
-                ItemStack stack = ItemStack.of(c);
+                ItemStack stack = ItemStack.parseOptional(registries, c);
                 if (stack.isEmpty()) {
                     continue;
                 }
@@ -939,13 +921,13 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
 
     @Override
     @Nonnull
-    public CompoundTag getUpdateTag() {
-        return this.saveWithoutMetadata();
+    public CompoundTag getUpdateTag(@Nonnull HolderLookup.Provider registries) {
+        return this.saveWithoutMetadata(registries);
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag) {
-        this.load(tag);
+    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
+        this.loadAdditional(tag, registries);
     }
 
     @Override
@@ -955,8 +937,9 @@ public class MobFarmEntity extends BlockEntity implements ICapabilityProvider, M
     }
 
     @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
-        this.load(pkt.getTag());
+    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
+        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
+        this.loadAdditional(pkt.getTag(), registries);
     }
 
     public void sendUpdatePacket() {

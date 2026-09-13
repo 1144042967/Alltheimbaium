@@ -4,7 +4,7 @@ import cn.sd.jrz.alltheimbaium.entity.InstantFurnaceEntity;
 import cn.sd.jrz.alltheimbaium.entity.InstantFurnaceEntity.Row;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "alltheimbaium",
+  "pattern": [
+    "BBB",
+    "XCX",
+    "BBB"
+  ],
+  "key": {
+    "X": {
+      "item": "alltheimbaium:package_material"
+    },
+    "B": {
+      "item": "minecraft:diamond_block"
+    },
+    "C": {
+      "item": "minecraft:iron_block"
+    }
+  },
+  "result": {
+    "id": "alltheimbaium:storage_fountain"
+  }
+}

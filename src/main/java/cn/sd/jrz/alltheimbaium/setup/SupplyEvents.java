@@ -1,12 +1,13 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
-import net.minecraft.advancements.Advancement;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.AdvancementEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.entity.player.AdvancementEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,17 +16,16 @@ import org.slf4j.LoggerFactory;
  * - 玩家游玩时间累计每 30 分钟，最大补给点 +1（跨会话累计）；
  * - 每获得一个成就，最大补给点 +5（recipe 类隐藏成就不计）。
  */
-@Mod.EventBusSubscriber(modid = "alltheimbaium")
+@EventBusSubscriber(modid = "alltheimbaium")
 public class SupplyEvents {
     private static final Logger log = LoggerFactory.getLogger(SupplyEvents.class);
 
     @SubscribeEvent
-    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+    public static void onPlayerTick(net.neoforged.neoforge.event.tick.PlayerTickEvent.Post event) {
         try {
-            if (event.phase != TickEvent.Phase.END) {
-                return;
-            }
-            if (!(event.player instanceof ServerPlayer serverPlayer)) {
+            // 1.21：TickEvent 拆成 Pre/Post，订阅 Post 即原来的 Phase.END；
+            // 且 PlayerEvent 的玩家字段已私有化，改走 getEntity()
+            if (!(event.getEntity() instanceof ServerPlayer serverPlayer)) {
                 return;
             }
             // 每秒推进一次，减少读写
@@ -44,12 +44,10 @@ public class SupplyEvents {
             if (!(event.getEntity() instanceof ServerPlayer serverPlayer)) {
                 return;
             }
-            Advancement advancement = event.getAdvancement();
-            if (advancement == null) {
-                return;
-            }
+            // 1.21：getAdvancement() 返回 AdvancementHolder（不再是 Advancement），注册名走 id()
+            net.minecraft.advancements.AdvancementHolder advancement = event.getAdvancement();
             // recipe 类成就不计入（玩家解锁大量配方会造成刷点）
-            String path = advancement.getId().getPath();
+            String path = advancement.id().getPath();
             if (path.startsWith("recipes/") || path.endsWith("/root")) {
                 return;
             }

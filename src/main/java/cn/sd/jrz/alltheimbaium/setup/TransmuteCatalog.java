@@ -37,8 +37,8 @@ public final class TransmuteCatalog {
 
     /** 固定配方表，自上而下即 tooltip 中的展示顺序 */
     private static final List<Entry> ENTRIES = List.of(
-            new Entry(new ResourceLocation("mekanism", "ultimate_chemical_tank"),
-                    new ResourceLocation("mekanism", "creative_chemical_tank"))
+            new Entry(ResourceLocation.fromNamespaceAndPath("mekanism", "ultimate_chemical_tank"),
+                    ResourceLocation.fromNamespaceAndPath("mekanism", "creative_chemical_tank"))
     );
 
     /** 已解析的配方（输入物品 + 产物模板）；首次使用时构建，之后不再重算 */

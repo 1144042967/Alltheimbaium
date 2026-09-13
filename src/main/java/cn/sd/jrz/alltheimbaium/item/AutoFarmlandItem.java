@@ -1,5 +1,6 @@
 package cn.sd.jrz.alltheimbaium.item;
 
+import net.minecraft.world.item.Item;
 import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.nbt.CompoundTag;
@@ -11,8 +12,8 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,12 +36,12 @@ public class AutoFarmlandItem extends BlockItem {
 
     @Override
     @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, worldIn, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, tooltip, flagIn);
         try {
             long level = MobFarmBlock.getInitialLevel();
-            if (stack.hasTag()) {
-                CompoundTag tag = stack.getTagElement("BlockEntityTag");
+            CompoundTag tag = Tool.getBlockEntityTag(stack);
+                if (tag != null) {
                 if (tag != null && tag.contains("level", Tag.TAG_LONG)) {
                     level = Tool.suit(tag.getLong("level"));
                 }

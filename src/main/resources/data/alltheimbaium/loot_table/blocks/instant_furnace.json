@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "function": "minecraft:copy_name",
+              "source": "block_entity"
+            }
+          ],
+          "name": "alltheimbaium:instant_furnace"
+        }
+      ],
+      "name": "instant_furnace",
+      "rolls": 1.0
+    }
+  ]
+}

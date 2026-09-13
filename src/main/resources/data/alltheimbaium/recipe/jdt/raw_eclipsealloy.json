@@ -1,0 +1,22 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "justdirethings"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "justdirethings:gooblock_tier4"
+    },
+    {
+      "item": "minecraft:netherite_block"
+    }
+  ],
+  "result": {
+    "count": 9,
+    "id": "justdirethings:raw_eclipsealloy"
+  }
+}

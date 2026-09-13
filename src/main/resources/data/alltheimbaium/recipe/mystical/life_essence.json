@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "group": "botania_life_essence",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "mysticalagriculture:gaia_spirit_essence"
+    },
+    {
+      "item": "mysticalagriculture:gaia_spirit_essence"
+    },
+    {
+      "item": "mysticalagriculture:gaia_spirit_essence"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "botania:life_essence"
+  },
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "mysticalagriculture"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "botania"
+    }
+  ]
+}

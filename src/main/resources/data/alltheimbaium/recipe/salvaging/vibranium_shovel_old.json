@@ -1,0 +1,22 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "silentgear"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ],
+  "type": "silentgear:salvaging",
+  "ingredient": {
+    "item": "allthemodium:vibranium_shovel"
+  },
+  "results": [
+    {
+      "count": 2,
+      "id": "allthemodium:vibranium_ingot"
+    }
+  ]
+}

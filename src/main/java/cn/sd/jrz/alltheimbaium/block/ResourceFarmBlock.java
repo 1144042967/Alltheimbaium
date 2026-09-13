@@ -1,5 +1,10 @@
 package cn.sd.jrz.alltheimbaium.block;
 
+import java.util.List;
+import net.minecraft.world.level.storage.loot.LootParams;
+import cn.sd.jrz.alltheimbaium.setup.Tool;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.item.ItemStack;
 import cn.sd.jrz.alltheimbaium.entity.ResourceFarmEntity;
 import cn.sd.jrz.alltheimbaium.gui.ResourceFarmMenu;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
@@ -18,7 +23,6 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.network.NetworkHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,9 +59,8 @@ public class ResourceFarmBlock extends Block implements EntityBlock {
     }
 
     @SuppressWarnings("deprecation")
-    @Override
     @Nonnull
-    public InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+    private InteractionResult doUse(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         try {
             if (level.isClientSide) {
                 return InteractionResult.SUCCESS;
@@ -68,7 +71,7 @@ public class ResourceFarmBlock extends Block implements EntityBlock {
             if (player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel) {
                 // 随开屏 extraData 下发"标记→产物"帮助行供 GUI 展示。
                 // 裁剪用的是解码端同一组常量（见 ResourceFarmMenu.HELP_MAX_*），两端必须一致。
-                NetworkHooks.openScreen(serverPlayer, machine, buf -> {
+                serverPlayer.openMenu(machine, buf -> {
                     buf.writeBlockPos(pos);
                     int[][] rows = ResourceData.helpRows();
                     int rowCount = Math.min(rows.length, ResourceFarmMenu.HELP_MAX_ROWS);
@@ -92,6 +95,36 @@ public class ResourceFarmBlock extends Block implements EntityBlock {
         } catch (Throwable e) {
             log.error("ResourceFarmBlock.use error", e);
         }
-        return super.use(state, level, pos, player, handIn, hit);
+        return InteractionResult.PASS;
+    }
+
+    /**
+     * 1.21：原版的 Block#use 拆成了空手的 useWithoutItem 与持物的 useItemOn，
+     * 这里两个都覆写并统一转到 doUse，行为与 1.20.1 保持一致。
+     */
+    @Override
+    protected @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
+        return doUse(state, level, pos, player, InteractionHand.MAIN_HAND, hit);
+    }
+
+    @Override
+    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+        InteractionResult result = doUse(state, level, pos, player, handIn, hit);
+        if (result == InteractionResult.SUCCESS) {
+            return ItemInteractionResult.SUCCESS;
+        }
+        if (result == InteractionResult.FAIL) {
+            return ItemInteractionResult.FAIL;
+        }
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    /**
+     * 1.21：掉落时把方块实体数据写进物品的 block_entity_data 组件（替代 1.20.1 战利品表的 copy_nbt）。
+     */
+    @Override
+    @Nonnull
+    public List<ItemStack> getDrops(@Nonnull BlockState state, @Nonnull LootParams.Builder params) {
+        return Tool.withBlockEntityData(super.getDrops(state, params), params);
     }
 }

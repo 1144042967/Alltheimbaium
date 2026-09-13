@@ -16,8 +16,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
@@ -33,7 +33,7 @@ import java.util.Optional;
  */
 @OnlyIn(Dist.CLIENT)
 public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscriberMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/instant_inscriber_gui.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/instant_inscriber_gui.png");
 
     // FE 能量条：贴图已经画好凹陷槽位（内嵌区域 x 8~167、y 16~22，共 160×7），
     // 代码只负责在槽位内填色块，不画边框也不画底槽
@@ -206,7 +206,6 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
 
     @Override
     protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        renderBackground(guiGraphics);
         guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
         // FE 能量条：只画填充色块，槽位边框由贴图提供
         int max = Math.max(1, this.menu.getMaxEnergy());

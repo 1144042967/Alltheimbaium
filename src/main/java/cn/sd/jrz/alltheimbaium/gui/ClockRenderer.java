@@ -10,8 +10,8 @@ import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
 
 import javax.annotation.Nonnull;
@@ -62,7 +62,7 @@ public class ClockRenderer implements BlockEntityRenderer<ClockEntity> {
         poseStack.pushPose();
         // 绕 Y 旋转使目标面朝向 +Z（Y 方向不变，文字保持竖直正立）
         poseStack.translate(0.5f, 0, 0.5f);
-        poseStack.mulPoseMatrix((new Matrix4f()).rotateYXZ(SIDE_ROT_Y[face.ordinal()] * 90f * (float) Math.PI / 180f, 0, 0));
+        poseStack.mulPose((new Matrix4f()).rotateYXZ(SIDE_ROT_Y[face.ordinal()] * 90f * (float) Math.PI / 180f, 0, 0));
         poseStack.translate(-0.5f, 0, -0.5f);
 
         // 只显示纯数字（不带 x 前缀）

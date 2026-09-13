@@ -1,6 +1,8 @@
 package cn.sd.jrz.alltheimbaium.item;
 
+import net.minecraft.world.item.Item;
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
+import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -14,9 +16,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,12 +41,12 @@ public class LiquidFountainItem extends BlockItem {
 
     @Override
     @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, worldIn, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, tooltip, flagIn);
         try {
             FluidStack fluidStack = FluidStack.EMPTY;
-            if (stack.hasTag()) {
-                CompoundTag tag = stack.getTagElement("BlockEntityTag");
+            CompoundTag tag = Tool.getBlockEntityTag(stack);
+                if (tag != null) {
                 if (tag != null) {
                     if (tag.contains("fluid_id", Tag.TAG_STRING)) {
                         Fluid fluid = null;
@@ -71,12 +73,12 @@ public class LiquidFountainItem extends BlockItem {
             } else if (fluidStack.getAmount() < max) {
                 // 内部存量按 mB 计数，直接展示原始值即可，无需换算
                 tip.state("item.alltheimbaium.liquid_fountain.state.fluid",
-                        fluidStack.getDisplayName().getString(),
+                        fluidStack.getHoverName().getString(),
                         String.format("%,d", fluidStack.getAmount()),
                         String.format("%,d", max));
             } else {
                 tip.state("item.alltheimbaium.liquid_fountain.state.infinite",
-                        fluidStack.getDisplayName().getString());
+                        fluidStack.getHoverName().getString());
             }
             tip.usage("item.alltheimbaium.liquid_fountain.usage.1",
                             "item.alltheimbaium.liquid_fountain.usage.2",

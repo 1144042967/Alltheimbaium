@@ -3,7 +3,7 @@ package cn.sd.jrz.alltheimbaium.connection;
 import cn.sd.jrz.alltheimbaium.entity.CreativeTransmuterEntity;
 import cn.sd.jrz.alltheimbaium.setup.TransmuteCatalog;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

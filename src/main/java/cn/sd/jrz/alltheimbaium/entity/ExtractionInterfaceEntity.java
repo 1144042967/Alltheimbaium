@@ -5,6 +5,7 @@ import cn.sd.jrz.alltheimbaium.connection.ExtractionInterfaceConnection;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -15,11 +16,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +45,7 @@ import java.util.Set;
  * </ul>
  * 搜索仅限已加载的区块，结果缓存 {@link #RESCAN_INTERVAL} 刻后重算，因此新增机器最多 1 秒后生效。
  */
-public class ExtractionInterfaceEntity extends BlockEntity implements ICapabilityProvider {
+public class ExtractionInterfaceEntity extends BlockEntity  {
     private static final Logger log = LoggerFactory.getLogger(ExtractionInterfaceEntity.class);
 
     /** 连通范围的重算间隔（tick） */
@@ -64,8 +62,14 @@ public class ExtractionInterfaceEntity extends BlockEntity implements ICapabilit
      */
     private static final String WATER_WHEEL_MOTOR = "water_wheel_motor";
 
-    private final LazyOptional<ExtractionInterfaceConnection> capability =
-            LazyOptional.of(() -> new ExtractionInterfaceConnection(this));
+
+    /** 对外只读的物品 / 流体能力（方向无关，同一个实例）。NeoForge 由 RegisterCapabilitiesEvent 拉取。 */
+    private final ExtractionInterfaceConnection capability = new ExtractionInterfaceConnection(this);
+
+    @Nonnull
+    public ExtractionInterfaceConnection getHandler(@Nullable Direction side) {
+        return capability;
+    }
 
     /** 连通搜索得到的产出机器位置；只读视图，服务端维护 */
     private List<BlockPos> sources = List.of();
@@ -159,7 +163,7 @@ public class ExtractionInterfaceEntity extends BlockEntity implements ICapabilit
      * 就能传导
      */
     private static boolean isConductor(@Nonnull Level level, @Nonnull BlockPos pos) {
-        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(level.getBlockState(pos).getBlock());
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock());
         if (id == null) {
             return false;
         }
@@ -191,7 +195,7 @@ public class ExtractionInterfaceEntity extends BlockEntity implements ICapabilit
      * 因此它虽然在此列，却抽不出任何物品与流体。
      */
     public static boolean isLinkedSource(@Nonnull BlockEntity be) {
-        ResourceLocation id = ForgeRegistries.BLOCK_ENTITY_TYPES.getKey(be.getType());
+        ResourceLocation id = BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType());
         if (id == null || !AUTORESOURCE_MODID.equals(id.getNamespace())) {
             return false;
         }
@@ -200,30 +204,17 @@ public class ExtractionInterfaceEntity extends BlockEntity implements ICapabilit
 
     // ==================== 能力 ====================
 
-    @Override
-    @Nonnull
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction direction) {
-        try {
-            if (capability == ForgeCapabilities.ITEM_HANDLER || capability == ForgeCapabilities.FLUID_HANDLER) {
-                return this.capability.cast();
-            }
-            return super.getCapability(capability, direction);
-        } catch (Throwable e) {
-            log.error("ExtractionInterfaceEntity.getCapability error", e);
-        }
-        return super.getCapability(capability, direction);
-    }
 
     // ==================== NBT（无持久字段） ====================
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
     }
 
     @Override
-    public void load(@Nonnull CompoundTag nbt) {
-        super.load(nbt);
+    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         // 重载后连通范围需要重算
         scanned = false;
     }
@@ -232,13 +223,13 @@ public class ExtractionInterfaceEntity extends BlockEntity implements ICapabilit
 
     @Override
     @Nonnull
-    public CompoundTag getUpdateTag() {
-        return this.saveWithoutMetadata();
+    public CompoundTag getUpdateTag(@Nonnull HolderLookup.Provider registries) {
+        return this.saveWithoutMetadata(registries);
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag) {
-        this.load(tag);
+    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
+        this.loadAdditional(tag, registries);
     }
 
     @Override
@@ -248,7 +239,8 @@ public class ExtractionInterfaceEntity extends BlockEntity implements ICapabilit
     }
 
     @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
-        this.load(pkt.getTag());
+    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
+        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
+        this.loadAdditional(pkt.getTag(), registries);
     }
 }

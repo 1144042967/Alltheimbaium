@@ -1,5 +1,6 @@
 package cn.sd.jrz.alltheimbaium.item;
 
+import net.minecraft.world.item.Item;
 import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.setup.KillLootEstimator;
 import cn.sd.jrz.alltheimbaium.setup.MobFarmCatalog;
@@ -24,8 +25,8 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,10 +57,7 @@ public class MobFarmItem extends BlockItem {
      */
     public static boolean hasCreature(ItemStack stack) {
         try {
-            if (!stack.hasTag()) {
-                return false;
-            }
-            CompoundTag tag = stack.getTagElement("BlockEntityTag");
+            CompoundTag tag = Tool.getBlockEntityTag(stack);
             return tag != null && tag.contains("entityTag", Tag.TAG_COMPOUND)
                     && tag.getCompound("entityTag").contains("id", Tag.TAG_STRING);
         } catch (Throwable e) {
@@ -154,8 +152,10 @@ public class MobFarmItem extends BlockItem {
                 tag = new CompoundTag();
                 tag.putString("id", EntityType.getKey(nearest.getType()).toString());
             }
-            CompoundTag blockTag = stack.getOrCreateTagElement("BlockEntityTag");
+            // 1.21：组件不是活引用，读出来是副本，改完必须写回
+            CompoundTag blockTag = Tool.getBlockEntityTagOrEmpty(stack);
             blockTag.put("entityTag", tag);
+            Tool.setBlockEntityTag(stack, blockTag);
             String name = nearest.getName().getString();
             nearest.discard();
             player.sendSystemMessage(Component.translatable("chat.alltheimbaium.mob_farm.capture", name));
@@ -168,14 +168,14 @@ public class MobFarmItem extends BlockItem {
 
     @Override
     @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, worldIn, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, tooltip, flagIn);
         try {
             long level = MobFarmBlock.getInitialLevel();
             String containedName = null;
             ListTag rows = null;
-            if (stack.hasTag()) {
-                CompoundTag tag = stack.getTagElement("BlockEntityTag");
+            CompoundTag tag = Tool.getBlockEntityTag(stack);
+                if (tag != null) {
                 if (tag != null) {
                     if (tag.contains("level", Tag.TAG_LONG)) {
                         level = Tool.suit(tag.getLong("level"));
@@ -227,7 +227,7 @@ public class MobFarmItem extends BlockItem {
         for (int i = 0; i < rows.size(); i++) {
             try {
                 CompoundTag c = rows.getCompound(i);
-                ItemStack rowStack = ItemStack.of(c);
+                ItemStack rowStack = ItemStack.parseOptional(Tool.registries(), c);
                 if (rowStack.isEmpty()) {
                     continue;
                 }

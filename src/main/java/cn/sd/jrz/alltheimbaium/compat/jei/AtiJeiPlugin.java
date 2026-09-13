@@ -24,6 +24,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
@@ -83,7 +84,7 @@ public class AtiJeiPlugin implements IModPlugin {
     @Override
     @Nonnull
     public ResourceLocation getPluginUid() {
-        return new ResourceLocation(Alltheimbaium.MODID, "jei_plugin");
+        return ResourceLocation.fromNamespaceAndPath(Alltheimbaium.MODID, "jei_plugin");
     }
 
     @Override
@@ -266,8 +267,10 @@ public class AtiJeiPlugin implements IModPlugin {
         // 这一档不留任何文字：卡片只画"原料 → 产物"，耗能在机器 GUI 与物品 tooltip 里有
         List<Component> notes = List.of();
         for (RecipeType<? extends AbstractCookingRecipe> type : InstantFurnaceEntity.FURNACE_TYPES) {
-            Collection<? extends AbstractCookingRecipe> recipes = manager.getAllRecipesFor(type);
-            for (AbstractCookingRecipe recipe : recipes) {
+            // 1.21：getAllRecipesFor 返回 RecipeHolder 列表；通配 RecipeType 下的类型捕获没法直接循环，
+            // 用 InstantFurnaceEntity 里同样的未检查辅助方法摊平（内部只做 .value()，类型由调用方保证）
+            for (RecipeHolder<? extends AbstractCookingRecipe> holder : InstantFurnaceEntity.getAllCookingRecipes(manager, type)) {
+                AbstractCookingRecipe recipe = holder.value();
                 ItemStack result = recipe.getResultItem(level.registryAccess());
                 if (result.isEmpty()) {
                     continue;

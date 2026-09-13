@@ -1,15 +1,12 @@
 package cn.sd.jrz.alltheimbaium.recipe;
 
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
 
 import javax.annotation.Nonnull;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -56,43 +53,43 @@ public class SmeltingCraftRecipe extends CustomRecipe {
     /**
      * Cached smelting result set by {@link #matches} and consumed by {@link #assemble}.
      * Reset to EMPTY after consumption. This pattern is necessary because
-     * {@code assemble()} receives {@link RegistryAccess} but not {@link Level},
+     * {@code assemble()} receives {@link HolderLookup.Provider} but not {@link Level},
      * so it cannot access the world-specific {@code RecipeManager}.
      */
     private ItemStack cachedResult = ItemStack.EMPTY;
 
-    public SmeltingCraftRecipe(ResourceLocation id, CraftingBookCategory category) {
-        super(id, category);
+    public SmeltingCraftRecipe(CraftingBookCategory category) {
+        super(category);
     }
 
     // ==================== Recipe overrides ====================
 
     @Override
-    public boolean matches(@Nonnull CraftingContainer container, @Nonnull Level level) {
+    public boolean matches(@Nonnull CraftingInput input, @Nonnull Level level) {
         // 每次匹配都先清空缓存，以本次网格为准，避免旧结果残留被 assemble/getResultItem 读到
         this.cachedResult = ItemStack.EMPTY;
 
         // (1) Require 3×3 crafting grid (not the player's 2×2 grid)
-        if (container.getWidth() != 3 || container.getHeight() != 3) {
+        if (input.width() != 3 || input.height() != 3) {
             return false;
         }
 
         // (2) Center slot must be coal or charcoal
-        ItemStack center = container.getItem(4);
+        ItemStack center = input.getItem(4);
         if (center.isEmpty() || !center.is(ItemTags.COALS)) {
             return false;
         }
 
         // (3) First outer slot must be non-empty (defines the reference item)
-        ItemStack reference = container.getItem(0);
+        ItemStack reference = input.getItem(0);
         if (reference.isEmpty()) {
             return false;
         }
 
-        // (4) All 8 outer slots must contain the exact same item (including NBT)
+        // (4) All 8 outer slots must contain the exact same item (including components)
         for (int slot : OUTER_SLOTS) {
-            ItemStack stack = container.getItem(slot);
-            if (stack.isEmpty() || !ItemStack.isSameItemSameTags(reference, stack)) {
+            ItemStack stack = input.getItem(slot);
+            if (stack.isEmpty() || !ItemStack.isSameItemSameComponents(reference, stack)) {
                 return false;
             }
         }
@@ -113,7 +110,7 @@ public class SmeltingCraftRecipe extends CustomRecipe {
 
     @Nonnull
     @Override
-    public ItemStack assemble(@Nonnull CraftingContainer container, @Nonnull RegistryAccess registryAccess) {
+    public ItemStack assemble(@Nonnull CraftingInput input, @Nonnull HolderLookup.Provider registries) {
         // 只读取 matches() 缓存的结果，不再清空。
         // 原因：Polymorph / FastWorkbench 等 mod 会在一次合成流程中对本配方多次调用
         // getResultItem()/assemble()（遍历配方列表、刷新客户端预览等），若这里清空缓存，
@@ -133,7 +130,7 @@ public class SmeltingCraftRecipe extends CustomRecipe {
 
     @Nonnull
     @Override
-    public ItemStack getResultItem(@Nonnull RegistryAccess registryAccess) {
+    public ItemStack getResultItem(@Nonnull HolderLookup.Provider registries) {
         // Dynamic recipe — no constant output to preview
         return ItemStack.EMPTY;
     }
@@ -175,8 +172,9 @@ public class SmeltingCraftRecipe extends CustomRecipe {
         ItemStack singleItem = input.copyWithCount(1);
 
         for (RecipeType<? extends AbstractCookingRecipe> type : FURNACE_TYPES) {
-            Collection<? extends AbstractCookingRecipe> recipes = recipeManager.getAllRecipesFor(type);
-            for (AbstractCookingRecipe recipe : recipes) {
+            // 1.21.1 起 getAllRecipesFor 返回 RecipeHolder 列表，需 .value() 取配方本体
+            for (RecipeHolder<? extends AbstractCookingRecipe> holder : recipeManager.getAllRecipesFor(type)) {
+                AbstractCookingRecipe recipe = holder.value();
                 for (Ingredient ingredient : recipe.getIngredients()) {
                     if (ingredient.test(singleItem)) {
                         ItemStack result = recipe.getResultItem(level.registryAccess()).copy();

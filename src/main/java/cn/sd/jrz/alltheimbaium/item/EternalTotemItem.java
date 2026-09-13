@@ -1,6 +1,9 @@
 package cn.sd.jrz.alltheimbaium.item;
 
 import cn.sd.jrz.alltheimbaium.setup.Config;
+import cn.sd.jrz.alltheimbaium.setup.Tool;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -14,10 +17,10 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -74,8 +77,8 @@ public class EternalTotemItem extends Item {
 
     @Override
     @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, worldIn, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, tooltip, flagIn);
         Tip.of(tooltip)
                 .head(stack, "tip.alltheimbaium.type.survival")
                 .summary("item.alltheimbaium.eternal_totem.summary")
@@ -91,53 +94,62 @@ public class EternalTotemItem extends Item {
         return true;
     }
 
-    // ==================== 药水 / 食物槽位 NBT ====================
+    // ==================== 药水 / 食物槽位数据 ====================
+    // 1.20.1 的 getTag()/getOrCreateTag() 已删除，改走 CUSTOM_DATA 数据组件（见 Tool）。
+    // 组件里的 tag 是副本，改完必须 Tool.setCustomTag 写回。
 
     /**
-     * 从图腾 NBT 加载 27 格药水 / 食物槽位
+     * 从图腾的自定义数据加载 27 格药水 / 食物槽位
+     *
+     * @param registries 解析物品栈需要的注册表（1.21 的物品序列化带数据组件，取世界注册表）
      */
-    public static void loadPotionItems(ItemStack totem, SimpleContainer inv) {
-        CompoundTag tag = totem.getTag();
+    public static void loadPotionItems(ItemStack totem, SimpleContainer inv, @Nonnull HolderLookup.Provider registries) {
+        CompoundTag tag = Tool.getCustomTag(totem);
         if (tag == null || !tag.contains(TAG_POTION_ITEMS)) return;
         ListTag list = tag.getList(TAG_POTION_ITEMS, Tag.TAG_COMPOUND);
         for (Tag t : list) {
-            CompoundTag ct = (CompoundTag) t;
+            if (!(t instanceof CompoundTag ct)) continue;
             int slot = ct.getByte("Slot");
             if (slot >= 0 && slot < STORAGE_INVENTORY_SIZE) {
-                inv.setItem(slot, ItemStack.of(ct));
+                inv.setItem(slot, ItemStack.parseOptional(registries, ct));
             }
         }
     }
 
     /**
-     * 保存 27 格药水 / 食物槽位到图腾 NBT
+     * 保存 27 格药水 / 食物槽位到图腾的自定义数据
+     *
+     * @param registries 序列化物品栈需要的注册表
      */
-    public static void savePotionItems(ItemStack totem, SimpleContainer inv) {
+    public static void savePotionItems(ItemStack totem, SimpleContainer inv, @Nonnull HolderLookup.Provider registries) {
         if (totem == null || totem.isEmpty()) return;
-        CompoundTag tag = totem.getOrCreateTag();
+        CompoundTag tag = Tool.getCustomTagOrEmpty(totem);
         ListTag list = new ListTag();
         for (int i = 0; i < STORAGE_INVENTORY_SIZE; i++) {
             ItemStack s = inv.getItem(i);
             if (!s.isEmpty()) {
                 CompoundTag ct = new CompoundTag();
                 ct.putByte("Slot", (byte) i);
-                s.save(ct);
+                // 1.21 的物品 NBT 必须由带注册表的 save 产生（药水效果等组件要查数据包注册表）
+                ct.merge((CompoundTag) s.save(registries));
                 list.add(ct);
             }
         }
         tag.put(TAG_POTION_ITEMS, list);
+        Tool.setCustomTag(totem, tag);
     }
 
     /**
      * 读取图腾 27 格药水 / 食物槽位中的非空物品
      */
-    public static List<ItemStack> getPotionItems(ItemStack totem) {
+    public static List<ItemStack> getPotionItems(ItemStack totem, @Nonnull HolderLookup.Provider registries) {
         List<ItemStack> list = new ArrayList<>();
-        CompoundTag tag = totem.getTag();
+        CompoundTag tag = Tool.getCustomTag(totem);
         if (tag == null || !tag.contains(TAG_POTION_ITEMS)) return list;
         ListTag nbt = tag.getList(TAG_POTION_ITEMS, Tag.TAG_COMPOUND);
         for (Tag t : nbt) {
-            ItemStack s = ItemStack.of((CompoundTag) t);
+            if (!(t instanceof CompoundTag ct)) continue;
+            ItemStack s = ItemStack.parseOptional(registries, ct);
             if (!s.isEmpty()) {
                 list.add(s);
             }
@@ -146,12 +158,17 @@ public class EternalTotemItem extends Item {
     }
 
     /**
-     * 应用图腾 27 格药水 / 食物槽位中药水的效果到玩家
+     * 应用图腾 27 格药水 / 食物槽位中药水的效果到玩家。
+     * <p>
+     * 1.21 删除了 {@code PotionUtils}：药水效果改由数据组件 {@link DataComponents#POTION_CONTENTS} 提供，
+     * {@link PotionContents#getAllEffects()} 与旧的 {@code PotionUtils.getMobEffects} 等价。
      */
     public static void applyPotionEffects(Player player, ItemStack totem) {
-        for (ItemStack s : getPotionItems(totem)) {
+        for (ItemStack s : getPotionItems(totem, player.level().registryAccess())) {
             if (s.isEmpty()) continue;
-            for (MobEffectInstance effect : PotionUtils.getMobEffects(s)) {
+            PotionContents contents = s.get(DataComponents.POTION_CONTENTS);
+            if (contents == null) continue;
+            for (MobEffectInstance effect : contents.getAllEffects()) {
                 player.addEffect(effect);
             }
         }
@@ -162,11 +179,13 @@ public class EternalTotemItem extends Item {
      * <p>
      * 直接调用物品自己的 {@code finishUsingItem}，因此苹果、金苹果乃至任何自定义食物都按原版
      * 食用逻辑处理；**忽略返回值、不消耗物品**，每次复活都能再用。
+     * <p>
+     * 1.21 没有 {@code isEdible()}，改用"有没有 FOOD 数据组件"判断。
      */
     public static void eatStoredFood(Player player, ItemStack totem) {
         Level level = player.level();
-        for (ItemStack s : getPotionItems(totem)) {
-            if (s.isEmpty() || !s.isEdible()) {
+        for (ItemStack s : getPotionItems(totem, level.registryAccess())) {
+            if (s.isEmpty() || !s.has(DataComponents.FOOD)) {
                 continue;
             }
             try {

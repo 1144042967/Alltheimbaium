@@ -7,16 +7,17 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
 
 /**
  * 永恒图腾事件处理：
  * - 死亡时触发复活（基础效果 + 药水槽效果）
  */
-@Mod.EventBusSubscriber(modid = "alltheimbaium")
+@EventBusSubscriber(modid = "alltheimbaium")
 public class TotemEventHandler {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

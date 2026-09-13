@@ -1,14 +1,26 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,16 +50,32 @@ public class Tool {
         }
     }
 
+    /**
+     * 取当前可用于物品（反）序列化的注册表访问器。
+     * <p>
+     * 1.21 起 {@code ItemStack#save}/{@code parseOptional} 需要 {@link HolderLookup.Provider}：
+     * 带附魔、药水等"按注册名引用注册表条目"的组件必须靠它才能正确编解码。
+     * 优先取当前服务端的 {@code registryAccess()}；服务端尚未启动（如仅客户端主菜单、
+     * 单元测试）时拿不到，回退到 {@link RegistryAccess#EMPTY}——此时只会丢失这类
+     * 需要注册表查表的组件，纯原版物品仍能正常读写。
+     */
+    @Nonnull
+    public static HolderLookup.Provider registries() {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        return server != null ? server.registryAccess() : RegistryAccess.EMPTY;
+    }
+
     public static ListTag toJsonArray(List<ItemStack> itemList, List<Long> blockList) {
         ListTag list = new ListTag();
+        HolderLookup.Provider registries = registries();
         for (int i = 0; i < itemList.size(); i++) {
             ItemStack item = itemList.get(i);
             Long count = blockList.get(i);
             if (item == null || count == null) {
                 continue;
             }
-            CompoundTag tag = new CompoundTag();
-            item.save(tag);
+            // 1.21：save 需要注册表访问器，且一律以返回值为准（不要依赖传入 tag 被原地填充）
+            CompoundTag tag = (CompoundTag) item.save(registries, new CompoundTag());
             tag.putLong("Long_Count", count);
             list.add(tag);
         }
@@ -56,9 +84,10 @@ public class Tool {
 
     public static List<ItemStack> toItemList(ListTag array) {
         List<ItemStack> itemList = new ArrayList<>();
+        HolderLookup.Provider registries = registries();
         for (Tag value : array) {
             CompoundTag tag = (CompoundTag) value;
-            ItemStack stack = ItemStack.of(tag);
+            ItemStack stack = ItemStack.parseOptional(registries, tag);
             if (stack.isEmpty()) {
                 continue;
             }
@@ -71,9 +100,10 @@ public class Tool {
 
     public static List<Long> toBlockList(ListTag array) {
         List<Long> blockList = new ArrayList<>();
+        HolderLookup.Provider registries = registries();
         for (Tag value : array) {
             CompoundTag tag = (CompoundTag) value;
-            ItemStack stack = ItemStack.of(tag);
+            ItemStack stack = ItemStack.parseOptional(registries, tag);
             if (stack.isEmpty()) {
                 continue;
             }
@@ -177,5 +207,85 @@ public class Tool {
             log.warn("混沌守卫免伤突破反射调用失败，回退到普通伤害", t);
         }
         return false;
+    }
+
+    // ==================== ItemStack 数据组件（1.21 的 NBT 替代） ====================
+    // 1.20.1 的 stack.getTag()/getOrCreateTag()/getTagElement("BlockEntityTag") 在 1.21 全部删除：
+    // 自定义数据改走 CUSTOM_DATA 组件、方块实体数据走 BLOCK_ENTITY_DATA 组件，且都不再返回"可写回"的活对象。
+
+    /** 读取物品上的方块实体数据（对应旧的 {@code getTagElement("BlockEntityTag")}），没有返回 null */
+    @Nullable
+    public static CompoundTag getBlockEntityTag(@Nonnull ItemStack stack) {
+        CustomData data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
+        return data == null ? null : data.copyTag();
+    }
+
+    /** 读取物品的自定义数据（对应旧的 {@code getTag()}），没有返回 null */
+    @Nullable
+    public static CompoundTag getCustomTag(@Nonnull ItemStack stack) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        return data == null ? null : data.copyTag();
+    }
+
+    /** 读取物品的自定义数据，没有则返回空标签（对应旧的 {@code getOrCreateTag()} 的读法） */
+    @Nonnull
+    public static CompoundTag getCustomTagOrEmpty(@Nonnull ItemStack stack) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        return data == null ? new CompoundTag() : data.copyTag();
+    }
+
+    /** 写回物品的自定义数据（改完 getCustomTagOrEmpty 的结果后必须调它，组件不像旧 NBT 那样是活引用） */
+    public static void setCustomTag(@Nonnull ItemStack stack, @Nonnull CompoundTag tag) {
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+    }
+
+    /**
+     * 读取方块实体数据用于改写（对应旧的 {@code getOrCreateTagElement("BlockEntityTag")}），没有则返回空标签。
+     * 注意返回值是副本，改完必须调 {@link #setBlockEntityTag} 写回。
+     */
+    @Nonnull
+    public static CompoundTag getBlockEntityTagOrEmpty(@Nonnull ItemStack stack) {
+        CustomData data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
+        return data == null ? new CompoundTag() : data.copyTag();
+    }
+
+    /** 写回物品上的方块实体数据（放置时会被 {@code BlockItem#updateCustomBlockEntityTag} 合并进方块实体） */
+    public static void setBlockEntityTag(@Nonnull ItemStack stack, @Nonnull CompoundTag tag) {
+        if (tag.isEmpty()) {
+            stack.remove(DataComponents.BLOCK_ENTITY_DATA);
+        } else {
+            stack.set(DataComponents.BLOCK_ENTITY_DATA, CustomData.of(tag));
+        }
+    }
+
+    /**
+     * 1.21：把方块实体数据写进掉落物的 block_entity_data 组件。
+     * <p>
+     * 1.20.1 的战利品表用 {@code minecraft:copy_nbt} 把 BE 数据搬进 {@code BlockEntityTag}，
+     * 该函数在 1.21 已被删除（BE 数据改走组件），因此在方块类的 {@code getDrops} 里直接写。
+     * 物品 tooltip 读的就是这个组件（见 {@link #getBlockEntityTag}），拆下重放不丢数据。
+     */
+    @Nonnull
+    public static List<ItemStack> withBlockEntityData(@Nonnull List<ItemStack> drops, LootParams.Builder params) {
+        BlockEntity be = params.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
+        if (be == null) {
+            return drops;
+        }
+        try {
+            HolderLookup.Provider registries = be.getLevel() == null ? RegistryAccess.EMPTY : be.getLevel().registryAccess();
+            CompoundTag tag = be.saveWithoutMetadata(registries);
+            if (tag.isEmpty()) {
+                return drops;
+            }
+            ItemStack self = new ItemStack(be.getBlockState().getBlock().asItem());
+            for (ItemStack stack : drops) {
+                if (ItemStack.isSameItem(stack, self)) {
+                    stack.set(DataComponents.BLOCK_ENTITY_DATA, CustomData.of(tag));
+                }
+            }
+        } catch (Throwable e) {
+            log.error("Tool.withBlockEntityData error", e);
+        }
+        return drops;
     }
 }

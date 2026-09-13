@@ -1,5 +1,10 @@
 package cn.sd.jrz.alltheimbaium.block;
 
+import java.util.List;
+import net.minecraft.world.level.storage.loot.LootParams;
+import cn.sd.jrz.alltheimbaium.setup.Tool;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.item.ItemStack;
 import cn.sd.jrz.alltheimbaium.entity.AutoFarmlandEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -10,6 +15,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.SaplingBlock;
 import net.minecraft.world.level.block.StemBlock;
@@ -21,9 +27,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.common.IPlantable;
-import net.minecraftforge.common.PlantType;
-import net.minecraftforge.network.NetworkHooks;
+import net.neoforged.neoforge.common.util.TriState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,9 +80,8 @@ public class AutoFarmlandBlock extends Block implements EntityBlock {
     }
 
     @SuppressWarnings("deprecation")
-    @Override
     @Nonnull
-    public InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+    private InteractionResult doUse(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         try {
             if (level.isClientSide) {
                 return InteractionResult.SUCCESS;
@@ -87,26 +90,61 @@ public class AutoFarmlandBlock extends Block implements EntityBlock {
                 return InteractionResult.PASS; // 顶面留给种植
             }
             if (level.getBlockEntity(pos) instanceof AutoFarmlandEntity entity && player instanceof ServerPlayer serverPlayer) {
-                NetworkHooks.openScreen(serverPlayer, entity, pos);
+                serverPlayer.openMenu(entity, pos);
             }
             return InteractionResult.SUCCESS;
         } catch (Throwable e) {
             log.error("AutoFarmlandBlock.use error", e);
         }
-        return super.use(state, level, pos, player, handIn, hit);
+        return InteractionResult.PASS;
+    }
+
+    /**
+     * 1.21：原版的 Block#use 拆成了空手的 useWithoutItem 与持物的 useItemOn，
+     * 这里两个都覆写并统一转到 doUse，行为与 1.20.1 保持一致。
+     */
+    @Override
+    protected @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
+        return doUse(state, level, pos, player, InteractionHand.MAIN_HAND, hit);
     }
 
     @Override
-    public boolean canSustainPlant(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull Direction facing, @Nonnull IPlantable plantable) {
+    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+        InteractionResult result = doUse(state, level, pos, player, handIn, hit);
+        if (result == InteractionResult.SUCCESS) {
+            return ItemInteractionResult.SUCCESS;
+        }
+        if (result == InteractionResult.FAIL) {
+            return ItemInteractionResult.FAIL;
+        }
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+
+    @Override
+    public TriState canSustainPlant(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos soilPos, @Nonnull Direction facing, @Nonnull BlockState plant) {
         try {
-            if (plantable instanceof SaplingBlock) {
-                return false;
+            // 禁止树苗种在耕地上：树长大时原版机制会把耕地变回普通泥土
+            if (plant.getBlock() instanceof SaplingBlock) {
+                return TriState.FALSE;
             }
-            var type = plantable.getPlantType(level, pos.relative(facing));
-            return type == PlantType.CROP || plantable.getPlant(level, pos.relative(facing)).getBlock() instanceof StemBlock;
+            // 作物与南瓜/西瓜的茎照常允许
+            if (plant.getBlock() instanceof CropBlock || plant.getBlock() instanceof StemBlock) {
+                return TriState.TRUE;
+            }
         } catch (Throwable e) {
             log.error("AutoFarmlandBlock.canSustainPlant error", e);
         }
-        return super.canSustainPlant(state, level, pos, facing, plantable);
+        // 其余交给原版判断
+        return TriState.DEFAULT;
+    }
+
+    /**
+     * 1.21：掉落时把方块实体数据写进物品的 block_entity_data 组件（替代 1.20.1 战利品表的 copy_nbt）。
+     */
+    @Override
+    @Nonnull
+    public List<ItemStack> getDrops(@Nonnull BlockState state, @Nonnull LootParams.Builder params) {
+        return Tool.withBlockEntityData(super.getDrops(state, params), params);
     }
 }

@@ -11,10 +11,10 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.util.FastColor;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.joml.Matrix4f;
 
 import javax.annotation.Nonnull;
@@ -121,7 +121,7 @@ public class LiquidFountainRenderer implements BlockEntityRenderer<LiquidFountai
 
     private void addVertex(VertexConsumer consumer, Matrix4f mat, float x, float y, float z, float u, float v,
                            float r, float g, float b, float a, int light, int overlay, float nx, float ny, float nz) {
-        consumer.vertex(mat, x, y, z).color(r, g, b, a).uv(u, v).overlayCoords(overlay).uv2(light).normal(nx, ny, nz).endVertex();
+        consumer.addVertex(mat, x, y, z).setColor(r, g, b, a).setUv(u, v).setOverlay(overlay).setLight(light).setNormal(nx, ny, nz);
     }
 
     /**

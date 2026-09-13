@@ -2,6 +2,7 @@ package cn.sd.jrz.alltheimbaium.gui;
 
 import cn.sd.jrz.alltheimbaium.item.EternalSwordItem;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
+import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
@@ -58,9 +59,9 @@ public class EternalSwordMenu extends AbstractContainerMenu {
         super(Registration.ETERNAL_SWORD_MENU.get(), id);
         this.sword = sword;
         this.player = player;
-        // 服务端从剑 NBT 加载 27 格槽位
-        if (sword != null && !sword.isEmpty()) {
-            EternalSwordItem.loadInventory(sword, swordInv);
+        // 服务端从剑的自定义数据加载 27 格槽位（客户端构造拿到的 sword 为 null，不会走到这里）
+        if (sword != null && !sword.isEmpty() && player != null) {
+            EternalSwordItem.loadInventory(sword, swordInv, player.level().registryAccess());
         }
         // 剑槽内容变化时实时保存到剑 NBT
         swordInv.addListener(new ContainerListener() {
@@ -108,7 +109,8 @@ public class EternalSwordMenu extends AbstractContainerMenu {
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (sword == null || sword.isEmpty()) return false;
-        CompoundTag tag = sword.getOrCreateTag();
+        // 组件的 tag 是副本：改完必须写回，否则后面的 saveInventory() 读到的还是旧值
+        CompoundTag tag = Tool.getCustomTagOrEmpty(sword);
         if (id == 0) {
             int mode = EternalSwordItem.getKillAll(sword);
             tag.putInt(EternalSwordItem.TAG_KILL_ALL, mode == 0 ? 1 : 0);
@@ -120,6 +122,7 @@ public class EternalSwordMenu extends AbstractContainerMenu {
         } else {
             return false;
         }
+        Tool.setCustomTag(sword, tag);
         saveInventory();
         return true;
     }
@@ -168,15 +171,16 @@ public class EternalSwordMenu extends AbstractContainerMenu {
     private boolean isSword(ItemStack stack) {
         if (stack == null || stack.isEmpty() || sword == null || sword.isEmpty()) return false;
         if (!stack.is(Registration.ETERNAL_SWORD.get())) return false;
-        return stack == sword || ItemStack.isSameItemSameTags(stack, sword);
+        return stack == sword || ItemStack.isSameItemSameComponents(stack, sword);
     }
 
     /**
      * 保存 27 格槽位到剑 NBT 并重新计算伤害与附魔
      */
     private void saveInventory() {
-        if (sword == null || sword.isEmpty()) return;
-        EternalSwordItem.saveInventory(sword, swordInv);
+        // 客户端构造没有 sword / player，直接跳过
+        if (sword == null || sword.isEmpty() || player == null) return;
+        EternalSwordItem.saveInventory(sword, swordInv, player.level().registryAccess());
     }
 
     @Override

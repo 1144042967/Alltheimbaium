@@ -15,9 +15,9 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.model.data.ModelData;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.client.model.data.ModelData;
 import org.joml.Matrix4f;
 
 import javax.annotation.Nonnull;
@@ -59,7 +59,7 @@ public class ResourceFarmRenderer implements BlockEntityRenderer<ResourceFarmEnt
     private void renderSide(ResourceFarmEntity entity, ItemStack stack, Direction face, PoseStack poseStack, MultiBufferSource buffer, int light, int overlay) {
         poseStack.pushPose();
         poseStack.translate(0.5f, 0, 0.5f);
-        poseStack.mulPoseMatrix((new Matrix4f()).rotateYXZ(SIDE_ROT_Y[face.ordinal()] * 90f * (float) Math.PI / 180f, 0, 0));
+        poseStack.mulPose((new Matrix4f()).rotateYXZ(SIDE_ROT_Y[face.ordinal()] * 90f * (float) Math.PI / 180f, 0, 0));
         poseStack.translate(-0.5f, 0, -0.5f);
         TextureAtlasSprite sprite = getSprite(entity, stack);
         if (sprite == null) {
@@ -95,6 +95,6 @@ public class ResourceFarmRenderer implements BlockEntityRenderer<ResourceFarmEnt
     }
 
     private void addVertex(VertexConsumer consumer, Matrix4f mat, float x, float y, float z, float u, float v, int light, int overlay) {
-        consumer.vertex(mat, x, y, z).color(1.0f, 1.0f, 1.0f, 1.0f).uv(u, v).overlayCoords(overlay).uv2(light).normal(0, 0, 1).endVertex();
+        consumer.addVertex(mat, x, y, z).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u, v).setOverlay(overlay).setLight(light).setNormal(0, 0, 1);
     }
 }

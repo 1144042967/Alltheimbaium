@@ -10,84 +10,90 @@ import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.item.EternalTotemItem;
 import cn.sd.jrz.alltheimbaium.item.StorageFountainItem;
 import cn.sd.jrz.alltheimbaium.recipe.PotionCombineRecipe;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
+
+import javax.annotation.Nonnull;
 
 import java.util.List;
 
 /**
- * 配置文件。使用 ForgeConfigSpec，参考 auto-resource 项目的配置模式。
+ * 配置文件。使用 ModConfigSpec，参考 auto-resource 项目的配置模式。
  * 配置类型为 SERVER（每世界可不同），在 Alltheimbaium 构造器中注册。
  * <p>
  * 监听 {@link ModConfigEvent.Loading} 事件，在 Forge 完成配置文件加载后，
  * 将配置值统一分发到各模块的静态字段中，确保运行时无需直接调用 Config.get()。
  */
-@Mod.EventBusSubscriber(modid = "alltheimbaium", bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = "alltheimbaium", bus = EventBusSubscriber.Bus.MOD)
 public class Config {
 
     // ==================== ATI 耕地 ====================
-    public static ForgeConfigSpec.IntValue FARMLAND_TICK_INTERVAL;
-    public static ForgeConfigSpec.IntValue FARMLAND_GROWTH_AMOUNT;
-    public static ForgeConfigSpec.BooleanValue FARMLAND_BONEMEAL_ENABLED;
-    public static ForgeConfigSpec.IntValue FARMLAND_BONEMEAL_INTERVAL;
+    public static ModConfigSpec.IntValue FARMLAND_TICK_INTERVAL;
+    public static ModConfigSpec.IntValue FARMLAND_GROWTH_AMOUNT;
+    public static ModConfigSpec.BooleanValue FARMLAND_BONEMEAL_ENABLED;
+    public static ModConfigSpec.IntValue FARMLAND_BONEMEAL_INTERVAL;
 
     // ==================== 时钟方块 ====================
-    public static ForgeConfigSpec.BooleanValue CLOCK_DEFAULT_ACTIVE;
+    public static ModConfigSpec.BooleanValue CLOCK_DEFAULT_ACTIVE;
 
     // ==================== 永恒图腾 ====================
-    public static ForgeConfigSpec.BooleanValue ETERNAL_TOTEM_DEFAULT_ENABLED;
+    public static ModConfigSpec.BooleanValue ETERNAL_TOTEM_DEFAULT_ENABLED;
 
     // ==================== 液体无限制造机 ====================
-    public static ForgeConfigSpec.LongValue LIQUID_FOUNTAIN_INFINITE_THRESHOLD;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> LIQUID_FOUNTAIN_AUTO_INFINITE_MODS;
+    public static ModConfigSpec.LongValue LIQUID_FOUNTAIN_INFINITE_THRESHOLD;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> LIQUID_FOUNTAIN_AUTO_INFINITE_MODS;
 
     // ==================== 混合药水合成 ====================
-    public static ForgeConfigSpec.DoubleValue POTION_COMBINE_DURATION_FACTOR;
+    public static ModConfigSpec.DoubleValue POTION_COMBINE_DURATION_FACTOR;
 
     // ==================== 存储方块制造机 ====================
-    public static ForgeConfigSpec.IntValue STORAGE_FOUNTAIN_MAX_ITEM_TYPES;
-    public static ForgeConfigSpec.LongValue STORAGE_FOUNTAIN_CARRY;
-    public static ForgeConfigSpec.IntValue STORAGE_FOUNTAIN_GROWTH_INTERVAL_SECONDS;
-    public static ForgeConfigSpec.LongValue STORAGE_FOUNTAIN_GROWTH_STEP;
-    public static ForgeConfigSpec.LongValue STORAGE_FOUNTAIN_INITIAL_OUTPUT;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_MODS;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_TAGS;
+    public static ModConfigSpec.IntValue STORAGE_FOUNTAIN_MAX_ITEM_TYPES;
+    public static ModConfigSpec.LongValue STORAGE_FOUNTAIN_CARRY;
+    public static ModConfigSpec.IntValue STORAGE_FOUNTAIN_GROWTH_INTERVAL_SECONDS;
+    public static ModConfigSpec.LongValue STORAGE_FOUNTAIN_GROWTH_STEP;
+    public static ModConfigSpec.LongValue STORAGE_FOUNTAIN_INITIAL_OUTPUT;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_MODS;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_TAGS;
     /** 物品白名单：完整注册 ID，命中则无视标签/命名空间规则直接接受 */
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_ITEMS;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> STORAGE_FOUNTAIN_ACCEPTED_ITEMS;
 
     // ==================== 生物农场 ====================
-    public static ForgeConfigSpec.IntValue MOB_FARM_LEVEL_UP_INTERVAL_SECONDS;
-    public static ForgeConfigSpec.LongValue MOB_FARM_CARRY;
-    public static ForgeConfigSpec.LongValue MOB_FARM_INITIAL_LEVEL;
-    public static ForgeConfigSpec.LongValue MOB_FARM_MAX_LEVEL;
-    public static ForgeConfigSpec.IntValue MOB_FARM_CAPTURE_RADIUS;
-    public static ForgeConfigSpec.IntValue MOB_FARM_MAX_PRODUCTS;
-    public static ForgeConfigSpec.IntValue MOB_FARM_SAMPLE_KILLS;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> MOB_FARM_SIGNATURES;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> MOB_FARM_PRODUCTS;
+    public static ModConfigSpec.IntValue MOB_FARM_LEVEL_UP_INTERVAL_SECONDS;
+    public static ModConfigSpec.LongValue MOB_FARM_CARRY;
+    public static ModConfigSpec.LongValue MOB_FARM_INITIAL_LEVEL;
+    public static ModConfigSpec.LongValue MOB_FARM_MAX_LEVEL;
+    public static ModConfigSpec.IntValue MOB_FARM_CAPTURE_RADIUS;
+    public static ModConfigSpec.IntValue MOB_FARM_MAX_PRODUCTS;
+    public static ModConfigSpec.IntValue MOB_FARM_SAMPLE_KILLS;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> MOB_FARM_SIGNATURES;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> MOB_FARM_PRODUCTS;
 
     // ==================== 生成平台 ====================
     /** 平台伪装全局开关（所有世界共用，由平台 GUI 切换并保存） */
-    public static ForgeConfigSpec.BooleanValue PLATFORM_DISGUISE_ENABLED;
+    public static ModConfigSpec.BooleanValue PLATFORM_DISGUISE_ENABLED;
     /** 已加载的 SERVER 配置实例，运行时切换伪装后用于回写保存配置文件 */
     public static ModConfig SERVER_MOD_CONFIG;
 
     // ==================== ATI 补给箱 ====================
     /** 补给箱随机物品黑名单（物品注册 ID），默认含基岩、末地传送门框架 */
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> SUPPLY_CRATE_BLACKLIST;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> SUPPLY_CRATE_BLACKLIST;
 
     // ==================== 通用资源农场 ====================
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> RESOURCE_WHITELIST;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> RESOURCE_WHITELIST;
 
     // ==================== 配置规范 ====================
-    public static ForgeConfigSpec SERVER_CONFIG;
+    /** SERVER 配置规范（NeoForge 里由主类构造器经 {@code ModContainer#registerConfig} 注册） */
+    public static ModConfigSpec SERVER_CONFIG;
+    /** 与 {@link #SERVER_CONFIG} 指向同一对象的别名，供主类按 NeoForge 惯例引用 */
+    public static ModConfigSpec SPEC;
 
     static {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
         // ---- ATI 耕地 ----
         builder.comment("ATI 耕地设置").push("farmland");
@@ -232,13 +238,27 @@ public class Config {
         builder.pop();
 
         SERVER_CONFIG = builder.build();
+        SPEC = SERVER_CONFIG;
     }
 
     /**
      * 注册配置文件。必须在 Registration.init() 之前调用。
+     * <p>
+     * 1.21：{@code ModLoadingContext.get().registerConfig(...)} 已删除，
+     * 改由主类构造器拿到的 {@link ModContainer} 注册。
      */
-    public static void init(ModLoadingContext context) {
-        context.registerConfig(ModConfig.Type.SERVER, SERVER_CONFIG);
+
+    /**
+     * 把当前 SERVER 配置写回磁盘。
+     * <p>
+     * 1.21：{@code ModConfig#save()} 已删除，改经 {@code getLoadedConfig().save()}
+     * （LoadedConfig 才是真正持有 nightconfig 文件句柄的那层）。
+     */
+    public static void saveServerConfig() {
+        ModConfig config = SERVER_MOD_CONFIG;
+        if (config != null && config.getLoadedConfig() != null) {
+            config.getLoadedConfig().save();
+        }
     }
 
     /**

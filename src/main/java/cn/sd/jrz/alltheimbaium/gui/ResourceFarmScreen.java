@@ -20,8 +20,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
@@ -39,7 +39,7 @@ import java.util.Optional;
  */
 @OnlyIn(Dist.CLIENT)
 public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/mob_farm_gui.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/mob_farm_gui.png");
 
     private static final int HELP_PAGE_LINES = 20;
     private static final int HELP_MAX_PRODUCTS_SHOWN = 8;
@@ -148,7 +148,6 @@ public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu
 
     @Override
     protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        renderBackground(guiGraphics);
         guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
         // 升级进度条
         int trackLeft = this.leftPos + PROGRESS_X;

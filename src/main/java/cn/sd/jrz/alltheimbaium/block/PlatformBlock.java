@@ -1,5 +1,6 @@
 package cn.sd.jrz.alltheimbaium.block;
 
+import net.minecraft.world.ItemInteractionResult;
 import cn.sd.jrz.alltheimbaium.gui.PlatformMenu;
 import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Config;
@@ -25,7 +26,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.network.NetworkHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,9 +97,8 @@ public class PlatformBlock extends Block {
         disguiseActive = on;
         // 持久化到配置文件（所有世界共用的全局开关）
         Config.PLATFORM_DISGUISE_ENABLED.set(on);
-        if (Config.SERVER_MOD_CONFIG != null) {
-            Config.SERVER_MOD_CONFIG.save();
-        }
+        // 1.21：ModConfig 不再有 save()，改经已加载的配置写回磁盘
+        Config.saveServerConfig();
         for (ServerLevel level : server.getAllLevels()) {
             Set<BlockPos> positions = DISGUISE_POSITIONS.get(level);
             if (positions == null || positions.isEmpty()) {
@@ -183,8 +182,7 @@ public class PlatformBlock extends Block {
     // ==================== 交互 ====================
 
     @SuppressWarnings("deprecation")
-    @Override
-    public @Nonnull InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+    private InteractionResult doUse(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         try {
             if (level.isClientSide) {
                 return InteractionResult.SUCCESS;
@@ -205,14 +203,36 @@ public class PlatformBlock extends Block {
                 // 右键（空手）：打开配置 GUI
                 MenuProvider provider = new SimpleMenuProvider((id, inv, owner) -> new PlatformMenu(id, inv, pos),
                         Component.translatable("block.alltheimbaium.platform").withStyle(Tip.rarityColor(Registration.PLATFORM_ITEM.get())));
-                NetworkHooks.openScreen(serverPlayer, provider, buf -> buf.writeBlockPos(pos));
+                serverPlayer.openMenu(provider, buf -> buf.writeBlockPos(pos));
             }
             return InteractionResult.SUCCESS;
         } catch (Throwable e) {
             log.error("PlatformBlock.use error", e);
         }
-        return super.use(state, level, pos, player, handIn, hit);
+        return InteractionResult.PASS;
     }
+
+    /**
+     * 1.21：原版的 Block#use 拆成了空手的 useWithoutItem 与持物的 useItemOn，
+     * 这里两个都覆写并统一转到 doUse，行为与 1.20.1 保持一致。
+     */
+    @Override
+    protected @Nonnull InteractionResult useWithoutItem(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hit) {
+        return doUse(state, level, pos, player, InteractionHand.MAIN_HAND, hit);
+    }
+
+    @Override
+    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+        InteractionResult result = doUse(state, level, pos, player, handIn, hit);
+        if (result == InteractionResult.SUCCESS) {
+            return ItemInteractionResult.SUCCESS;
+        }
+        if (result == InteractionResult.FAIL) {
+            return ItemInteractionResult.FAIL;
+        }
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
 
     // ==================== 生成 ====================
 

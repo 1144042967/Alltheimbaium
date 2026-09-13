@@ -16,8 +16,8 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -40,14 +40,14 @@ public class ResourceFarmItem extends BlockItem {
 
     @Override
     @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, worldIn, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, tooltip, flagIn);
         try {
             long level = MobFarmBlock.getInitialLevel();
             String marker = null;
             ListTag rows = null;
-            if (stack.hasTag()) {
-                CompoundTag tag = stack.getTagElement("BlockEntityTag");
+            CompoundTag tag = Tool.getBlockEntityTag(stack);
+                if (tag != null) {
                 if (tag != null) {
                     if (tag.contains("level", Tag.TAG_LONG)) {
                         level = Tool.suit(tag.getLong("level"));
@@ -100,7 +100,7 @@ public class ResourceFarmItem extends BlockItem {
         for (int i = 0; i < rows.size(); i++) {
             try {
                 CompoundTag c = rows.getCompound(i);
-                ItemStack rowStack = ItemStack.of(c);
+                ItemStack rowStack = ItemStack.parseOptional(Tool.registries(), c);
                 if (rowStack.isEmpty()) {
                     continue;
                 }

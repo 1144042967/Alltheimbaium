@@ -1,0 +1,49 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "extendedae"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "advanced_ae"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ae2"
+    }
+  ],
+  "type": "advanced_ae:reaction",
+  "input_energy": 200000,
+  "input_fluid": {
+    "amount": 16000,
+    "ingredient": {
+      "fluid": "minecraft:water"
+    }
+  },
+  "input_items": [
+    {
+      "amount": 64,
+      "ingredient": {
+        "item": "extendedae:concurrent_processor_print"
+      }
+    },
+    {
+      "amount": 64,
+      "ingredient": {
+        "item": "ae2:printed_silicon"
+      }
+    },
+    {
+      "amount": 64,
+      "ingredient": {
+        "tag": "c:dusts/redstone"
+      }
+    }
+  ],
+  "output": {
+    "#": 64,
+    "#t": "ae2:i",
+    "id": "extendedae:concurrent_processor"
+  }
+}

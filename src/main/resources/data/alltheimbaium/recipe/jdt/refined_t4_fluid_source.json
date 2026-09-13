@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "advanced_ae"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "justdirethings"
+    }
+  ],
+  "type": "advanced_ae:reaction",
+  "input_energy": 20000,
+  "input_fluid": {
+    "amount": 16000,
+    "ingredient": {
+      "fluid": "justdirethings:unrefined_t4_fluid_source"
+    }
+  },
+  "input_items": [
+    {
+      "amount": 1,
+      "ingredient": {
+        "item": "justdirethings:gooblock_tier4"
+      }
+    }
+  ],
+  "output": {
+    "#": 16000,
+    "#t": "ae2:f",
+    "id": "justdirethings:refined_t4_fluid_source"
+  }
+}
