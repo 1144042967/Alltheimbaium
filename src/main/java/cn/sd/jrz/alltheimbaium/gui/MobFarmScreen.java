@@ -317,9 +317,6 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
      */
     private void renderHelpCardA(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int count = this.menu.markerCount();
-        if (count <= 0) {
-            return;
-        }
         int pages = totalPages(count, HELP_PAGE_PAIRS);
         int from = Math.min(this.helpPageA * HELP_PAGE_PAIRS, count);
         int to = Math.min(count, from + HELP_PAGE_PAIRS);
@@ -343,6 +340,8 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         }
         int n = itemC.size();
         if (n == 0) {
+            // 整表为空、或本页条目全部失效（id 变 AIR）时给空态提示，而不是一片空白
+            renderEmptyCard(guiGraphics, mouseX, mouseY, "screen.alltheimbaium.mob_farm.help.header");
             return;
         }
         // 条目按顺序 2 个一组：每行第 0、2、4… 个在左栏，第 1、3、5… 个在右栏
@@ -418,9 +417,6 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
      */
     private void renderHelpCardB(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int total = this.menu.productRowCount();
-        if (total <= 0) {
-            return;
-        }
         int pages = totalPages(total, HELP_PAGE_LINES);
         int from = Math.min(this.helpPageB * HELP_PAGE_LINES, total);
         int to = Math.min(total, from + HELP_PAGE_LINES);
@@ -443,6 +439,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         }
         int rows = bios.size();
         if (rows == 0) {
+            renderEmptyCard(guiGraphics, mouseX, mouseY, "screen.alltheimbaium.mob_farm.help2.header");
             return;
         }
         int maxBioW = 0;
@@ -489,31 +486,58 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     /** 组装某行的产物文本：前 HELP_MAX_PRODUCTS_SHOWN 个产物名 顿号连接，超出加 "…等 N 项" */
     private Component buildProductText(int row) {
         int itemCount = this.menu.productRowItemCount(row);
+        // 先把有效项收集出来：id 失效（AIR）的条目不参与展示也不计入"…等 N 项"，
+        // 否则会显示"还有 3 项"但实际一项都看不到
+        List<Item> valid = new ArrayList<>();
+        for (int k = 0; k < itemCount; k++) {
+            Item item = this.menu.productRowItem(row, k);
+            if (item != null && item != Items.AIR) {
+                valid.add(item);
+            }
+        }
         MutableComponent text = Component.literal("");
         boolean first = true;
-        int shown = Math.min(itemCount, HELP_MAX_PRODUCTS_SHOWN);
+        int shown = Math.min(valid.size(), HELP_MAX_PRODUCTS_SHOWN);
         for (int k = 0; k < shown; k++) {
-            Item item = this.menu.productRowItem(row, k);
-            if (item == null || item == Items.AIR) {
-                continue;
-            }
             if (!first) {
                 text.append(Component.literal("、").withStyle(ChatFormatting.GRAY));
             }
-            text.append(new ItemStack(item).getHoverName().copy().withStyle(ChatFormatting.WHITE));
+            text.append(new ItemStack(valid.get(k)).getHoverName().copy().withStyle(ChatFormatting.WHITE));
             first = false;
         }
-        if (itemCount > shown) {
+        if (valid.size() > shown) {
             if (!first) {
                 text.append(Component.literal("、").withStyle(ChatFormatting.GRAY));
             }
             text.append(Component.translatable("screen.alltheimbaium.mob_farm.help2.more",
-                    itemCount - shown).withStyle(ChatFormatting.GRAY));
+                    valid.size() - shown).withStyle(ChatFormatting.GRAY));
         }
         if (first) {
             text.append(Component.literal("-").withStyle(ChatFormatting.GRAY));
         }
         return text;
+    }
+
+    /**
+     * 空态卡片：帮助数据为空（白名单为空、或动态标记表构建失败）时给一句提示。
+     * 以前这种情况直接不画卡片，玩家 hover "?" 什么都没有，和"这台机器没有帮助"无法区分。
+     */
+    private void renderEmptyCard(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, @Nonnull String headerKey) {
+        int hpad = 4;
+        int vpad = 4;
+        int lineH = this.font.lineHeight + 1;
+        Component header = Component.translatable(headerKey).withStyle(ChatFormatting.GRAY);
+        Component empty = Component.translatable("screen.alltheimbaium.mob_farm.help.empty").withStyle(ChatFormatting.GRAY);
+        int boxW = Math.max(this.font.width(header), this.font.width(empty)) + hpad * 2;
+        int boxH = vpad * 2 + lineH * 2;
+        int bx = cardX(mouseX, boxW);
+        int by = cardY(mouseY, boxH);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
+        guiGraphics.drawString(this.font, header, bx + hpad, by + vpad, 0xFFFFFF, true);
+        guiGraphics.drawString(this.font, empty, bx + hpad, by + vpad + lineH, 0xFFFFFF, true);
+        guiGraphics.pose().popPose();
     }
 
     /** 找到鼠标悬浮的槽位（在渲染 tooltip 时机，容器内部 hoveredSlot 不可靠，自行用 isHovering 判断） */

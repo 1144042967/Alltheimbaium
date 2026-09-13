@@ -71,6 +71,12 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
     public static final int MAX_ENERGY = 2_000_000_000;
     /** 每熔炼一个物品消耗的 FE */
     public static final int ENERGY_PER_SMELT = 1000;
+    /**
+     * 查表优先级：熔炉 → 高炉 → 烟熏（同一种原料只取最先命中的那一条）。
+     * 机器与 JEI 都读这一份，保证两边展示与结算的顺序一致。
+     */
+    public static final List<RecipeType<? extends AbstractCookingRecipe>> FURNACE_TYPES =
+            List.of(RecipeType.SMELTING, RecipeType.BLASTING, RecipeType.SMOKING);
     /** 输入 / 输出区各可容纳的最大物品种类数（"槽位数"） */
     public static final int MAX_TYPES = 18;
 
@@ -333,8 +339,7 @@ public class InstantFurnaceEntity extends BlockEntity implements ICapabilityProv
         try {
             RecipeManager recipeManager = level.getRecipeManager();
             ItemStack single = new ItemStack(item, 1);
-            for (RecipeType<? extends AbstractCookingRecipe> type : List.of(
-                    RecipeType.SMELTING, RecipeType.BLASTING, RecipeType.SMOKING)) {
+            for (RecipeType<? extends AbstractCookingRecipe> type : FURNACE_TYPES) {
                 for (AbstractCookingRecipe recipe : recipeManager.getAllRecipesFor(type)) {
                     for (Ingredient ingredient : recipe.getIngredients()) {
                         if (ingredient.test(single)) {

@@ -615,6 +615,42 @@ src/main/java/cn/sd/jrz/alltheimbaium/
   - 目录名是**本模组自己的联动分类**，与配方实际涉及的 MOD **不是一一对应**：例如 `thermal/` 里放的多是"用热力机器做的血魔法物品"、`ae2/` 里混了 `advanced_ae` 与 `megacells`。要查某条配方到底需要装什么，看总表里逐条列出的「前置」而非目录名
   - 生效条件有两个来源，脚本两处都认：`forge:conditional` 外层条目的 `conditions`，以及直接写在配方对象上的顶层 `conditions`（Forge 会对每条配方调 `processConditions`）
 
+## JEI 联动（可选）
+
+JEI 是**可选**联动，不能变成硬依赖：`build.gradle` 只声明编译期的 `jei-<mc>-common-api` 与 `jei-<mc>-forge-api`（`common-api` 才是 API 本体，`forge-api` 只有 `ForgeTypes` 一个壳），**不打包、不进运行时**。插件类 `compat/jei/AtiJeiPlugin`（`@JeiPlugin`）只会被 JEI 自己加载，没装 JEI 的整合包里本模组照常运行。
+
+- **样式**：两种版面（`MarkerRecipeCategory` / `ProcessingRecipeCategory`）都用 `JeiLayout` 参数化，**不画自己的 JEI 贴图**，但**必须显式覆写 `getBackground()` 返回一个 `createBlankDrawable(width, height)`**（配 `@SuppressWarnings("removal")`）。理由：该方法虽然自 15.20 起标记待删除，老版本却仍靠它确定配方卡片的范围——不覆写时 15.20 画出的底衬会**小于实际布局**（实测第 3 行产物与说明文字全落在底衬外面）。箭头用 `addRecipeArrow()`（两端都在）。
+- **各机器的版面**（`AtiJeiPlugin` 顶部常量，改版面只动这几个常量）：
+
+  | 机器 | 输入列 | 产物网格 | 底部说明 |
+  |---|---|---|---|
+  | 资源农场 | 1（标记物） | 4×4 | 无 |
+  | 生物农场 | 2（特征物 + 刷怪蛋） | 5×5 | 居中一行"收容物：XXX" |
+  | 存储方块制造机 | 0（只列物品） | 8×6 分页 | 居中两行：先"共 K 个可复制物品"，再"第 N/M 页" |
+  | 零刻熔炉 | 1 | 1×1 | 无 |
+  | 零刻压印器 · 压板 | 1（竖排居中） | 3×3 | 无 |
+  | 零刻压印器 · 组装 | 1~3（**横排**） | 1×1 | 无 |
+
+  - 压印器的压板 / 组装**是两个独立的 JEI 类别**（`JeiRecipeTypes.INSCRIBER_PRESS` / `INSCRIBER_ASSEMBLY`），各自只收自己那批配方，类别标题用 `jei.alltheimbaium.inscriber.press` / `.assembly`；机器物品同时挂两个类别的催化。
+  - `ProcessingRecipeCategory` 的最后一个构造参数是 **`horizontalInputs`（输入横排）**：竖排适合"1 原料 → 1 产物"（熔炉），横排适合"多原料 → 少产物"（组装模式）。组装模式横排后卡片从 78×66 变成 114×30，**高度减半，一页能多放好几条配方**；横排时输入占不满就在右边留空，箭头位置固定不动。标记物类（`MarkerRecipeCategory`）没有这个开关——农场的输入永远是竖排一列。
+  - **输入格只画实际有的，并整组上下居中**（压印器 1/2/3 个输入都居中，1 个时正好在中间）。`inputSlots` 只用来算卡片尺寸，不决定画几个槽。
+  - **产物格始终整片画出**：`cols × rows` 个槽位全部建出来，有产物的填物品、没产物的只画空槽背景（JEI 的 `RecipeSlot.draw` 会无条件画背景），按自然顺序（左→右、上→下）排列——不做短行居中，也不需要"还有 N 项"这类描述。网格比输入列矮时（组装模式只有 1 个产物）整片网格会在卡片高度里垂直居中。
+  - 产物格数就是机器实际的上限：压印器 3×3=9（超出也产不出来）；资源农场 4×4=16 正好覆盖默认数据的最大值；生物农场 4×4=16 装不下 18 项的生物时多出的不显示（只记一条 info 日志）。
+  - `inputSlots = 0` 时**不画输入列也不画箭头**，产物网格直接贴左边（存储方块制造机）。
+  - 零刻熔炉的卡片只有 78×30（无文字），而 JEI 配方页宽度固定不小于 198，所以**一页会自动排成两栏小卡片**。
+  - 说明文字是 `List<Component>`（每个元素一行），逐条按像素宽折行、总行数不超过 2；`hasNote=false` 的版面连这两行的空间都不留。
+  - 数据侧实测（默认白名单）：资源农场 33 条 / 生物农场 79 条 / 存储方块制造机 81 件（按 8×6 分页即 2 页）；生物农场无刷怪蛋的 0 条（第二输入格不会空）。
+- **说明文字绝对不能用 `extras.addText(...)`**：`addText(List, int, int)` 这个签名在 **15.20 里后两个参数是"最大宽 / 最大高"、在 15.59 里是"x / y 坐标"**——同一签名含义相反，按任一版本写都会在另一版本上画成乱码（实测传 (4, 62) 被 15.20 当成"4px 宽的文字区"，逐字折行后截断成一团）。文字一律在 {@code IRecipeCategory#draw(...)} 里用 `guiGraphics.drawString` 自己画：`draw` 的签名（`T, IRecipeSlotsView, GuiGraphics, double, double`）在 15.20~15.59 之间是稳定的。
+- **输入槽与产物格一律用 `setStandardSlotBackground()`，不要用 `setOutputSlotBackground()`**：JEI 的槽位贴图尺寸不同——`slot.png` 是 **18×18**、`output_slot.png` 是 **26×26**（原版工作台产物槽那套）。用输出槽背景时槽位会比 18px 的网格间距大 8px，产物格互相重叠并整体超出卡片范围（实测截图里第 3 行产物跑到卡片外）。`addOutputSlot` 已经声明了"这是产物"的角色，背景用哪个不影响配方转移等语义。
+- **编译基线取"要支持的最老 JEI 版本"，`jei_version` 不要随手升**：JEI 的 api 一路在加方法（`addRecipeArrowWidget()` 是 15.56 才有的），**按新版本编译出来的 jar 装进老版本 JEI 就是 `NoSuchMethodError`**——实测过一次：按 15.59 编译、玩家的整合包装的是 15.20.0.112，结果 JEI 每渲染一条配方就报一次错，整个配方页变成报错界面。当前基线 `15.20.0.112`，本项目用到的 16 个 JEI 成员已核对在 **15.20.0.112 与 15.59.0.210 两端都存在**；换 `jei_version` 前要重新跑这个双向核对。（`addRecipeArrow()` 在 15.59 里虽已 `forRemoval` 但仍在，所以选它恰好跨得住两端；等 15.x 真的删掉它，再换成 `addRecipeArrowWidget()` 并同时抬高基线。）
+- **`createRecipeExtras` 与 `setRecipe` 里的任何失败都要自己吞掉**：那里抛出的异常会被 JEI 记账成"该配方渲染失败"，把整张配方页换成报错界面并逐条刷 ERROR 日志。附加的箭头 / 说明文字尤其要包 try-catch，坏了只丢点缀，别让整页不可用。
+  - `MarkerRecipeCategory`：标记物 → 产物（资源农场 / 生物农场），左一输入格 + 箭头 + 4×3 产物格，底部 1~2 行说明；产物格可带悬浮说明（资源农场把权重折算成速率挂上去）
+  - `ProcessingRecipeCategory`：输入 → 产物 + 耗能（零刻熔炉 1 格输入、零刻压印器 3 格对应上/中/下），底部固定写明 `耗能 N FE/件` 与配方模式；输入按**槽位下标**给，空栈不画槽——压板模式只填中间那格，一眼能看出"只有中间被消耗"
+- **数据来源**：JEI 跑在**客户端**。白名单类数据能读到，是因为 Forge 会把 `ModConfig.Type.SERVER` 同步给客户端（`net.minecraftforge.network.ConfigSync`）；而 `KillLootEstimator` 需要 `ServerLevel`，客户端拿不到——所以生物农场只展示**白名单产物 + 刷怪蛋兜底**，白名单之外、只有击杀采样结果的生物不会出现在 JEI 里（这是设计取舍，不是 bug）。熔炉 / 压印器读客户端 `RecipeManager`，与配方书、`?` 卡片同源。
+- 每个分类的数据收集都单独 try-catch（`AtiJeiPlugin.safe`）：解析失败只让那张卡空着，绝不让 JEI 崩在配方页上。
+- 产物格数是**分类级常量**（`getWidth/getHeight` 不能按配方变化），放不下的用 `jei.alltheimbaium.more` 提示，并把玩家引到机器 GUI 的 `?` 卡片看完整清单。
+- 实测（默认白名单）：资源农场 33 条、生物农场 79 条配方。
+
 ## 依赖
 
 - **Forge** 1.20.1-47.2.20 (唯一硬依赖)
@@ -652,5 +688,8 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - **可选依赖（AE2 / Mekanism / AutoResource / 创造标签）的存在性判定只能靠注册名或 `ModList.get().isLoaded`**，不能写成 `instanceof`（那需要编译期依赖）；反射调用一律包 `catch (Throwable)` 并判 `null` 后静默禁用。
 - **动态查配方/查表的循环里，每一条都要独立判空并 `continue`**（产物 `isEmpty()`、`Ingredient` 为空、`getResultItem` 为空），不能只判外层——一条坏配方把材料吞掉比直接报错更难查。参考 `SmeltingCraftRecipe.findFurnaceResult` 与 `InstantFurnaceEntity` 的空产物哨兵。
 - DataSlot 与"物品注册 id"：见上文「GUI 规范」的 16 位说明，动态解析出来的 id 不要直接塞进单槽。
+- **`?` 帮助表经开屏包下发时，编码端与解码端必须共用同一组容量常量**：解码端单方面截断会让后续字段整体错位（多出来的产物 id 被当成下一行的标记物读，之后每行都串位），残留数据甚至会被当成下一个字段的长度读。资源农场用 `ResourceFarmMenu.HELP_MAX_*`、生物农场用 `MobFarmMenu.HELP_MAX_*`，编码端裁剪并打 warn。新增任何"服务端编码、客户端解码"的开屏数据都要照这个来。
+- **帮助卡必须有空态文案**：数据为空（白名单为空、缓存构建失败、数据没下发）时要画一句提示，否则玩家 hover `?` 什么都没看到，和"这台机器没有帮助"无法区分。参考 `InstantInscriberScreen.renderEmptyCard` 与两个农场的 `renderEmptyCard`。
+- **显示计数要按"有效条目"算**：帮助卡里的"…等 N 项"必须只统计真正解析出物品的条目（id 失效返回 AIR 的要排除），否则会出现"还有 3 项"却一项都看不到。
 - **解析出来的缓存必须能被丢弃**：`MobFarmWhitelist` / `ResourceData` / `KillLootEstimator` / `MobFarmMarkerIndex` 各有一个 `invalidate()`，由 `Config.applyServerConfig` 在**配置加载与重载**时统一调用。SERVER 配置是每个存档一份，所以单机换存档也会走到这里——不失效的话新存档会继续沿用上一个存档的白名单。新增任何"按配置算一次就缓存"的表，都要挂进这个失效链。
 - **失败不要写进缓存**：`KillLootEstimator` 的采样抛异常时返回 `null` 并**不缓存**（只有"确实没有掉落"的空表才缓存），否则一次瞬时失败会让该生物在整个 JVM 生命周期内没有产物。用 `computeIfAbsent` 时尤其要留意这一点。

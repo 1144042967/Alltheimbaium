@@ -261,6 +261,9 @@ public final class ResourceData {
             markerToResource = null;
             entries = null;
             helpRows = null;
+            // productsById 也要清：它是"资源 id → 产物"的正表，留着旧表会让 productsForId 在新一轮
+            // 构建完成之前返回上一个存档的结果（build() 里是整体重建，不清就等于跨存档泄漏）
+            productsById = new LinkedHashMap<>();
         }
     }
 

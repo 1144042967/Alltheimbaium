@@ -44,6 +44,14 @@ public class ResourceFarmMenu extends AbstractContainerMenu {
     public static final int SLOT_PRODUCT_BASE = 1;
     public static final int SLOT_PLAYER_BASE = 28;
 
+    // ==================== 帮助表（开屏包）容量 ====================
+    // **编码端（ResourceFarmBlock）与解码端必须用同一组常量**：解码端单方面截断会让后续字段整体错位
+    // ——多出来的产物 id 会被当成下一行的标记物读，之后每一行都串位。
+    /** 帮助表最多下发的资源行数（含自动扫描出的每个树苗一棵树，整合包里可能上千） */
+    public static final int HELP_MAX_ROWS = 2048;
+    /** 每个资源最多下发的产物个数 */
+    public static final int HELP_MAX_PRODUCTS_PER_ROW = 512;
+
     public final ResourceFarmEntity entity;
 
     /** "标记→产物" 帮助行：每行 {markerId, itemId…} */
@@ -200,11 +208,11 @@ public class ResourceFarmMenu extends AbstractContainerMenu {
 
     private static int[][] readHelpRows(FriendlyByteBuf data) {
         try {
-            int rows = Math.max(0, Math.min(data.readVarInt(), 512));
+            int rows = Math.max(0, Math.min(data.readVarInt(), HELP_MAX_ROWS));
             int[][] out = new int[rows][];
             for (int r = 0; r < rows; r++) {
                 int markerId = data.readVarInt();
-                int count = Math.max(0, Math.min(data.readVarInt(), 256));
+                int count = Math.max(0, Math.min(data.readVarInt(), HELP_MAX_PRODUCTS_PER_ROW));
                 int[] row = new int[count + 1];
                 row[0] = markerId;
                 for (int i = 0; i < count; i++) {

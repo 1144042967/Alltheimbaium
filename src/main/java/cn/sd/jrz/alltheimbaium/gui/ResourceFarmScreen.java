@@ -255,6 +255,8 @@ public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu
     private void renderHelpCard(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int total = this.menu.helpRowCount();
         if (total <= 0) {
+            // 帮助表为空（白名单为空 / 构建失败 / 数据没下发）时给一句提示，而不是一片空白
+            renderEmptyCard(guiGraphics, mouseX, mouseY);
             return;
         }
         int pages = totalPages(total, HELP_PAGE_LINES);
@@ -278,6 +280,8 @@ public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu
         }
         int rows = markNames.size();
         if (rows == 0) {
+            // 本页条目的标记物 id 全部失效时同样给空态提示
+            renderEmptyCard(guiGraphics, mouseX, mouseY);
             return;
         }
         int maxMark = 0, maxProd = 0;
@@ -308,11 +312,7 @@ public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu
         by = Math.max(2, by);
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
-        guiGraphics.fill(bx - 1, by - 1, bx + boxW + 1, by, 0xFF000000);
-        guiGraphics.fill(bx - 1, by + boxH, bx + boxW + 1, by + boxH + 1, 0xFF000000);
-        guiGraphics.fill(bx - 1, by, bx, by + boxH, 0xFF000000);
-        guiGraphics.fill(bx + boxW, by, bx + boxW + 1, by + boxH, 0xFF000000);
-        guiGraphics.fill(bx, by, bx + boxW, by + boxH, 0xF0100010);
+        drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
         int contentLeft = bx + hpad;
         int y = by + vpad;
         guiGraphics.drawString(this.font, header, contentLeft, y, 0xFFFFFF, true);
@@ -329,31 +329,75 @@ public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu
 
     private Component buildProductText(int row) {
         int count = this.menu.helpRowItemCount(row);
+        // 先把有效项收集出来：id 失效（AIR）的条目不参与展示也不计入"…等 N 项"，
+        // 否则会显示"还有 3 项"但实际一项都看不到
+        List<Item> valid = new ArrayList<>();
+        for (int k = 0; k < count; k++) {
+            Item item = this.menu.helpRowItem(row, k);
+            if (item != null && item != Items.AIR) {
+                valid.add(item);
+            }
+        }
         MutableComponent text = Component.literal("");
         boolean first = true;
-        int shown = Math.min(count, HELP_MAX_PRODUCTS_SHOWN);
+        int shown = Math.min(valid.size(), HELP_MAX_PRODUCTS_SHOWN);
         for (int k = 0; k < shown; k++) {
-            Item item = this.menu.helpRowItem(row, k);
-            if (item == null || item == Items.AIR) {
-                continue;
-            }
             if (!first) {
                 text.append(Component.literal("、").withStyle(ChatFormatting.GRAY));
             }
-            text.append(new ItemStack(item).getHoverName().copy().withStyle(ChatFormatting.WHITE));
+            text.append(new ItemStack(valid.get(k)).getHoverName().copy().withStyle(ChatFormatting.WHITE));
             first = false;
         }
-        if (count > shown) {
+        if (valid.size() > shown) {
             if (!first) {
                 text.append(Component.literal("、").withStyle(ChatFormatting.GRAY));
             }
             text.append(Component.translatable("screen.alltheimbaium.resource_farm.help.more",
-                    count - shown).withStyle(ChatFormatting.GRAY));
+                    valid.size() - shown).withStyle(ChatFormatting.GRAY));
         }
         if (first) {
             text.append(Component.literal("-").withStyle(ChatFormatting.GRAY));
         }
         return text;
+    }
+
+    /**
+     * 空态卡片：帮助数据为空（白名单为空、或构建失败）时给一句提示。
+     * 以前这种情况直接不画卡片，玩家 hover "?" 什么都没有，和"这台机器没有帮助"无法区分。
+     */
+    private void renderEmptyCard(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int hpad = 4;
+        int vpad = 4;
+        int lineH = this.font.lineHeight + 1;
+        Component header = Component.translatable("screen.alltheimbaium.resource_farm.help.header").withStyle(ChatFormatting.GRAY);
+        Component empty = Component.translatable("screen.alltheimbaium.resource_farm.help.empty").withStyle(ChatFormatting.GRAY);
+        int boxW = Math.max(this.font.width(header), this.font.width(empty)) + hpad * 2;
+        int boxH = vpad * 2 + lineH * 2;
+        int bx = mouseX + 8;
+        if (bx + boxW > this.width) {
+            bx = mouseX - 8 - boxW;
+        }
+        bx = Math.max(2, bx);
+        int by = mouseY + 8;
+        if (by + boxH > this.height) {
+            by = mouseY - 8 - boxH;
+        }
+        by = Math.max(2, by);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
+        guiGraphics.drawString(this.font, header, bx + hpad, by + vpad, 0xFFFFFF, true);
+        guiGraphics.drawString(this.font, empty, bx + hpad, by + vpad + lineH, 0xFFFFFF, true);
+        guiGraphics.pose().popPose();
+    }
+
+    /** 半透明卡片底板：黑色 1px 边框 + 半透明底（与其它界面的帮助卡同款） */
+    private void drawHelpPanel(@Nonnull GuiGraphics guiGraphics, int bx, int by, int boxW, int boxH) {
+        guiGraphics.fill(bx - 1, by - 1, bx + boxW + 1, by, 0xFF000000);
+        guiGraphics.fill(bx - 1, by + boxH, bx + boxW + 1, by + boxH + 1, 0xFF000000);
+        guiGraphics.fill(bx - 1, by, bx, by + boxH, 0xFF000000);
+        guiGraphics.fill(bx + boxW, by, bx + boxW + 1, by + boxH, 0xFF000000);
+        guiGraphics.fill(bx, by, bx + boxW, by + boxH, 0xF0100010);
     }
 
     @Nullable

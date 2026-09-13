@@ -47,6 +47,17 @@ public class MobFarmMenu extends AbstractContainerMenu {
     public static final int SLOT_PRODUCT_BASE = 1;               // 1~27
     public static final int SLOT_PLAYER_BASE = 28;               // 28~63
 
+    // ==================== 帮助表（开屏包）容量 ====================
+    // **编码端（MobFarmMarkerIndex.writeToBuf）与解码端必须用同一组常量**。此前编码端不封顶、
+    // 解码端单方面截断：超限时没读完的标记对残留会被紧接着当成"产物行数"读，
+    // 轻则 B 卡整页错位（未知实体 id 被 Forge 回退成猪），重则缓冲越界、B 卡全空。
+    /** 标记对最多下发的 int 个数（每 2 个 int 为一条 物品→生物 映射） */
+    public static final int HELP_MAX_MARKER_INTS = 8192;
+    /** 产物行最多下发的行数 */
+    public static final int HELP_MAX_ROWS = 2048;
+    /** 每行最多下发的产物个数 */
+    public static final int HELP_MAX_PRODUCTS_PER_ROW = 512;
+
     public final MobFarmEntity entity;
 
     // 开屏 extraData 带来的数据（客户端用 "?" 帮助；服务端为空）
@@ -204,7 +215,8 @@ public class MobFarmMenu extends AbstractContainerMenu {
     /** 第 i 条标记物物品（越界返回 null） */
     @Nullable
     public Item markerItem(int index) {
-        if (index < 0 || index * 2 + 1 > markerPairs.length) {
+        // 需要 index*2 与 index*2+1 两个下标都合法，所以判 >= 而不是 >
+        if (index < 0 || index * 2 + 1 >= markerPairs.length) {
             return null;
         }
         //noinspection deprecation
@@ -214,7 +226,7 @@ public class MobFarmMenu extends AbstractContainerMenu {
     /** 第 i 条对应的收容生物类型（越界返回 null） */
     @Nullable
     public EntityType<?> markerType(int index) {
-        if (index < 0 || index * 2 + 1 > markerPairs.length) {
+        if (index < 0 || index * 2 + 1 >= markerPairs.length) {
             return null;
         }
         //noinspection deprecation
@@ -259,7 +271,7 @@ public class MobFarmMenu extends AbstractContainerMenu {
     /** 读取开屏 extraData 中的标记对；读损坏回退空数组 */
     private static int[] readMarkerPairs(FriendlyByteBuf data) {
         try {
-            int count = Math.max(0, Math.min(data.readVarInt(), 4096));
+            int count = Math.max(0, Math.min(data.readVarInt(), HELP_MAX_MARKER_INTS));
             int[] arr = new int[count];
             for (int i = 0; i < count; i++) {
                 arr[i] = data.readVarInt();
@@ -273,11 +285,11 @@ public class MobFarmMenu extends AbstractContainerMenu {
     /** 读取开屏 extraData 中的产物行（先行数，每行 typeId + 物品数 + 物品id…）；读损坏回退空数组 */
     private static int[][] readProductRows(FriendlyByteBuf data) {
         try {
-            int rows = Math.max(0, Math.min(data.readVarInt(), 512));
+            int rows = Math.max(0, Math.min(data.readVarInt(), HELP_MAX_ROWS));
             int[][] out = new int[rows][];
             for (int r = 0; r < rows; r++) {
                 int typeId = data.readVarInt();
-                int count = Math.max(0, Math.min(data.readVarInt(), 256));
+                int count = Math.max(0, Math.min(data.readVarInt(), HELP_MAX_PRODUCTS_PER_ROW));
                 int[] row = new int[count + 1];
                 row[0] = typeId;
                 for (int i = 0; i < count; i++) {

@@ -1,5 +1,6 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
+import cn.sd.jrz.alltheimbaium.gui.MobFarmMenu;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
@@ -79,19 +80,36 @@ public final class MobFarmMarkerIndex {
         return rows == null ? new int[0][] : rows;
     }
 
-    /** 把标记对 + 产物行编码进开屏 extraData（先 pairs，再 rows） */
+    /**
+     * 把标记对 + 产物行编码进开屏 extraData（先 pairs，再 rows）。
+     * <p>
+     * 这里是**编码端，必须按 {@link MobFarmMenu#HELP_MAX_*} 裁剪**：解码端按同一组常量截断，
+     * 若这边多写，没读完的残留值会被当成"产物行数"读，串位甚至越界。
+     */
     public static void writeToBuf(@Nonnull FriendlyByteBuf buf, @Nonnull ServerLevel level) {
         int[] pairs = pairs(level);
-        buf.writeVarInt(pairs.length);
-        for (int v : pairs) {
-            buf.writeVarInt(v);
+        int pairInts = Math.min(pairs.length, MobFarmMenu.HELP_MAX_MARKER_INTS);
+        if (pairInts < pairs.length) {
+            log.warn("生物农场帮助表标记对 {} 个 int 超过上限 {}，多出的不会下发给客户端",
+                    pairs.length, MobFarmMenu.HELP_MAX_MARKER_INTS);
+        }
+        buf.writeVarInt(pairInts);
+        for (int i = 0; i < pairInts; i++) {
+            buf.writeVarInt(pairs[i]);
         }
         int[][] rows = productRows(level);
-        buf.writeVarInt(rows.length);
-        for (int[] row : rows) {
+        int rowCount = Math.min(rows.length, MobFarmMenu.HELP_MAX_ROWS);
+        if (rowCount < rows.length) {
+            log.warn("生物农场帮助表 {} 行超过上限 {}，多出的不会下发给客户端",
+                    rows.length, MobFarmMenu.HELP_MAX_ROWS);
+        }
+        buf.writeVarInt(rowCount);
+        for (int r = 0; r < rowCount; r++) {
+            int[] row = rows[r];
+            int productCount = Math.min(row.length - 1, MobFarmMenu.HELP_MAX_PRODUCTS_PER_ROW);
             buf.writeVarInt(row[0]);            // 生物 typeId
-            buf.writeVarInt(row.length - 1);    // 物品个数
-            for (int i = 1; i < row.length; i++) {
+            buf.writeVarInt(productCount);      // 物品个数
+            for (int i = 1; i <= productCount; i++) {
                 buf.writeVarInt(row[i]);        // 物品 itemId
             }
         }

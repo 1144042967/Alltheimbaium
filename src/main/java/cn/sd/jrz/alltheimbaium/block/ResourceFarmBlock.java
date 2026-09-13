@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.entity.ResourceFarmEntity;
+import cn.sd.jrz.alltheimbaium.gui.ResourceFarmMenu;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.ResourceData;
 import net.minecraft.core.BlockPos;
@@ -65,15 +66,23 @@ public class ResourceFarmBlock extends Block implements EntityBlock {
                 return InteractionResult.FAIL;
             }
             if (player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel) {
-                // 随开屏 extraData 下发"标记→产物"帮助行供 GUI 展示
+                // 随开屏 extraData 下发"标记→产物"帮助行供 GUI 展示。
+                // 裁剪用的是解码端同一组常量（见 ResourceFarmMenu.HELP_MAX_*），两端必须一致。
                 NetworkHooks.openScreen(serverPlayer, machine, buf -> {
                     buf.writeBlockPos(pos);
                     int[][] rows = ResourceData.helpRows();
-                    buf.writeVarInt(rows.length);
-                    for (int[] row : rows) {
+                    int rowCount = Math.min(rows.length, ResourceFarmMenu.HELP_MAX_ROWS);
+                    if (rowCount < rows.length) {
+                        log.warn("资源农场帮助表 {} 行超过上限 {}，多出的 {} 行不会下发给客户端",
+                                rows.length, ResourceFarmMenu.HELP_MAX_ROWS, rows.length - rowCount);
+                    }
+                    buf.writeVarInt(rowCount);
+                    for (int r = 0; r < rowCount; r++) {
+                        int[] row = rows[r];
+                        int productCount = Math.min(row.length - 1, ResourceFarmMenu.HELP_MAX_PRODUCTS_PER_ROW);
                         buf.writeVarInt(row[0]);            // 标记物 itemId
-                        buf.writeVarInt(row.length - 1);    // 产物个数
-                        for (int i = 1; i < row.length; i++) {
+                        buf.writeVarInt(productCount);      // 产物个数
+                        for (int i = 1; i <= productCount; i++) {
                             buf.writeVarInt(row[i]);
                         }
                     }

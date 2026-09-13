@@ -42,9 +42,20 @@ minecraft {
     }
 }
 repositories {
+    // JEI 的 maven（仅编译期用到 API，运行期 JEI 是可选的）
+    maven {
+        name = "JEI"
+        url = "https://maven.blamejared.com"
+    }
 }
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    // JEI 是**可选**联动：只用编译期的 api 制品，不打进 jar、也不进运行时依赖，
+    // 因此没装 JEI 的整合包里本模组照常运行（插件类只会被 JEI 自己加载）。
+    // common-api 才是 API 类本体，forge-api 只有 ForgeTypes 那一个壳，两个都要声明。
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}")
 }
 tasks.named('processResources', ProcessResources).configure {
     var replaceProperties = [
