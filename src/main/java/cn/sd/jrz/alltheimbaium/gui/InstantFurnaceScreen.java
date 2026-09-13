@@ -35,12 +35,12 @@ import java.util.Optional;
 public class InstantFurnaceScreen extends AbstractContainerScreen<InstantFurnaceMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation("alltheimbaium", "textures/gui/instant_furnace_gui.png");
 
-    // FE 能量条（代码绘制）
+    // FE 能量条：贴图已经画好凹陷槽位（内嵌区域 x 8~167、y 16~22，共 160×7），
+    // 代码只负责在槽位内填色块，不画边框也不画底槽
     private static final int ENERGY_X = 8;
     private static final int ENERGY_Y = 16;
     private static final int ENERGY_W = 160;
-    private static final int ENERGY_H = 6;
-    private static final int ENERGY_TRACK_COLOR = 0xFF373737;
+    private static final int ENERGY_H = 7;
     private static final int ENERGY_FILL_COLOR = 0xFFFF8000;
 
     // 控制区（贴图中部留白带 y61~81）：六面开关（16 方块）+ 交换按钮
@@ -163,16 +163,15 @@ public class InstantFurnaceScreen extends AbstractContainerScreen<InstantFurnace
     protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         renderBackground(guiGraphics);
         guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
-        // FE 能量条
-        int trackLeft = this.leftPos + ENERGY_X;
-        int trackTop = this.topPos + ENERGY_Y;
-        guiGraphics.fill(trackLeft, trackTop, trackLeft + ENERGY_W, trackTop + ENERGY_H, ENERGY_TRACK_COLOR);
+        // FE 能量条：只画填充色块，槽位边框由贴图提供
         int max = Math.max(1, this.menu.getMaxEnergy());
         int energy = Math.max(0, Math.min(max, this.menu.getEnergy()));
         if (energy > 0) {
             // 必须先用 long 相乘：MAX_ENERGY 是 20 亿，ENERGY_W × energy 会溢出 int
             int fill = (int) ((long) ENERGY_W * energy / max);
-            guiGraphics.fill(trackLeft, trackTop, trackLeft + fill, trackTop + ENERGY_H, ENERGY_FILL_COLOR);
+            int left = this.leftPos + ENERGY_X;
+            int top = this.topPos + ENERGY_Y;
+            guiGraphics.fill(left, top, left + fill, top + ENERGY_H, ENERGY_FILL_COLOR);
         }
     }
 
