@@ -54,7 +54,11 @@ public class ClockMenu extends AbstractContainerMenu {
         for (Direction direction : Direction.values()) {
             final int idx = direction.ordinal();
             addDataSlot(makeDataSlot(() -> entity.directionEnabled[idx] ? 1 : 0, v -> clientDirEnabled[idx] = v != 0));
-            addDataSlot(makeDataSlot(() -> entity.getNeighborBlockId(direction), v -> clientNeighborBlockId[idx] = v));
+            // 方块注册 id 拆 2 块：大整合包里 id 会超过 32767，单槽传过去会被读成负数
+            addDataSlot(makeDataSlot(() -> intChunk(entity.getNeighborBlockId(direction), 0),
+                    v -> clientNeighborBlockId[idx] = merge32(intChunk(clientNeighborBlockId[idx], 1), v)));
+            addDataSlot(makeDataSlot(() -> intChunk(entity.getNeighborBlockId(direction), 1),
+                    v -> clientNeighborBlockId[idx] = merge32(v, intChunk(clientNeighborBlockId[idx], 0))));
         }
     }
 
@@ -180,5 +184,20 @@ public class ClockMenu extends AbstractContainerMenu {
                 setter.accept(value);
             }
         };
+    }
+
+    // ==================== 数据槽拆位工具 ====================
+    // 数据槽在线路上走 ClientboundContainerSetDataPacket，值用 writeShort 写——**只有 16 位**。
+    // 因此 32 位值要拆成 2 块；每块按无符号 16 位传递（0~65535 写出去会被读成负数，
+    // 所以取块与并块都要 & 0xFFFF）。
+
+    /** 取 32 位值的第 {@code part} 个 16 位块（part 0 = 低 16 位） */
+    private static int intChunk(int value, int part) {
+        return (value >>> (part * 16)) & 0xFFFF;
+    }
+
+    /** 把两个 16 位块并回 32 位值 */
+    private static int merge32(int high, int low) {
+        return ((high & 0xFFFF) << 16) | (low & 0xFFFF);
     }
 }

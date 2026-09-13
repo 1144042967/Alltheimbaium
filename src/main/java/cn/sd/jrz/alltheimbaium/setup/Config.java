@@ -225,7 +225,9 @@ public class Config {
         // ---- 通用资源农场 ----
         builder.comment("通用资源农场设置").push("resource_farm");
         RESOURCE_WHITELIST = builder
-                .comment("资源白名单：每行 \"资源id=标记物token;…|物品id:权重;…\"。| 前为放入标记槽可标记该资源的标记物（物品id 或 tag:标签id），后为该资源的白名单产物（权重 500≈1件/s@Lv1）。旧专属资源农场删除后仍由本清单生效")
+                .comment("资源白名单：每行 \"资源id=标记物token;…|物品id:权重;…\"。| 前为放入标记槽可标记该资源的标记物（物品id 或 tag:标签id），后为该资源的白名单产物（权重 500≈1件/s@Lv1）。旧专属资源农场删除后仍由本清单生效",
+                        "注意：所有树苗会自动按树扫描、各自成一个资源（产出对应原木/树苗/树叶），且优先于本清单认领树苗——",
+                        "所以 \"tag:minecraft:saplings\" 这类写法不会再截到树苗；该资源会退化成以首个产物为标记物（仍可标记使用）。")
                 .defineList("whitelist", ResourceDefaultData::whitelist, o -> o instanceof String);
         builder.pop();
 
@@ -246,19 +248,44 @@ public class Config {
     @SubscribeEvent
     public static void onConfigLoad(ModConfigEvent.Loading event) {
         if (event.getConfig().getSpec() == SERVER_CONFIG) {
-            // 保存配置实例引用，供运行时回写（如平台伪装开关切换）
-            SERVER_MOD_CONFIG = event.getConfig();
-            FarmlandBlock.loadConfig();
-            ClockEntity.loadConfig();
-            EternalTotemItem.loadConfig();
-            LiquidFountainBlock.loadConfig();
-            PlatformBlock.loadConfig();
-            SupplyRoll.loadConfig();
-            StorageFountainBlock.loadConfig();
-            StorageFountainBlock.loadConfig();
-            StorageFountainEntity.loadConfig();
-            MobFarmBlock.loadConfig();
-            PotionCombineRecipe.loadConfig();
+            applyServerConfig(event.getConfig());
         }
+    }
+
+    /**
+     * 运行期配置重载（配置界面改动、/reload）走的是 Reloading 而不是 Loading。
+     * 此前只监听 Loading，导致改完配置要重启游戏才生效。
+     */
+    @SubscribeEvent
+    public static void onConfigReload(ModConfigEvent.Reloading event) {
+        if (event.getConfig().getSpec() == SERVER_CONFIG) {
+            applyServerConfig(event.getConfig());
+        }
+    }
+
+    /**
+     * 把一份 SERVER 配置分发到各模块，并丢弃所有"按旧配置算出来"的缓存。
+     * <p>
+     * SERVER 配置是**每个存档一份**的，所以在单机里换存档也会走到这里——
+     * 缓存不失效的话，新存档会继续沿用上一个存档的白名单与采样结果。
+     */
+    private static void applyServerConfig(ModConfig config) {
+        // 保存配置实例引用，供运行时回写（如平台伪装开关切换）
+        SERVER_MOD_CONFIG = config;
+        FarmlandBlock.loadConfig();
+        ClockEntity.loadConfig();
+        EternalTotemItem.loadConfig();
+        LiquidFountainBlock.loadConfig();
+        PlatformBlock.loadConfig();
+        SupplyRoll.loadConfig();
+        StorageFountainBlock.loadConfig();
+        StorageFountainEntity.loadConfig();
+        MobFarmBlock.loadConfig();
+        PotionCombineRecipe.loadConfig();
+        // 白名单 / 战利品采样 / 动态标记表都拿着旧配置（和旧存档的数据包）算出的结果，必须丢掉重算
+        MobFarmWhitelist.invalidate();
+        ResourceData.invalidate();
+        KillLootEstimator.invalidate();
+        MobFarmMarkerIndex.invalidate();
     }
 }

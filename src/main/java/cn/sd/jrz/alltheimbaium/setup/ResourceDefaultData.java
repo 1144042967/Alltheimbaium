@@ -8,6 +8,10 @@ import java.util.List;
  * 每行格式：{@code 资源id=标记物token;…|物品id:权重;…}
  * | 前为放入标记槽可标记该资源的标记物（物品id 或 tag:标签id，多个用 ; 分隔，首个即"代表标记物"用于展示），
  * | 后为该资源的白名单产物（物品id:权重，权重 500≈1件/s@Lv1）。
+ * <p>
+ * <b>树苗不在这里配置</b>：{@code ResourceData} 的内置树扫描会把每个树苗自动变成独立资源（原木/树苗/树叶加特有掉落），
+ * 且优先于本清单认领树苗。因此下面的 {@code wood} 行的 {@code tag:minecraft:saplings} 已经失效——
+ * 它的标记物被扫空后退化成"以首个产物（橡木原木）为标记物"的全量原木资源，保留是为了让"标记一个原木换到所有原木"仍然可用。
  */
 public final class ResourceDefaultData {
     private ResourceDefaultData() {

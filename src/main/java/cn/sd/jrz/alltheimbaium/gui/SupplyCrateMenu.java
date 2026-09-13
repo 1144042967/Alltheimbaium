@@ -1,11 +1,13 @@
 package cn.sd.jrz.alltheimbaium.gui;
 
 import cn.sd.jrz.alltheimbaium.block.SupplyCrateBlock;
+import cn.sd.jrz.alltheimbaium.network.Network;
+import cn.sd.jrz.alltheimbaium.network.SupplyCrateRollsPacket;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.SupplyData;
 import cn.sd.jrz.alltheimbaium.setup.SupplyRoll;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,6 +18,7 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.network.PacketDistributor;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -27,13 +30,18 @@ import java.util.function.IntSupplier;
  * <p>
  * 服务端在打开时按 世界种子|游戏小时(取整)|已用补给点 随机 10 个分类物品，同时写入开屏包。
  * 随机小时按整点取整：GUI 保持打开不动时，每到新的整点自动重掷一次（免费）。
- * 数据槽同步 10 个物品 id、选中索引、最大/已用补给点。
- * 按钮：0~9 选择某分类物品；10 兑换（消耗 3 点，给 1 件选中物品）；11 刷新（消耗 1 点，重新随机 10 件）。
+ * <p>
+ * 10 个物品按**完整 ItemStack**（含 NBT）经开屏包与 {@link SupplyCrateRollsPacket} 同步，
+ * 不走数据槽——数据槽只有 16 位，装不下物品注册 id，更装不下 NBT。
+ * 数据槽只同步选中索引与最大/已用补给点这三个小整数。
  */
 public class SupplyCrateMenu extends AbstractContainerMenu {
     public static final int BUTTON_SELECT_BASE = 0;   // 0~9：选择某分类物品
     public static final int BUTTON_REDEEM = 10;        // 兑换选中物品
     public static final int BUTTON_REFRESH = 11;       // 刷新
+
+    /** 一次随机生成的分类物品数 */
+    public static final int ROLL_SLOTS = 10;
 
     /** 补给箱位置（仍有效判断用） */
     public final BlockPos pos;
@@ -43,8 +51,8 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
     /** 当前 10 个物品所对应的世界游戏小时（整点）；整点变化时自动重掷 */
     private int rollHour = -1;
 
-    /** 10 个分类的随机物品 id（0 = 无可用） */
-    private final int[] itemIds = new int[10];
+    /** 10 个分类的随机物品（含完整 NBT）；空栈 = 该分类无可用物品 */
+    private final ItemStack[] rolls = new ItemStack[ROLL_SLOTS];
     /** 当前选中的分类索引，-1 表示未选择 */
     private int selectedIndex = -1;
     private int clientMax;
@@ -52,7 +60,7 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
 
     public SupplyCrateMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
         this(id, playerInventory, data.readBlockPos(), null, -1,
-                readIds(data), data.readVarInt() - 1, data.readVarInt(), data.readVarInt());
+                readRolls(data), data.readVarInt() - 1, data.readVarInt(), data.readVarInt());
     }
 
     /**
@@ -61,41 +69,46 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
     public static SupplyCrateMenu createServer(int id, Inventory playerInventory, BlockPos pos,
                                                ItemStack[] rolls, int selectedIndex, int max, int used,
                                                ServerPlayer owner) {
-        int[] ids = new int[10];
-        for (int i = 0; i < 10; i++) {
-            ids[i] = (i < rolls.length && !rolls[i].isEmpty())
-                    ? BuiltInRegistries.ITEM.getId(rolls[i].getItem()) : 0;
-        }
         int hour = owner.level() instanceof ServerLevel sl ? currentHour(sl) : -1;
-        return new SupplyCrateMenu(id, playerInventory, pos, owner, hour, ids, selectedIndex, max, used);
+        return new SupplyCrateMenu(id, playerInventory, pos, owner, hour, rolls, selectedIndex, max, used);
     }
 
     private SupplyCrateMenu(int id, Inventory playerInventory, BlockPos pos,
-                            @Nullable ServerPlayer owner, int rollHour, int[] ids,
+                            @Nullable ServerPlayer owner, int rollHour, ItemStack[] initialRolls,
                             int initialSelected, int initialMax, int initialUsed) {
         super(Registration.SUPPLY_CRATE_MENU.get(), id);
         this.pos = pos;
         this.ownerPlayer = owner;
         this.rollHour = rollHour;
-        System.arraycopy(ids, 0, this.itemIds, 0, Math.min(10, ids.length));
+        setRolls(initialRolls);
         this.selectedIndex = initialSelected;
         this.clientMax = initialMax;
         this.clientUsed = initialUsed;
-        for (int i = 0; i < 10; i++) {
-            final int idx = i;
-            addDataSlot(makeDataSlot(() -> itemIds[idx], v -> itemIds[idx] = v));
-        }
         addDataSlot(makeDataSlot(() -> selectedIndex + 1, v -> selectedIndex = v - 1));
         addDataSlot(makeDataSlot(() -> clientMax, v -> clientMax = v));
         addDataSlot(makeDataSlot(() -> clientUsed, v -> clientUsed = v));
     }
 
-    private static int[] readIds(FriendlyByteBuf data) {
-        int[] ids = new int[10];
-        for (int i = 0; i < 10; i++) {
-            ids[i] = data.readVarInt();
+    private static ItemStack[] readRolls(FriendlyByteBuf data) {
+        ItemStack[] result = new ItemStack[ROLL_SLOTS];
+        for (int i = 0; i < ROLL_SLOTS; i++) {
+            CompoundTag tag = data.readNbt();
+            result[i] = tag == null ? ItemStack.EMPTY : ItemStack.of(tag);
         }
-        return ids;
+        return result;
+    }
+
+    /** 用一组新结果替换当前 10 格（不足或含 null 的按空处理） */
+    private void setRolls(@Nullable ItemStack[] source) {
+        for (int i = 0; i < ROLL_SLOTS; i++) {
+            ItemStack stack = (source != null && i < source.length) ? source[i] : null;
+            rolls[i] = stack == null ? ItemStack.EMPTY : stack;
+        }
+    }
+
+    /** 客户端收到服务端重掷结果后调用 */
+    public void applyRolls(@Nullable ItemStack[] newRolls) {
+        setRolls(newRolls);
     }
 
     /** 世界累计真实小时数（72000 tick = 1 真实小时） */
@@ -125,10 +138,6 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
 
     // ==================== 读取 ====================
 
-    public int getItemId(int index) {
-        return index >= 0 && index < 10 ? itemIds[index] : 0;
-    }
-
     public int getSelectedIndex() {
         return selectedIndex;
     }
@@ -146,15 +155,11 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
     }
 
     /**
-     * 某分类当前随机物品的栈（数量 1），空返回 EMPTY
+     * 某分类当前随机物品的栈（含 NBT），空返回 EMPTY
      */
+    @Nonnull
     public ItemStack getRolledStack(int index) {
-        int id = getItemId(index);
-        if (id <= 0) {
-            return ItemStack.EMPTY;
-        }
-        //noinspection deprecation
-        return new ItemStack(BuiltInRegistries.ITEM.byId(id), 1);
+        return index >= 0 && index < ROLL_SLOTS ? rolls[index] : ItemStack.EMPTY;
     }
 
     // ==================== 按钮处理 ====================
@@ -164,8 +169,8 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
         if (player.level().isClientSide) {
             return false;
         }
-        if (id >= BUTTON_SELECT_BASE && id < BUTTON_SELECT_BASE + 10) {
-            if (getItemId(id) != 0) {
+        if (id >= BUTTON_SELECT_BASE && id < BUTTON_SELECT_BASE + ROLL_SLOTS) {
+            if (!getRolledStack(id).isEmpty()) {
                 this.selectedIndex = id;
             }
             return true;
@@ -175,10 +180,10 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
             if (remaining < SupplyData.COST_REDEEM) {
                 return false;
             }
-            if (this.selectedIndex < 0 || getItemId(this.selectedIndex) == 0) {
+            if (this.selectedIndex < 0 || getRolledStack(this.selectedIndex).isEmpty()) {
                 return false;
             }
-            // 给玩家 1 件选中的物品，放不下则丢到脚边
+            // 给玩家 1 件选中的物品（带 NBT），放不下则丢到脚边
             ItemStack give = getRolledStack(this.selectedIndex).copy();
             player.getInventory().add(give);
             if (!give.isEmpty()) {
@@ -206,14 +211,15 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
     }
 
     /**
-     * 按当前状态重掷一组物品并记录对应的整点小时。
+     * 按当前状态重掷一组物品并记录对应的整点小时，随后把结果发给客户端。
      */
     private void rollItems(ServerLevel level, Player player) {
-        ItemStack[] rolls = SupplyRoll.roll(level, player);
-        for (int i = 0; i < rolls.length && i < 10; i++) {
-            itemIds[i] = rolls[i].isEmpty() ? 0 : BuiltInRegistries.ITEM.getId(rolls[i].getItem());
-        }
+        setRolls(SupplyRoll.roll(level, player));
         this.rollHour = currentHour(level);
+        if (ownerPlayer != null) {
+            Network.CHANNEL.send(PacketDistributor.PLAYER.with(() -> ownerPlayer),
+                    new SupplyCrateRollsPacket(rolls.clone()));
+        }
     }
 
     @Override

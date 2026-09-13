@@ -56,6 +56,15 @@ public final class MobFarmMarkerIndex {
         }
     }
 
+    /** 丢弃已构建的标记表（配置重载 / 换存档时调用），下次访问按新白名单与采样结果重建 */
+    public static void invalidate() {
+        synchronized (MobFarmMarkerIndex.class) {
+            TABLE = null;
+            MARKER_PAIRS = null;
+            PRODUCT_ROWS = null;
+        }
+    }
+
     /** 标记对（先确保已构建） */
     public static int[] pairs(@Nonnull ServerLevel level) {
         ensureBuilt(level);

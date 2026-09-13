@@ -84,7 +84,11 @@ public class InstantFurnaceMenu extends AbstractContainerMenu {
         // 输入行 18：itemId + 存量（long，拆四个 16 位块）
         for (int i = 0; i < InstantFurnaceEntity.MAX_TYPES; i++) {
             final int idx = i;
-            addDataSlot(makeDataSlot(() -> entity == null ? 0 : entity.getInputItemId(idx), v -> clientInputIds[idx] = v));
+            // 物品注册 id 拆 2 块：大整合包里 id 会超过 32767，单槽传过去会被读成负数
+            addDataSlot(makeDataSlot(() -> entity == null ? 0 : intChunk(entity.getInputItemId(idx), 0),
+                    v -> clientInputIds[idx] = merge32(intChunk(clientInputIds[idx], 1), v)));
+            addDataSlot(makeDataSlot(() -> entity == null ? 0 : intChunk(entity.getInputItemId(idx), 1),
+                    v -> clientInputIds[idx] = merge32(v, intChunk(clientInputIds[idx], 0))));
             for (int k = 0; k < 4; k++) {
                 final int part = k;
                 addDataSlot(makeDataSlot(
@@ -95,7 +99,10 @@ public class InstantFurnaceMenu extends AbstractContainerMenu {
         // 输出行 18：itemId + 存量（long，拆四个 16 位块）
         for (int i = 0; i < InstantFurnaceEntity.MAX_TYPES; i++) {
             final int idx = i;
-            addDataSlot(makeDataSlot(() -> entity == null ? 0 : entity.getOutputItemId(idx), v -> clientOutputIds[idx] = v));
+            addDataSlot(makeDataSlot(() -> entity == null ? 0 : intChunk(entity.getOutputItemId(idx), 0),
+                    v -> clientOutputIds[idx] = merge32(intChunk(clientOutputIds[idx], 1), v)));
+            addDataSlot(makeDataSlot(() -> entity == null ? 0 : intChunk(entity.getOutputItemId(idx), 1),
+                    v -> clientOutputIds[idx] = merge32(v, intChunk(clientOutputIds[idx], 0))));
             for (int k = 0; k < 4; k++) {
                 final int part = k;
                 addDataSlot(makeDataSlot(

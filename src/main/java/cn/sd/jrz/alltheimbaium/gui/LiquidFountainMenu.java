@@ -60,12 +60,17 @@ public class LiquidFountainMenu extends AbstractContainerMenu {
         // 玩家背包：2-37
         addPlayerInventory(playerInventory);
 
-        // 数据同步（long 拆成高低 32 位两个数据槽）
-        addDataSlot(makeDataSlot(() -> getFluidId(entity), v -> clientFluidId = v));
-        addDataSlot(makeDataSlot(() -> hiWord(entity.getFluidAmount()), v -> clientLiquid = mergeLong(v, loWord(clientLiquid))));
-        addDataSlot(makeDataSlot(() -> loWord(entity.getFluidAmount()), v -> clientLiquid = mergeLong(hiWord(clientLiquid), v)));
-        addDataSlot(makeDataSlot(() -> hiWord(entity.getMax()), v -> clientMax = mergeLong(v, loWord(clientMax))));
-        addDataSlot(makeDataSlot(() -> loWord(entity.getMax()), v -> clientMax = mergeLong(hiWord(clientMax), v)));
+        // 数据同步：每个值按 16 位一块拆开传（数据槽走 writeShort，>32767 会被读成负数）
+        addDataSlot(makeDataSlot(() -> intChunk(getFluidId(entity), 0), v -> clientFluidId = merge32(intChunk(clientFluidId, 1), v)));
+        addDataSlot(makeDataSlot(() -> intChunk(getFluidId(entity), 1), v -> clientFluidId = merge32(v, intChunk(clientFluidId, 0))));
+        for (int k = 0; k < 4; k++) {
+            final int part = k;
+            addDataSlot(makeDataSlot(() -> longChunk(entity.getFluidAmount(), part), v -> clientLiquid = setChunk(clientLiquid, part, v)));
+        }
+        for (int k = 0; k < 4; k++) {
+            final int part = k;
+            addDataSlot(makeDataSlot(() -> longChunk(entity.getMax(), part), v -> clientMax = setChunk(clientMax, part, v)));
+        }
         // 六面主动输出开关数据槽（Direction.values() 顺序与 BUTTON_TRANSFER_* 一致）
         for (Direction direction : Direction.values()) {
             int idx = direction.ordinal();
@@ -222,15 +227,31 @@ public class LiquidFountainMenu extends AbstractContainerMenu {
         };
     }
 
-    private static int hiWord(long value) {
-        return (int) (value >> 32);
+    // ==================== 数据槽拆位工具 ====================
+    // 数据槽在线路上走 ClientboundContainerSetDataPacket，值用 writeShort 写——**只有 16 位**。
+    // 因此 32 位值要拆成 2 块、64 位值要拆成 4 块；每块按无符号 16 位传递
+    // （0~65535 写出去会被读成负数，所以取块与并块都要 & 0xFFFF）。
+    // 注意「拆成高低 32 位」是错的：那样每一半仍然会被截断到 16 位。
+
+    /** 取 32 位值的第 {@code part} 个 16 位块（part 0 = 低 16 位） */
+    private static int intChunk(int value, int part) {
+        return (value >>> (part * 16)) & 0xFFFF;
     }
 
-    private static int loWord(long value) {
-        return (int) (value & 0xFFFFFFFFL);
+    /** 把两个 16 位块并回 32 位值 */
+    private static int merge32(int high, int low) {
+        return ((high & 0xFFFF) << 16) | (low & 0xFFFF);
     }
 
-    private static long mergeLong(int hi, int lo) {
-        return ((long) hi << 32) | (lo & 0xFFFFFFFFL);
+    /** 取 long 的第 {@code part} 个 16 位块（part 0 = 低 16 位，共 4 块） */
+    private static int longChunk(long value, int part) {
+        return (int) ((value >>> (part * 16)) & 0xFFFFL);
+    }
+
+    /** 把第 {@code part} 个 16 位块写回 long */
+    private static long setChunk(long value, int part, int chunk) {
+        int shift = part * 16;
+        long mask = 0xFFFFL << shift;
+        return (value & ~mask) | (((long) (chunk & 0xFFFF)) << shift);
     }
 }

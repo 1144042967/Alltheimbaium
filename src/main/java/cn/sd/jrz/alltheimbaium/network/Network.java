@@ -6,7 +6,8 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 /**
- * 简易网络通道。目前仅用于客户端请求打开永恒之剑配置界面。
+ * 简易网络通道。用于客户端请求打开永恒之剑 / 永恒图腾配置界面，
+ * 以及补给箱把重掷结果（含 NBT 的完整物品）发给客户端。
  */
 public class Network {
 
@@ -31,5 +32,9 @@ public class Network {
                 OpenEternalTotemGuiPacket::encode,
                 OpenEternalTotemGuiPacket::decode,
                 OpenEternalTotemGuiPacket::handle);
+        CHANNEL.registerMessage(2, SupplyCrateRollsPacket.class,
+                SupplyCrateRollsPacket::encode,
+                SupplyCrateRollsPacket::decode,
+                SupplyCrateRollsPacket::handle);
     }
 }

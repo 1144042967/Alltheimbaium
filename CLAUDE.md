@@ -245,7 +245,10 @@ public class XxxItem extends BlockItem {
   ```
 - 玩家背包采用标准四行布局时，`inventoryLabelY = this.imageHeight - 94`；布局特殊（剑 / 图腾）才手填。
 - **每个 Screen 都必须覆写 `renderLabels`**，标题传 `true`、`playerInventoryTitle` 传 `false`。标题颜色由 `Tip.rarityColor(...)` 给的样式色决定，`drawString` 的颜色参数只是样式缺失时的兜底（详见上方「GUI 标题颜色」）。
-- 状态同步走 `DataSlot`，但**单个数据槽只有 16 位**：`ClientboundContainerSetDataPacket` 用 `writeShort` 读写，0~65535 传过去会被读成负数。所以 32 位值要拆 **2 块**、64 位值要拆 **4 块**，取块与并块都要 `& 0xFFFF`。**注意不是"拆成高低两个 int"**——那样每个 int 仍会被截断到 16 位。参考 `InstantFurnaceMenu` / `InstantInscriberMenu` 底部的 `intChunk` / `merge32` / `longChunk` / `setChunk`。
+- 状态同步走 `DataSlot`，但**单个数据槽只有 16 位**：`ClientboundContainerSetDataPacket` 用 `writeShort` 读写，0~65535 传过去会被读成负数（客户端的 `readShort` 会符号扩展）。所以 32 位值要拆 **2 块**、64 位值要拆 **4 块**，取块与并块都要 `& 0xFFFF`。**注意不是"拆成高低 32 位"**——那样每一半仍会被截断到 16 位，表现是"值大于 32767 时显示成 ~42.9 亿"。参考各菜单底部的 `intChunk` / `merge32` / `longChunk` / `setChunk`（`ClockMenu` 只需 32 位的那两个）。
+  - **必须拆的**：物品 / 方块 / 流体的**注册 id**（大整合包里很容易超过 32767）、存量与权重这类 long、tick 计数、能量。
+  - **不能拆的**：`AbstractContainerMenu` 的 `dataSlots` 数量本身没有硬上限，但每个变化的数据槽每 tick 都要发一个包，行数多时注意别把槽位数翻倍到没必要的程度。
+  - **装不下的就别走数据槽**：补给箱的 10 件随机物品要带完整 NBT（药水 / 附魔书 / 带 EntityTag 的刷怪蛋），根本放不进 16 位整数槽，改走开屏包 + `SupplyCrateRollsPacket` 直接传 `ItemStack` 的 NBT。
   - 只有取值 ≤ 32767 的状态（模式、开关、面状态）才能直接用单槽。
   - 能量这类"看起来不大"的值也很容易越界：`MAX_ENERGY` 是 20 亿，必须拆 2 块。
 - 交互走 `clickMenuButton` + 按钮 ID 常量，常量集中声明在 Menu 顶部；右键反向循环的区间取 `BUTTON_DIR_REVERSE_BASE`，值为紧邻各菜单 `BUTTON_OUTPUT` 之后。
@@ -421,7 +424,8 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 收容制生物农场，右键打开 GUI（`MobFarmMenu`/`MobFarmScreen`）。
 
-- **手持收容**（`MobFarmItem`）：未收容时右键，在玩家外扩 `mob_farm.capture_radius`（默认 5）格内找**最近**的有效 `LivingEntity`（白名单 `MobFarmCatalog.isWhitelisted()` 或 `KillLootEstimator.hasAnyDrop()` 有掉落），捕捉后实体 `discard()`
+- **手持收容**（`MobFarmItem`）：未收容时右键，在玩家外扩 `mob_farm.capture_radius`（默认 5）格内找**最近**的有效生物（白名单 `MobFarmCatalog.isWhitelisted()`，或 `KillLootEstimator.hasAnyDrop()` 有掉落的 `Mob`），捕捉后实体 `discard()`
+  - 非 `Mob` 的 `LivingEntity`（典型是**盔甲架**——它有击杀战利品表、掉落自身）**只能靠白名单收容**，否则会被 `hasAnyDrop` 放行，等于可以"养殖"盔甲架。模组加的自定义非 `Mob` 生物写进 `signature_whitelist` 仍可收容
 - 未收容时右击方块面：先尝试捕捉，**捕捉失败才当方块放下**
 - **放置后收容**：GUI 的标记槽放入刷怪蛋 / 白名单特征物 / 动态掉落物即可收容
 - **每台只能收容一次**：已收容后 `processSpecialSlotMarker` 直接返回，不可取消/更换
@@ -435,8 +439,13 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 标记制资源农场，右键打开 GUI（`ResourceFarmMenu`/`ResourceFarmScreen`）。
 
-- 标记槽放入一个标记物（`ResourceData.isMarker()` 命中，来自配置 `resource_farm.whitelist`）即永久确定该资源并重建产物表；标记物常驻槽内展示
+- 标记槽放入一个标记物（`ResourceData.isMarker()` 命中，来自配置 `resource_farm.whitelist` **或内置的树扫描**）即永久确定该资源并重建产物表；标记物常驻槽内展示
 - **不能取消、不能更换**：`hasMarker()` 后 `isItemValid` 返回 false 且槽位不可取出
+- **内置树扫描**（`ResourceData.scanTrees`）：除配置外，还会自动扫描注册表里所有树苗，**每个树苗自成一个资源**，产出 `原木 500 + 该树苗 200 + 树叶 150 + 特有掉落`（橡木补苹果 10）。树苗识别 = 原版 `SaplingBlock`/`AzaleaBlock`/`MangrovePropaguleBlock` 三者之一，**或**加入了 `minecraft:saplings` 标签（有的模组树苗只加标签）；树干/树叶按注册名约定推导 `X_sapling → X_log / X_leaves`，树叶先按树苗名再按树干名回落（红树林繁殖体 → `mangrove_leaves`），杜鹃科两条列为显式例外（长成橡树）
+  - 推不出树干的模组树苗只产出自身并打一条 warn，可用配置手工补齐
+  - **树苗的认领先于配置**：配置里基于 `tag:minecraft:saplings` 的资源（默认白名单的 `wood` 行）不会截走树苗，而是退化成"以首个产物为标记物"的普通资源——即默认配置里标记橡木原木可换到全部原木
+  - **标记物被抢空的资源会真的把首个产物登记成标记物**（不只是拿来展示）。只做展示值的话，帮助卡会显示一条玩家实际放不进标记槽的"标记物 → 产物"对照；若首个产物已经是别的资源的标记物，则该资源既不可标记也不进帮助卡
+  - 树资源追加在配置资源之后，帮助卡里配置资源仍排在前面；两边都按资源 id / 配置行序稳定排序，分页顺序不会抖
 - 等级与产出机制同生物农场（`weight × level / 500` 件/秒，共用 `mob_farm.*` 配置）
 - 六面状态 + 总开关同上；对外 `IItemHandler` 只读
 - GUI 右上角 `?` 可翻页查看「标记物 → 产物」对照表
@@ -506,6 +515,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - **补给点获得**：游玩时间累计每 **1800 秒** +1（存玩家 persistent data，跨会话累计）；每获得一个成就 **+5**（排除 `recipes/` 开头与 `/root` 结尾的成就）
 - **消耗**：兑换选中物品 **3 点**，刷新 **1 点**；剩余 = max − used
 - 随机种子 = `世界种子 | 世界游戏小时 | 已用补给点`（`hours = gameTime / 72000`），因此 GUI 保持打开时每到新的整点自动免费重掷
+- **10 件随机物品按完整 `ItemStack`（含 NBT）同步**：开屏包传首屏、重掷时由 `SupplyCrateRollsPacket`（`network/`，S→C，注册 id 2）续传；数据槽只放选中索引与最大/已用补给点这三个小整数。**不能只传物品注册 id**——药水 / 附魔书 / 带 `EntityTag` 的刷怪蛋的信息全在 NBT 上，只传 id 玩家看到并兑换到的都是默认版本
 - 每次生成 **10 个分类各 1 件**；兑换给 1 件选中物品
 - 黑名单配置 `supply_crate.blacklist`（精确匹配物品注册 ID）
 - 方块本身不存数据，数据全在玩家身上
@@ -634,3 +644,13 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 - 方块/物品类中 tick 逻辑在私有方法中，通过匿名 `BlockEntityTicker` lambda 调用
 - 所有公开交互方法（`use` 等）的最外层捕获 Throwable
 - 物品的 `appendHoverText()` 一律先调 `super.appendHoverText(...)`，再用 `Tip.of(tooltip)` 链式构建内容
+
+### 动态解析的硬性约束
+
+- **`BuiltInRegistries` 的 `ITEM` / `BLOCK` / `FLUID` / `ENTITY_TYPE` 被 Forge 包成了"带默认值"的注册表：`get(ResourceLocation)` 与 `byId(int)` 查不到时返回默认值**（`AIR` / `AIR` / `FLUID.EMPTY` / **`EntityType.PIG`**），永远不为 null。因此 `if (item != null)`、`if (type == null)` 是**死代码**，拼错的 id 会静默变成空气/猪。判定"是否注册"一律用 `containsKey(ResourceLocation)`（或 `ResourceLocation.tryParse` 先挡非法 id），再取值。
+- **`new ResourceLocation(String)` 遇到非法字符会抛 `ResourceLocationException`**。凡是解析配置文件/存档里由人手写的字符串，一律先 `ResourceLocation.tryParse` 判 null，**且必须放在逐行的 try 里**——解析类（`MobFarmWhitelist` / `ResourceData`）的构建是一次性的、失败后缓存不会重建，一行写错就会让后面所有行都不再解析、留下半成品白名单并永久生效。
+- **可选依赖（AE2 / Mekanism / AutoResource / 创造标签）的存在性判定只能靠注册名或 `ModList.get().isLoaded`**，不能写成 `instanceof`（那需要编译期依赖）；反射调用一律包 `catch (Throwable)` 并判 `null` 后静默禁用。
+- **动态查配方/查表的循环里，每一条都要独立判空并 `continue`**（产物 `isEmpty()`、`Ingredient` 为空、`getResultItem` 为空），不能只判外层——一条坏配方把材料吞掉比直接报错更难查。参考 `SmeltingCraftRecipe.findFurnaceResult` 与 `InstantFurnaceEntity` 的空产物哨兵。
+- DataSlot 与"物品注册 id"：见上文「GUI 规范」的 16 位说明，动态解析出来的 id 不要直接塞进单槽。
+- **解析出来的缓存必须能被丢弃**：`MobFarmWhitelist` / `ResourceData` / `KillLootEstimator` / `MobFarmMarkerIndex` 各有一个 `invalidate()`，由 `Config.applyServerConfig` 在**配置加载与重载**时统一调用。SERVER 配置是每个存档一份，所以单机换存档也会走到这里——不失效的话新存档会继续沿用上一个存档的白名单。新增任何"按配置算一次就缓存"的表，都要挂进这个失效链。
+- **失败不要写进缓存**：`KillLootEstimator` 的采样抛异常时返回 `null` 并**不缓存**（只有"确实没有掉落"的空表才缓存），否则一次瞬时失败会让该生物在整个 JVM 生命周期内没有产物。用 `computeIfAbsent` 时尤其要留意这一点。

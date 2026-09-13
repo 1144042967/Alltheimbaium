@@ -79,7 +79,8 @@ public class ResourceFarmItem extends BlockItem {
             tip.usage("item.alltheimbaium.resource_farm.usage.1",
                             "item.alltheimbaium.resource_farm.usage.2",
                             "item.alltheimbaium.resource_farm.usage.3",
-                            "item.alltheimbaium.resource_farm.usage.4")
+                            "item.alltheimbaium.resource_farm.usage.4",
+                            "item.alltheimbaium.resource_farm.usage.5")
                     .params("item.alltheimbaium.resource_farm.param.1")
                     .warn("item.alltheimbaium.resource_farm.warn.1");
         } catch (Throwable e) {

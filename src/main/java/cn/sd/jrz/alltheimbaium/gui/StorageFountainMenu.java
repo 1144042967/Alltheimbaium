@@ -66,15 +66,21 @@ public class StorageFountainMenu extends AbstractContainerMenu {
         // 玩家背包：10~45
         addPlayerInventory(playerInventory);
 
-        // 数据同步（long 拆成高低 32 位两个数据槽）
-        addDataSlot(makeDataSlot(() -> hiWord(entity.output), v -> clientOutput = mergeLong(v, loWord(clientOutput))));
-        addDataSlot(makeDataSlot(() -> loWord(entity.output), v -> clientOutput = mergeLong(hiWord(clientOutput), v)));
-        addDataSlot(makeDataSlot(() -> (int) Math.min(Integer.MAX_VALUE, entity.tickCount), v -> clientTickCount = v));
+        // 数据同步：每个值按 16 位一块拆开传（数据槽走 writeShort，>32767 会被读成负数）
+        for (int k = 0; k < 4; k++) {
+            final int part = k;
+            addDataSlot(makeDataSlot(() -> longChunk(entity.output, part), v -> clientOutput = setChunk(clientOutput, part, v)));
+        }
+        addDataSlot(makeDataSlot(() -> intChunk(suitInt(entity.tickCount), 0), v -> clientTickCount = merge32(intChunk(clientTickCount, 1), v)));
+        addDataSlot(makeDataSlot(() -> intChunk(suitInt(entity.tickCount), 1), v -> clientTickCount = merge32(v, intChunk(clientTickCount, 0))));
         for (int i = 0; i < 9; i++) {
             final int idx = i;
-            addDataSlot(makeDataSlot(() -> entity.getMarkedItemId(idx), v -> clientItemIds[idx] = v));
-            addDataSlot(makeDataSlot(() -> hiWord(entity.getMarkedCount(idx)), v -> clientCounts[idx] = mergeLong(v, loWord(clientCounts[idx]))));
-            addDataSlot(makeDataSlot(() -> loWord(entity.getMarkedCount(idx)), v -> clientCounts[idx] = mergeLong(hiWord(clientCounts[idx]), v)));
+            addDataSlot(makeDataSlot(() -> intChunk(entity.getMarkedItemId(idx), 0), v -> clientItemIds[idx] = merge32(intChunk(clientItemIds[idx], 1), v)));
+            addDataSlot(makeDataSlot(() -> intChunk(entity.getMarkedItemId(idx), 1), v -> clientItemIds[idx] = merge32(v, intChunk(clientItemIds[idx], 0))));
+            for (int k = 0; k < 4; k++) {
+                final int part = k;
+                addDataSlot(makeDataSlot(() -> longChunk(entity.getMarkedCount(idx), part), v -> clientCounts[idx] = setChunk(clientCounts[idx], part, v)));
+            }
         }
         for (Direction direction : Direction.values()) {
             final int idx = direction.ordinal();
@@ -320,15 +326,36 @@ public class StorageFountainMenu extends AbstractContainerMenu {
         };
     }
 
-    private static int hiWord(long value) {
-        return (int) (value >> 32);
+    // ==================== 数据槽拆位工具 ====================
+    // 数据槽在线路上走 ClientboundContainerSetDataPacket，值用 writeShort 写——**只有 16 位**。
+    // 因此 32 位值要拆成 2 块、64 位值要拆成 4 块；每块按无符号 16 位传递
+    // （0~65535 写出去会被读成负数，所以取块与并块都要 & 0xFFFF）。
+    // 注意「拆成高低 32 位」是错的：那样每一半仍然会被截断到 16 位。
+
+    /** 取 32 位值的第 {@code part} 个 16 位块（part 0 = 低 16 位） */
+    private static int intChunk(int value, int part) {
+        return (value >>> (part * 16)) & 0xFFFF;
     }
 
-    private static int loWord(long value) {
-        return (int) (value & 0xFFFFFFFFL);
+    /** 把两个 16 位块并回 32 位值 */
+    private static int merge32(int high, int low) {
+        return ((high & 0xFFFF) << 16) | (low & 0xFFFF);
     }
 
-    private static long mergeLong(int hi, int lo) {
-        return ((long) hi << 32) | (lo & 0xFFFFFFFFL);
+    /** 取 long 的第 {@code part} 个 16 位块（part 0 = 低 16 位，共 4 块） */
+    private static int longChunk(long value, int part) {
+        return (int) ((value >>> (part * 16)) & 0xFFFFL);
+    }
+
+    /** 把第 {@code part} 个 16 位块写回 long */
+    private static long setChunk(long value, int part, int chunk) {
+        int shift = part * 16;
+        long mask = 0xFFFFL << shift;
+        return (value & ~mask) | (((long) (chunk & 0xFFFF)) << shift);
+    }
+
+    /** 裁剪到 int 范围（负值取 0） */
+    private static int suitInt(long value) {
+        return (int) Math.max(0, Math.min(Integer.MAX_VALUE, value));
     }
 }

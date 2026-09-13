@@ -85,16 +85,27 @@ public class ResourceFarmMenu extends AbstractContainerMenu {
         }
         addPlayerInventory(playerInventory);
 
-        addDataSlot(makeDataSlot(() -> hiWord(entity.level), v -> clientLevel = mergeLong(v, loWord(clientLevel))));
-        addDataSlot(makeDataSlot(() -> loWord(entity.level), v -> clientLevel = mergeLong(hiWord(clientLevel), v)));
-        addDataSlot(makeDataSlot(() -> (int) Math.min(Integer.MAX_VALUE, entity.tickCount), v -> clientTickCount = v));
-        addDataSlot(makeDataSlot(entity::getMarkerItemId, v -> clientMarkerId = v));
+        // 每个值都按 16 位一块拆开传：数据槽走 writeShort，>32767 的值会被客户端读成负数
+        for (int k = 0; k < 4; k++) {
+            final int part = k;
+            addDataSlot(makeDataSlot(() -> longChunk(entity.level, part), v -> clientLevel = setChunk(clientLevel, part, v)));
+        }
+        addDataSlot(makeDataSlot(() -> intChunk(suitInt(entity.tickCount), 0), v -> clientTickCount = merge32(intChunk(clientTickCount, 1), v)));
+        addDataSlot(makeDataSlot(() -> intChunk(suitInt(entity.tickCount), 1), v -> clientTickCount = merge32(v, intChunk(clientTickCount, 0))));
+        addDataSlot(makeDataSlot(() -> intChunk(entity.getMarkerItemId(), 0), v -> clientMarkerId = merge32(intChunk(clientMarkerId, 1), v)));
+        addDataSlot(makeDataSlot(() -> intChunk(entity.getMarkerItemId(), 1), v -> clientMarkerId = merge32(v, intChunk(clientMarkerId, 0))));
         for (int i = 0; i < MAX_PRODUCTS; i++) {
             final int idx = i;
-            addDataSlot(makeDataSlot(() -> entity.getProductItemId(idx), v -> clientItemIds[idx] = v));
-            addDataSlot(makeDataSlot(() -> hiWord(entity.getProductStock(idx)), v -> clientStocks[idx] = mergeLong(v, loWord(clientStocks[idx]))));
-            addDataSlot(makeDataSlot(() -> loWord(entity.getProductStock(idx)), v -> clientStocks[idx] = mergeLong(hiWord(clientStocks[idx]), v)));
-            addDataSlot(makeDataSlot(() -> (int) Math.min(Integer.MAX_VALUE, entity.getProductWeight(idx)), v -> clientWeights[idx] = v));
+            addDataSlot(makeDataSlot(() -> intChunk(entity.getProductItemId(idx), 0), v -> clientItemIds[idx] = merge32(intChunk(clientItemIds[idx], 1), v)));
+            addDataSlot(makeDataSlot(() -> intChunk(entity.getProductItemId(idx), 1), v -> clientItemIds[idx] = merge32(v, intChunk(clientItemIds[idx], 0))));
+            for (int k = 0; k < 4; k++) {
+                final int part = k;
+                addDataSlot(makeDataSlot(() -> longChunk(entity.getProductStock(idx), part), v -> clientStocks[idx] = setChunk(clientStocks[idx], part, v)));
+            }
+            for (int k = 0; k < 4; k++) {
+                final int part = k;
+                addDataSlot(makeDataSlot(() -> longChunk(entity.getProductWeight(idx), part), v -> clientWeights[idx] = setChunk(clientWeights[idx], part, v)));
+            }
         }
         for (Direction direction : Direction.values()) {
             final int idx = direction.ordinal();
@@ -387,15 +398,36 @@ public class ResourceFarmMenu extends AbstractContainerMenu {
         };
     }
 
-    private static int hiWord(long value) {
-        return (int) (value >> 32);
+    // ==================== 数据槽拆位工具 ====================
+    // 数据槽在线路上走 ClientboundContainerSetDataPacket，值用 writeShort 写——**只有 16 位**。
+    // 因此 32 位值要拆成 2 块、64 位值要拆成 4 块；每块按无符号 16 位传递
+    // （0~65535 写出去会被读成负数，所以取块与并块都要 & 0xFFFF）。
+    // 注意「拆成高低 32 位」是错的：那样每一半仍然会被截断到 16 位。
+
+    /** 取 32 位值的第 {@code part} 个 16 位块（part 0 = 低 16 位） */
+    private static int intChunk(int value, int part) {
+        return (value >>> (part * 16)) & 0xFFFF;
     }
 
-    private static int loWord(long value) {
-        return (int) (value & 0xFFFFFFFFL);
+    /** 把两个 16 位块并回 32 位值 */
+    private static int merge32(int high, int low) {
+        return ((high & 0xFFFF) << 16) | (low & 0xFFFF);
     }
 
-    private static long mergeLong(int hi, int lo) {
-        return ((long) hi << 32) | (lo & 0xFFFFFFFFL);
+    /** 取 long 的第 {@code part} 个 16 位块（part 0 = 低 16 位，共 4 块） */
+    private static int longChunk(long value, int part) {
+        return (int) ((value >>> (part * 16)) & 0xFFFFL);
+    }
+
+    /** 把第 {@code part} 个 16 位块写回 long */
+    private static long setChunk(long value, int part, int chunk) {
+        int shift = part * 16;
+        long mask = 0xFFFFL << shift;
+        return (value & ~mask) | (((long) (chunk & 0xFFFF)) << shift);
+    }
+
+    /** 裁剪到 int 范围（负值取 0） */
+    private static int suitInt(long value) {
+        return (int) Math.max(0, Math.min(Integer.MAX_VALUE, value));
     }
 }

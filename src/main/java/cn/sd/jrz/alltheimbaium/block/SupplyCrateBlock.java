@@ -6,7 +6,7 @@ import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.SupplyData;
 import cn.sd.jrz.alltheimbaium.setup.SupplyRoll;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -70,13 +70,16 @@ public class SupplyCrateBlock extends Block {
     }
 
     /**
-     * 写入菜单初始数据：方块坐标、10 个物品 id、选中索引(无=-1 编码为0)、最大/已用补给点。
+     * 写入菜单初始数据：方块坐标、10 个完整物品（含 NBT）、选中索引(无=-1 编码为0)、最大/已用补给点。
+     * <p>
+     * 物品按 NBT 写而不是只写注册 id：药水 / 附魔书 / 带 EntityTag 的刷怪蛋这类物品的信息全在 NBT 上，
+     * 只发 id 客户端会显示（并兑换）成默认版本。
      */
     private static void writeOpenData(FriendlyByteBuf buf, BlockPos pos, ItemStack[] rolls, int max, int used) {
         buf.writeBlockPos(pos);
-        for (int i = 0; i < 10; i++) {
-            int id = (i < rolls.length && !rolls[i].isEmpty()) ? BuiltInRegistries.ITEM.getId(rolls[i].getItem()) : 0;
-            buf.writeVarInt(id);
+        for (int i = 0; i < SupplyCrateMenu.ROLL_SLOTS; i++) {
+            ItemStack stack = (rolls != null && i < rolls.length && rolls[i] != null) ? rolls[i] : ItemStack.EMPTY;
+            buf.writeNbt(stack.isEmpty() ? null : stack.save(new CompoundTag()));
         }
         buf.writeVarInt(0);
         buf.writeVarInt(max);

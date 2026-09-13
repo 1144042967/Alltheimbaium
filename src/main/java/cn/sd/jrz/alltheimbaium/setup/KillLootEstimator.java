@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,7 +50,18 @@ public final class KillLootEstimator {
      */
     @Nonnull
     public static List<SampledDrop> estimate(ServerLevel serverLevel, @Nonnull EntityType<?> type) {
-        return CACHE.computeIfAbsent(type, t -> doEstimate(serverLevel, t, MobFarmBlock.getSampleKills()));
+        List<SampledDrop> cached = CACHE.get(type);
+        if (cached != null) {
+            return cached;
+        }
+        List<SampledDrop> result = doEstimate(serverLevel, type, MobFarmBlock.getSampleKills());
+        if (result == null) {
+            // 采样抛异常：**不写缓存**。以前用 computeIfAbsent 会把失败结果（空表）永久固定下来，
+            // 一次瞬时失败就让该生物在整个 JVM 生命周期内没有任何产物。
+            return List.of();
+        }
+        CACHE.put(type, result);
+        return result;
     }
 
     /**
@@ -58,15 +70,31 @@ public final class KillLootEstimator {
      */
     @Nonnull
     public static List<Item> possibleItems(ServerLevel serverLevel, @Nonnull EntityType<?> type) {
-        return MARKER_CACHE.computeIfAbsent(type, t -> {
-            List<Item> items = new ArrayList<>();
-            for (SampledDrop drop : doEstimate(serverLevel, t, MARKER_ROLLS)) {
-                if (drop.item() != null && !items.contains(drop.item())) {
-                    items.add(drop.item());
-                }
+        List<Item> cached = MARKER_CACHE.get(type);
+        if (cached != null) {
+            return cached;
+        }
+        List<SampledDrop> sampled = doEstimate(serverLevel, type, MARKER_ROLLS);
+        if (sampled == null) {
+            return List.of();
+        }
+        List<Item> items = new ArrayList<>();
+        for (SampledDrop drop : sampled) {
+            if (drop.item() != null && !items.contains(drop.item())) {
+                items.add(drop.item());
             }
-            return items;
-        });
+        }
+        MARKER_CACHE.put(type, items);
+        return items;
+    }
+
+    /**
+     * 丢弃全部采样缓存。配置重载（采样次数变了）与换存档（数据包可能不同）时调用，
+     * 下次访问按新配置 / 新数据包重新采样。
+     */
+    public static void invalidate() {
+        CACHE.clear();
+        MARKER_CACHE.clear();
     }
 
     /**
@@ -81,7 +109,8 @@ public final class KillLootEstimator {
         return false;
     }
 
-    @Nonnull
+    /** @return 采样结果；**抛异常时返回 null**（调用方据此决定不写缓存），确实没有掉落时返回空表 */
+    @Nullable
     private static List<SampledDrop> doEstimate(ServerLevel serverLevel, EntityType<?> type, int rolls) {
         List<SampledDrop> result = new ArrayList<>();
         try {
@@ -124,6 +153,7 @@ public final class KillLootEstimator {
             acc.forEach((item, count) -> result.add(new SampledDrop(item, count / (double) effective)));
         } catch (Throwable e) {
             log.warn("KillLootEstimator.doEstimate error for {}", type, e);
+            return null;   // 失败与"确实没有掉落"要区分开：失败结果不能被缓存
         }
         return result;
     }

@@ -112,81 +112,153 @@ public final class MobFarmWhitelist {
         } catch (Throwable e) {
             log.error("MobFarmWhitelist.build error", e);
         }
-        markersCache = markers;
+        // 先写数据、最后写"哨兵"字段：ensure() 只看 markersCache，最后写它才能保证
+        // 别的线程看到非 null 时另两个字段已经就绪
         productsCache = products;
         knownCache = known;
+        markersCache = markers;
+    }
+
+    /** 丢弃已构建的白名单（配置重载 / 换存档时调用），下次访问按新配置重新解析 */
+    public static void invalidate() {
+        synchronized (MobFarmWhitelist.class) {
+            markersCache = null;
+            productsCache = null;
+            knownCache = null;
+        }
     }
 
     private static void parseSignature(String line, Map<Item, EntityType<?>> markers, Set<EntityType<?>> known) {
-        int eq = line.indexOf('=');
-        if (eq <= 0) {
-            return;
-        }
-        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(new ResourceLocation(line.substring(0, eq)));
-        if (type == null) {
-            log.warn("MobFarmWhitelist 特征物白名单: 找不到实体 {}", line.substring(0, eq));
-            return;
-        }
-        known.add(type);
-        for (String token : line.substring(eq + 1).split(";")) {
-            try {
-                if (token == null || token.isEmpty()) {
-                    continue;
-                }
-                if (token.startsWith("tag:")) {
-                    TagKey<Item> tag = TagKey.create(Registries.ITEM, new ResourceLocation(token.substring(4)));
-                    for (Item item : BuiltInRegistries.ITEM) {
-                        if (item != Items.AIR && BuiltInRegistries.ITEM.wrapAsHolder(item).is(tag)) {
+        // 单行失败只丢这一行。此前实体 id 的构造在 try 之外，一行写错就会中断整个 build：
+        // 后面的行全都不再解析（产物表整表为空），而半成品的缓存已写入、之后永不重建。
+        try {
+            int eq = line.indexOf('=');
+            if (eq <= 0) {
+                return;
+            }
+            String typeId = line.substring(0, eq).trim();
+            EntityType<?> type = lookupEntity(typeId);
+            if (type == null) {
+                log.warn("MobFarmWhitelist 特征物白名单: 找不到实体 {}", typeId);
+                return;
+            }
+            known.add(type);
+            for (String token : line.substring(eq + 1).split(";")) {
+                try {
+                    if (token == null || token.isEmpty()) {
+                        continue;
+                    }
+                    if (token.startsWith("tag:")) {
+                        ResourceLocation tagId = ResourceLocation.tryParse(token.substring(4).trim());
+                        if (tagId == null) {
+                            log.warn("MobFarmWhitelist.parseSignature: 非法标签 id {}", token);
+                            continue;
+                        }
+                        TagKey<Item> tag = TagKey.create(Registries.ITEM, tagId);
+                        for (Item item : BuiltInRegistries.ITEM) {
+                            if (item != Items.AIR && BuiltInRegistries.ITEM.wrapAsHolder(item).is(tag)) {
+                                markers.putIfAbsent(item, type);
+                            }
+                        }
+                    } else {
+                        Item item = lookupItem(token);
+                        if (item != null) {
                             markers.putIfAbsent(item, type);
                         }
                     }
-                } else {
-                    Item item = BuiltInRegistries.ITEM.get(new ResourceLocation(token));
-                    if (item != null) {
-                        markers.putIfAbsent(item, type);
-                    }
+                } catch (Throwable e) {
+                    log.warn("MobFarmWhitelist.parseSignature token {} error", token, e);
                 }
-            } catch (Throwable e) {
-                log.warn("MobFarmWhitelist.parseSignature token {} error", token, e);
             }
+        } catch (Throwable e) {
+            log.warn("MobFarmWhitelist.parseSignature line {} error", line, e);
         }
     }
 
     private static void parseProduct(String line, Map<EntityType<?>, List<Product>> products, Set<EntityType<?>> known) {
-        int eq = line.indexOf('=');
-        if (eq <= 0) {
-            return;
-        }
-        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(new ResourceLocation(line.substring(0, eq)));
-        if (type == null) {
-            log.warn("MobFarmWhitelist 产物白名单: 找不到实体 {}", line.substring(0, eq));
-            return;
-        }
-        known.add(type);
-        List<Product> list = products.computeIfAbsent(type, k -> new ArrayList<>());
-        for (String token : line.substring(eq + 1).split(";")) {
-            try {
-                if (token == null || token.isEmpty()) {
-                    continue;
-                }
-                int lastColon = token.lastIndexOf(':');
-                if (lastColon <= 0) {
-                    continue;
-                }
-                Item item = BuiltInRegistries.ITEM.get(new ResourceLocation(token.substring(0, lastColon)));
-                if (item == null) {
-                    continue;
-                }
-                long weight;
-                try {
-                    weight = Long.parseLong(token.substring(lastColon + 1));
-                } catch (NumberFormatException e) {
-                    weight = 1;
-                }
-                list.add(new Product(item, weight));
-            } catch (Throwable e) {
-                log.warn("MobFarmWhitelist.parseProduct token {} error", token, e);
+        try {
+            int eq = line.indexOf('=');
+            if (eq <= 0) {
+                return;
             }
+            String typeId = line.substring(0, eq).trim();
+            EntityType<?> type = lookupEntity(typeId);
+            if (type == null) {
+                log.warn("MobFarmWhitelist 产物白名单: 找不到实体 {}", typeId);
+                return;
+            }
+            known.add(type);
+            List<Product> list = products.computeIfAbsent(type, k -> new ArrayList<>());
+            for (String token : line.substring(eq + 1).split(";")) {
+                try {
+                    if (token == null || token.isEmpty()) {
+                        continue;
+                    }
+                    Product product = parseProductToken(token);
+                    if (product != null) {
+                        list.add(product);
+                    }
+                } catch (Throwable e) {
+                    log.warn("MobFarmWhitelist.parseProduct token {} error", token, e);
+                }
+            }
+        } catch (Throwable e) {
+            log.warn("MobFarmWhitelist.parseProduct line {} error", line, e);
+        }
+    }
+
+    // ==================== 解析工具 ====================
+    // 注意：ITEM / ENTITY_TYPE 都被 Forge 包成了"带默认值"的注册表——get() 查不到时返回默认值
+    // （AIR / PIG）而不是 null，所以 `!= null` 恒真、永远拦不住拼错的 id（拼错会静默变成猪/空气）。
+    // 一律用 containsKey 判定"是否注册"。
+
+    /** 实体 id 解析：非法 id 或未注册返回 null */
+    @Nullable
+    private static EntityType<?> lookupEntity(@Nonnull String id) {
+        ResourceLocation key = ResourceLocation.tryParse(id.trim());
+        if (key == null || !BuiltInRegistries.ENTITY_TYPE.containsKey(key)) {
+            return null;
+        }
+        return BuiltInRegistries.ENTITY_TYPE.get(key);
+    }
+
+    /** 物品 id 解析：非法 id、未注册或 air 一律返回 null（生物没有对应刷怪蛋时按此跳过） */
+    @Nullable
+    private static Item lookupItem(@Nonnull String id) {
+        ResourceLocation key = ResourceLocation.tryParse(id.trim());
+        if (key == null || !BuiltInRegistries.ITEM.containsKey(key)) {
+            return null;
+        }
+        Item item = BuiltInRegistries.ITEM.get(key);
+        return item == null || item == Items.AIR ? null : item;
+    }
+
+    /** 解析一条 {@code 物品id:权重} 产物片段；非法或未注册返回 null（省略权重按 1 计） */
+    @Nullable
+    private static Product parseProductToken(@Nonnull String token) {
+        String text = token.trim();
+        int last = text.lastIndexOf(':');
+        String idPart = text;
+        long weight = 1;
+        if (last > 0) {
+            // 只有尾段是纯数字才当权重，否则整串都是物品 id（"minecraft:honeycomb" 这种省略权重的写法）
+            Long parsed = parseLong(text.substring(last + 1).trim());
+            if (parsed != null) {
+                idPart = text.substring(0, last);
+                weight = parsed;
+            }
+        }
+        Item item = lookupItem(idPart);
+        return item == null ? null : new Product(item, weight);
+    }
+
+    /** 纯数字串转 long，非数字返回 null */
+    @Nullable
+    private static Long parseLong(@Nonnull String text) {
+        try {
+            return Long.parseLong(text);
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 }

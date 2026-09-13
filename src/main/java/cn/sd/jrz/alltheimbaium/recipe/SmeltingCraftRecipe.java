@@ -179,7 +179,13 @@ public class SmeltingCraftRecipe extends CustomRecipe {
             for (AbstractCookingRecipe recipe : recipes) {
                 for (Ingredient ingredient : recipe.getIngredients()) {
                     if (ingredient.test(singleItem)) {
-                        return recipe.getResultItem(level.registryAccess()).copy();
+                        ItemStack result = recipe.getResultItem(level.registryAccess()).copy();
+                        // 空产物配方（数据包里写了 air、或产物物品被移除后配方仍能加载）不能算匹配成功——
+                        // 否则 matches() 判定成立、assemble() 却吐不出东西，玩家放进去的材料会被白白吞掉。
+                        if (result.isEmpty()) {
+                            continue;
+                        }
+                        return result;
                     }
                 }
             }

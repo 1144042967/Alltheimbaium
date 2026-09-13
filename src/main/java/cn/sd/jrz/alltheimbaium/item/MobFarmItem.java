@@ -14,6 +14,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -124,12 +125,15 @@ public class MobFarmItem extends BlockItem {
             }
             int radius = Math.max(1, MobFarmBlock.getCaptureRadius());
             AABB box = player.getBoundingBox().inflate(radius);
+            // 只收真正的生物（Mob）：盔甲架这类 LivingEntity 有击杀战利品表（掉落自身），
+            // 单靠 hasAnyDrop 过滤会把它一并放行，等于可以"养殖"盔甲架。
+            // 白名单里的实体不受此限——模组加的自定义非 Mob 生物写进 signature_whitelist 仍可收容。
             List<LivingEntity> list = serverLevel.getEntitiesOfClass(LivingEntity.class, box,
                     e -> e.isAlive()
                             && !(e instanceof Player)
                             && !e.isRemoved()
                             && (MobFarmCatalog.isWhitelisted(e.getType())
-                            || KillLootEstimator.hasAnyDrop(serverLevel, e.getType())));
+                            || (e instanceof Mob && KillLootEstimator.hasAnyDrop(serverLevel, e.getType()))));
             if (list.isEmpty()) {
                 return false;
             }

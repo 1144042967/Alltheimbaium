@@ -126,6 +126,7 @@
   "item.alltheimbaium.resource_farm.usage.2": "标记物可以是圆石 / 任意树苗 / 竹子 / 甘蔗 / 冰 / 骨粉 / 花 / 蘑菇等",
   "item.alltheimbaium.resource_farm.usage.3": "产物按大数累计在 §e27 行§7 内，可在界面取出或由管道抽取",
   "item.alltheimbaium.resource_farm.usage.4": "悬停界面右上角的 §e?§7 可查看「标记物 → 产物」的完整对照表",
+  "item.alltheimbaium.resource_farm.usage.5": "任意树苗都能直接标记，产出该树的原木 / 树苗 / 树叶",
   "item.alltheimbaium.resource_farm.warn.1": "每台只能标记一次，不可取消或更换",
   "item.alltheimbaium.storage_fountain.param.1": "可复制的物品需满足以下任一条件：",
   "item.alltheimbaium.storage_fountain.param.items": "或在白名单中：%s",
