@@ -30,6 +30,6 @@ public class PackageMaterialItem extends Item {
         super.appendHoverText(stack, worldIn, tooltip, flagIn);
         Tip.of(tooltip)
                 .head(stack, "tip.alltheimbaium.type.material")
-                .summary("item.alltheimbaium.package_material_x1.summary");
+                .summary("item.alltheimbaium.package_material.summary");
     }
 }

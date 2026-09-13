@@ -44,78 +44,78 @@
 
 ### `auto_farmland.json`
 
-- **`alltheimbaium:auto_farmland`**  ·  图案 `XFF` / `FRF` / `FFX`
-  - 键位：`X`=`alltheimbaium:package_material_x1`×2、`F`=`alltheimbaium:farmland`×6、`R`=`minecraft:redstone`
+- **`alltheimbaium:auto_farmland`**  ·  图案 `FFF` / `XRX` / `FFF`
+  - 键位：`X`=`alltheimbaium:package_material`×2、`F`=`alltheimbaium:farmland`×6、`R`=`minecraft:redstone`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `clock.json`
 
 - **`alltheimbaium:clock`**  ·  图案 `BXB` / `BCB` / `BBB`
-  - 键位：`X`=`alltheimbaium:package_material_x1`、`B`=`minecraft:iron_block`×7、`C`=`minecraft:clock`
+  - 键位：`X`=`alltheimbaium:package_material`、`B`=`minecraft:iron_block`×7、`C`=`minecraft:clock`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `creative_transmuter.json`
 
 - **`alltheimbaium:creative_transmuter`**  ·  图案 `NNN` / `NPN` / `NNN`
-  - 键位：`N`=`minecraft:netherite_block`×8、`P`=`alltheimbaium:package_material_x1`
+  - 键位：`N`=`minecraft:netherite_block`×8、`P`=`alltheimbaium:package_material`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `eternal_sword.json`
 
-- **`alltheimbaium:eternal_sword`**  ·  图案 `XBA` / `BCB` / `ABX`
-  - 键位：`X`=`alltheimbaium:package_material_x1`×2、`A`=`minecraft:netherite_block`×2、`B`=`minecraft:golden_apple`×4、`C`=`minecraft:netherite_sword`
+- **`alltheimbaium:eternal_sword`**  ·  图案 `ABA` / `XCX` / `BBB`
+  - 键位：`X`=`alltheimbaium:package_material`×2、`A`=`minecraft:netherite_block`×2、`B`=`minecraft:golden_apple`×4、`C`=`minecraft:netherite_sword`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `eternal_totem.json`
 
-- **`alltheimbaium:eternal_totem`**  ·  图案 `XBA` / `BCB` / `ABX`
-  - 键位：`X`=`alltheimbaium:package_material_x1`×2、`A`=`minecraft:netherite_block`×2、`B`=`minecraft:golden_apple`×4、`C`=`minecraft:totem_of_undying`
+- **`alltheimbaium:eternal_totem`**  ·  图案 `ABA` / `XCX` / `BBB`
+  - 键位：`X`=`alltheimbaium:package_material`×2、`A`=`minecraft:netherite_block`×2、`B`=`minecraft:golden_apple`×4、`C`=`minecraft:totem_of_undying`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `extraction_interface.json`
 
-- **`alltheimbaium:extraction_interface`**  ·  图案 `XBB` / `BCB` / `BBX`
-  - 键位：`X`=`alltheimbaium:package_material_x1`×2、`B`=`minecraft:iron_ingot`×6、`C`=`minecraft:redstone_block`
+- **`alltheimbaium:extraction_interface`**  ·  图案 `BBB` / `XCX` / `BBB`
+  - 键位：`X`=`alltheimbaium:package_material`×2、`B`=`minecraft:iron_ingot`×6、`C`=`minecraft:redstone_block`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `farmland.json`
 
 - **`alltheimbaium:farmland`**  ·  图案 `BXB` / `BCB` / `BBB`
-  - 键位：`X`=`alltheimbaium:package_material_x1`、`B`=`minecraft:iron_ingot`×7、`C`=`minecraft:dirt`
+  - 键位：`X`=`alltheimbaium:package_material`、`B`=`minecraft:iron_ingot`×7、`C`=`minecraft:dirt`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `instant_furnace.json`
 
-- **`alltheimbaium:instant_furnace`**  ·  图案 `XBB` / `BCB` / `BBX`
-  - 键位：`X`=`alltheimbaium:package_material_x1`×2、`B`=`minecraft:iron_block`×6、`C`=`minecraft:furnace`
+- **`alltheimbaium:instant_furnace`**  ·  图案 `BBB` / `XCX` / `BBB`
+  - 键位：`X`=`alltheimbaium:package_material`×2、`B`=`minecraft:iron_block`×6、`C`=`minecraft:furnace`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `instant_inscriber.json`
 
-- **`alltheimbaium:instant_inscriber`**  ·  图案 `XBB` / `BCB` / `BBX`
-  - 键位：`X`=`alltheimbaium:package_material_x1`×2、`B`=`minecraft:iron_block`×6、`C`=`minecraft:smithing_table`
+- **`alltheimbaium:instant_inscriber`**  ·  图案 `BBB` / `XCX` / `BBB`
+  - 键位：`X`=`alltheimbaium:package_material`×2、`B`=`minecraft:iron_block`×6、`C`=`minecraft:smithing_table`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `liquid_fountain.json`
 
-- **`alltheimbaium:liquid_fountain`**  ·  图案 `XBB` / `BCB` / `BBX`
-  - 键位：`X`=`alltheimbaium:package_material_x1`×2、`B`=`minecraft:diamond_block`×6、`C`=`minecraft:bucket`
+- **`alltheimbaium:liquid_fountain`**  ·  图案 `BBB` / `XCX` / `BBB`
+  - 键位：`X`=`alltheimbaium:package_material`×2、`B`=`minecraft:diamond_block`×6、`C`=`minecraft:bucket`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `mob_farm.json`
 
-- **`alltheimbaium:mob_farm`**  ·  图案 `XBB` / `BCB` / `BBX`
-  - 键位：`X`=`alltheimbaium:package_material_x1`×2、`B`=`minecraft:diamond_block`×6、`C`=`minecraft:glass_bottle`
+- **`alltheimbaium:mob_farm`**  ·  图案 `BBB` / `XCX` / `BBB`
+  - 键位：`X`=`alltheimbaium:package_material`×2、`B`=`minecraft:diamond_block`×6、`C`=`minecraft:glass_bottle`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
@@ -125,16 +125,16 @@
   - 机器：工作台（无序） · `minecraft:crafting_shapeless`
   - 前置：无（始终生效）
 
-### `package_material_x1_1.json`
+### `package_material_1.json`
 
-- **`alltheimbaium:package_material_x1`×8**  ·  图案 `AAA` / `ABA` / `AAA`
+- **`alltheimbaium:package_material`**  ·  图案 `AAA` / `ABA` / `AAA`
   - 键位：`A`=`#minecraft:planks`×8、`B`=`#forge:cobblestone`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
-### `package_material_x1_2.json`
+### `package_material_2.json`
 
-- **`alltheimbaium:package_material_x1`×8**  ·  图案 `AAA` / `ABA` / `AAA`
+- **`alltheimbaium:package_material`**  ·  图案 `AAA` / `ABA` / `AAA`
   - 键位：`A`=`#forge:cobblestone`×8、`B`=`#minecraft:planks`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
@@ -142,21 +142,21 @@
 ### `platform.json`
 
 - **`alltheimbaium:platform`**  ·  图案 `BXB` / `BCB` / `BBB`
-  - 键位：`X`=`alltheimbaium:package_material_x1`、`B`=`minecraft:iron_ingot`×7、`C`=`minecraft:smooth_stone`
+  - 键位：`X`=`alltheimbaium:package_material`、`B`=`minecraft:iron_ingot`×7、`C`=`minecraft:smooth_stone`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `resource_farm.json`
 
-- **`alltheimbaium:resource_farm`**  ·  图案 `XBB` / `BCB` / `BBX`
-  - 键位：`X`=`alltheimbaium:package_material_x1`×2、`B`=`minecraft:diamond_block`×6、`C`=`minecraft:dirt`
+- **`alltheimbaium:resource_farm`**  ·  图案 `BBB` / `XCX` / `BBB`
+  - 键位：`X`=`alltheimbaium:package_material`×2、`B`=`minecraft:diamond_block`×6、`C`=`minecraft:dirt`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
 ### `storage_fountain.json`
 
-- **`alltheimbaium:storage_fountain`**  ·  图案 `XBB` / `BCB` / `BBX`
-  - 键位：`X`=`alltheimbaium:package_material_x1`×2、`B`=`minecraft:diamond_block`×6、`C`=`minecraft:iron_block`
+- **`alltheimbaium:storage_fountain`**  ·  图案 `BBB` / `XCX` / `BBB`
+  - 键位：`X`=`alltheimbaium:package_material`×2、`B`=`minecraft:diamond_block`×6、`C`=`minecraft:iron_block`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
@@ -213,8 +213,8 @@
 
 ### `supply_crate.json`
 
-- **`alltheimbaium:supply_crate`**  ·  图案 `XBB` / `BCB` / `BBX`
-  - 键位：`X`=`alltheimbaium:package_material_x1`×2、`B`=`minecraft:diamond_block`×6、`C`=`minecraft:chest`
+- **`alltheimbaium:supply_crate`**  ·  图案 `BBB` / `XCX` / `BBB`
+  - 键位：`X`=`alltheimbaium:package_material`×2、`B`=`minecraft:diamond_block`×6、`C`=`minecraft:chest`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：无（始终生效）
 
@@ -967,7 +967,7 @@
 ### `small_chaos_frag.json`
 
 - **`draconicevolution:small_chaos_frag`**  ·  图案 `ADA` / `DLD` / `ADA`
-  - 键位：`A`=`alltheimbaium:package_material_x1`×4、`D`=`minecraft:dragon_head`×4、`L`=`minecraft:dragon_egg`
+  - 键位：`A`=`alltheimbaium:package_material`×4、`D`=`minecraft:dragon_head`×4、`L`=`minecraft:dragon_egg`
   - 机器：工作台（有序） · `minecraft:crafting_shaped`
   - 前置：需要安装 `draconicevolution`
 

@@ -67,8 +67,10 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     private static final int HELP_COL_GAP = 4;
     /** 一行里最多列出的输入材料数，超出折叠为"…等 N 项" */
     private static final int HELP_MAX_INPUTS = 3;
-    /** 帮助里的箭头符号：输出 ← 输入 */
+    /** 帮助里的箭头符号：输出 ← 输入（组装卡，输出在左） */
     private static final String HELP_ARROW = "←";
+    /** 压板卡的箭头符号：输入 → 输出（压板卡与组装卡列方向相反，输入在左） */
+    private static final String HELP_ARROW_PRESS = "→";
     /** 自绘帮助卡片的抬升 z，确保盖过槽位里的物品贴图 */
     private static final int HELP_Z = 400;
 
@@ -211,7 +213,8 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
         int max = Math.max(1, this.menu.getMaxEnergy());
         int energy = Math.max(0, Math.min(max, this.menu.getEnergy()));
         if (energy > 0) {
-            int fill = ENERGY_W * energy / max;
+            // 必须先用 long 相乘：MAX_ENERGY 是 20 亿，ENERGY_W × energy 会溢出 int
+            int fill = (int) ((long) ENERGY_W * energy / max);
             guiGraphics.fill(trackLeft, trackTop, trackLeft + fill, trackTop + ENERGY_H, ENERGY_FILL_COLOR);
         }
     }
@@ -478,7 +481,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
 
         Component footer = Component.translatable("screen.alltheimbaium.instant_inscriber.help.page",
                 Math.min(this.helpPageA + 1, pages), pages, total).withStyle(ChatFormatting.GRAY);
-        int arrowW = this.font.width(HELP_ARROW);
+        int arrowW = this.font.width(HELP_ARROW_PRESS);
         int arrowX = maxInW + HELP_COL_GAP;
         int outX = arrowX + arrowW + HELP_COL_GAP;
         int rowW = outX + maxOutW;
@@ -497,7 +500,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
         y += lineH;
         for (int i = 0; i < inputNames.size(); i++) {
             guiGraphics.drawString(this.font, inputNames.get(i), left, y, 0xFFFFFF, true);
-            guiGraphics.drawString(this.font, HELP_ARROW, left + arrowX, y, 0xFFAAAAAA, true);
+            guiGraphics.drawString(this.font, HELP_ARROW_PRESS, left + arrowX, y, 0xFFAAAAAA, true);
             guiGraphics.drawString(this.font, outputNames.get(i), left + outX, y, 0xFFFFFF, true);
             y += lineH;
         }

@@ -64,7 +64,7 @@ public class Registration {
                 .icon(() -> new ItemStack(Registration.ETERNAL_SWORD.get()))
                 .displayItems((parameters, output) -> {
                     // 顺序与下方声明顺序一致，按品级升序排列
-                    output.accept(Registration.PACKAGE_MATERIAL_X1.get());
+                    output.accept(Registration.PACKAGE_MATERIAL.get());
                     output.accept(Registration.FARMLAND_ITEM.get());
                     output.accept(Registration.PLATFORM_ITEM.get());
                     output.accept(Registration.EXTRACTION_INTERFACE_ITEM.get());
@@ -93,7 +93,7 @@ public class Registration {
 
     // ==================== 材料级 ====================
 
-    public static final RegistryObject<PackageMaterialItem> PACKAGE_MATERIAL_X1 = ITEMS.register("package_material_x1", PackageMaterialItem::new);
+    public static final RegistryObject<PackageMaterialItem> PACKAGE_MATERIAL = ITEMS.register("package_material", PackageMaterialItem::new);
 
     // ==================== 便利级 ====================
 

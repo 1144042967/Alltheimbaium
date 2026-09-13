@@ -40,7 +40,7 @@
 
 | 品级 | Rarity | 颜色 | 能力定位 | 物品 |
 |------|--------|------|----------|------|
-| 材料级 | `COMMON` | 白色 | 仅合成中间物 | `package_material_x1` |
+| 材料级 | `COMMON` | 白色 | 仅合成中间物 | `package_material` |
 | 便利级 | `UNCOMMON` | 黄色 | 省事、提速，本身不产生资源 | `farmland` `platform` `extraction_interface` `clock` `supply_crate` |
 | 高效级 | `RARE` | 青色 | 需输入或能量，批量加工 | `auto_farmland` `instant_furnace` `instant_inscriber` `mob_farm` `resource_farm` |
 | 破坏平衡 | `EPIC` | 淡紫 | 一次建立后无限产出，或绝对能力 | `storage_fountain` `liquid_fountain` `creative_transmuter` `eternal_totem` `eternal_sword` |
@@ -258,6 +258,7 @@ public class XxxItem extends BlockItem {
 ### 7. 数据文件
 
 - 配方统一放 `recipes/main/<name>.json`，`group` 固定 `alltheimbaium`，成本随品级递增（便利级铁锭 / 高效级铁块 / 破坏平衡钻石块 / 永恒系列下界合金块）。
+- **含 2 个打包材料的配方一律把这两个材料放在中间一行的左右两端**（`BBB` / `XCX` / `BBB`，耕地类为 `FFF` / `XRX` / `FFF`），不要摆在四个角或对角线上；永恒系列因环上材料不单一，空出的上排两角补下界合金块（`ABA` / `XCX` / `BBB`）。
 - **改完配方必须同步配方总表**：执行 `python tools/gen_recipe_docs.py` 重新生成根目录的 `RECIPES.md`。该文件由脚本扫描全部配方 JSON 生成（按目录分类、自动列出内层配方类型与生效前置 MOD），**不要手改**——它是全项目配方的唯一索引，漏同步会导致文档与实际不符。
 - **有持久数据的机器**：战利品表要 `copy_name` + `copy_nbt`，把 `saveAdditional` 写下的每个键逐个搬到 `BlockEntityTag.<键>`，拆下重放才不丢数据。**无持久数据的机器**（platform / supply_crate / extraction_interface）用普通战利品表即可。
 - 语言文件 `zh_cn.json` 与 `en_us.json` **键集必须完全一致、段落顺序逐行对齐**，改完用脚本比对一次（键数相等且差集为空）。
@@ -551,7 +552,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 
 ### 16. 合成材料
 
-- `package_material_x1` — 打包材料：本模组所有机器与材料的通用合成基底，由木板与圆石互相合成，一次产出 8 个
+- `package_material` — 打包材料：本模组所有机器与材料的通用合成基底，由木板与圆石互相合成，一次产出 1 个
 
 ### 17. 创造物品质变器 (`CreativeTransmuterBlock` / `CreativeTransmuterEntity`)
 

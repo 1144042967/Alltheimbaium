@@ -3,10 +3,10 @@
   "group": "alltheimbaium",
   "key": {
     "A": {
-      "tag": "minecraft:planks"
+      "tag": "forge:cobblestone"
     },
     "B": {
-      "tag": "forge:cobblestone"
+      "tag": "minecraft:planks"
     }
   },
   "pattern": [
@@ -15,7 +15,6 @@
     "AAA"
   ],
   "result": {
-    "item": "alltheimbaium:package_material_x1",
-    "count": 8
+    "item": "alltheimbaium:package_material"
   }
 }

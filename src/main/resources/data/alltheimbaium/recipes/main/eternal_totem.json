@@ -1,13 +1,13 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "XBA",
-    "BCB",
-    "ABX"
+    "ABA",
+    "XCX",
+    "BBB"
   ],
   "key": {
     "X": {
-      "item": "alltheimbaium:package_material_x1"
+      "item": "alltheimbaium:package_material"
     },
     "A": {
       "item": "minecraft:netherite_block"

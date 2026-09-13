@@ -170,7 +170,8 @@ public class InstantFurnaceScreen extends AbstractContainerScreen<InstantFurnace
         int max = Math.max(1, this.menu.getMaxEnergy());
         int energy = Math.max(0, Math.min(max, this.menu.getEnergy()));
         if (energy > 0) {
-            int fill = ENERGY_W * energy / max;
+            // 必须先用 long 相乘：MAX_ENERGY 是 20 亿，ENERGY_W × energy 会溢出 int
+            int fill = (int) ((long) ENERGY_W * energy / max);
             guiGraphics.fill(trackLeft, trackTop, trackLeft + fill, trackTop + ENERGY_H, ENERGY_FILL_COLOR);
         }
     }
