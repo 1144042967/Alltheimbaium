@@ -1,18 +1,17 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "itemInput": {
-    "ingredient": {
-      "item": "ae2:chipped_budding_quartz"
-    }
+  "item_input": {
+    "item": "ae2:chipped_budding_quartz"
   },
-  "chemicalInput": {
+  "chemical_input": {
     "amount": 80,
     "tag": "mekanism:carbon"
   },
   "output": {
-    "count": 64,
-    "item": "ae2:sky_dust"
+    "id": "ae2:sky_dust",
+    "count": 64
   },
+  "per_tick_usage": false,
   "neoforge:conditions": [
     {
       "type": "neoforge:mod_loaded",

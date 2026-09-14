@@ -1,10 +1,10 @@
 {
   "type": "advanced_ae:reaction",
-  "energy": 320000,
-  "fluid": {
-    "fluidStack": {
-      "Amount": 16000,
-      "FluidName": "minecraft:lava"
+  "input_energy": 320000,
+  "input_fluid": {
+    "amount": 16000,
+    "ingredient": {
+      "fluid": "minecraft:lava"
     }
   },
   "input_items": [
@@ -17,7 +17,7 @@
   ],
   "output": {
     "#": 16000,
-    "#c": "ae2:f",
+    "#t": "ae2:f",
     "id": "advanced_ae:quantum_infusion_source"
   },
   "neoforge:conditions": [

@@ -5,12 +5,12 @@
   },
   "results": [
     {
-      "count": 1,
-      "item": "minecraft:glass_bottle"
+      "id": "minecraft:glass_bottle",
+      "count": 1
     },
     {
-      "count": 1,
-      "item": "mysticalagriculture:water_essence"
+      "id": "mysticalagriculture:water_essence",
+      "count": 1
     }
   ],
   "neoforge:conditions": [

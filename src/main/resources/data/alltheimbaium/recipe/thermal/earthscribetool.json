@@ -2,7 +2,7 @@
   "type": "thermal:bottler",
   "ingredients": [
     {
-      "tag": "c:obsidian"
+      "tag": "c:obsidians"
     },
     {
       "fluid": "bloodmagic:life_essence_fluid",
@@ -11,7 +11,7 @@
   ],
   "result": [
     {
-      "item": "bloodmagic:earthscribetool"
+      "id": "bloodmagic:earthscribetool"
     }
   ],
   "energy": 2000,

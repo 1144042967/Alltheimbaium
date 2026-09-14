@@ -4,6 +4,7 @@ import net.minecraft.world.item.Item;
 import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.setup.KillLootEstimator;
 import cn.sd.jrz.alltheimbaium.setup.MobFarmCatalog;
+import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -155,7 +156,8 @@ public class MobFarmItem extends BlockItem {
             // 1.21：组件不是活引用，读出来是副本，改完必须写回
             CompoundTag blockTag = Tool.getBlockEntityTagOrEmpty(stack);
             blockTag.put("entityTag", tag);
-            Tool.setBlockEntityTag(stack, blockTag);
+            // 必须带方块实体类型：BLOCK_ENTITY_DATA 组件要求标签里有 id，缺了存档即崩
+            Tool.setBlockEntityTag(stack, Registration.MOB_FARM_ENTITY.get(), blockTag);
             String name = nearest.getName().getString();
             nearest.discard();
             player.sendSystemMessage(Component.translatable("chat.alltheimbaium.mob_farm.capture", name));
@@ -175,21 +177,19 @@ public class MobFarmItem extends BlockItem {
             String containedName = null;
             ListTag rows = null;
             CompoundTag tag = Tool.getBlockEntityTag(stack);
-                if (tag != null) {
-                if (tag != null) {
-                    if (tag.contains("level", Tag.TAG_LONG)) {
-                        level = Tool.suit(tag.getLong("level"));
+            if (tag != null) {
+                if (tag.contains("level", Tag.TAG_LONG)) {
+                    level = Tool.suit(tag.getLong("level"));
+                }
+                if (tag.contains("entityTag", Tag.TAG_COMPOUND)) {
+                    String id = tag.getCompound("entityTag").getString("id");
+                    Optional<EntityType<?>> type = EntityType.byString(id);
+                    if (type.isPresent()) {
+                        containedName = type.get().getDescription().getString();
                     }
-                    if (tag.contains("entityTag", Tag.TAG_COMPOUND)) {
-                        String id = tag.getCompound("entityTag").getString("id");
-                        Optional<EntityType<?>> type = EntityType.byString(id);
-                        if (type.isPresent()) {
-                            containedName = type.get().getDescription().getString();
-                        }
-                    }
-                    if (tag.contains("rows", Tag.TAG_LIST)) {
-                        rows = (ListTag) tag.get("rows");
-                    }
+                }
+                if (tag.contains("rows", Tag.TAG_LIST)) {
+                    rows = (ListTag) tag.get("rows");
                 }
             }
             Tip tip = Tip.of(tooltip)

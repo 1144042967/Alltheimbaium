@@ -1,17 +1,16 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "itemInput": {
-    "ingredient": {
-      "item": "alltheores:iron_dust"
-    }
+  "item_input": {
+    "item": "alltheores:iron_dust"
   },
-  "chemicalInput": {
+  "chemical_input": {
     "amount": 20,
     "tag": "mekanism:carbon"
   },
   "output": {
-    "item": "alltheores:steel_ingot"
+    "id": "alltheores:steel_ingot"
   },
+  "per_tick_usage": false,
   "neoforge:conditions": [
     {
       "type": "neoforge:mod_loaded",

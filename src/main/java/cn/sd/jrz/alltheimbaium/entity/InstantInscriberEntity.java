@@ -27,6 +27,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
@@ -518,21 +519,45 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
 
     @Nullable
     private static RecipeType<?> findInscriberType(Level level) {
-        try {
-            var registry = level.registryAccess().registry(Registries.RECIPE_TYPE).orElse(null);
-            if (registry == null) {
-                return null;
-            }
-            for (String id : new String[]{"ae2:inscriber", "appliedenergistics2:inscriber"}) {
-                RecipeType<?> type = registry.get(ResourceLocation.parse(id));
+        for (String id : new String[]{"ae2:inscriber", "appliedenergistics2:inscriber"}) {
+            try {
+                ResourceLocation key = ResourceLocation.tryParse(id);
+                if (key == null) {
+                    continue;
+                }
+                // 直接查内置注册表：RECIPE_TYPE 不是"带默认值"的注册表，未注册时 get 返回 null
+                RecipeType<?> type = BuiltInRegistries.RECIPE_TYPE.get(key);
                 if (type != null) {
                     return type;
                 }
+                // 兜底：部分环境下 RECIPE_TYPE 只出现在 level 的 registryAccess 里
+                var registry = level.registryAccess().registry(Registries.RECIPE_TYPE).orElse(null);
+                if (registry != null) {
+                    type = registry.get(key);
+                    if (type != null) {
+                        return type;
+                    }
+                }
+            } catch (Throwable e) {
+                log.error("InstantInscriberEntity.findInscriberType error for {}", id, e);
             }
-        } catch (Throwable e) {
-            log.error("InstantInscriberEntity.findInscriberType error", e);
         }
         return null;
+    }
+
+    /**
+     * 取出配方本体。
+     * <p>
+     * 1.21 起 {@code RecipeManager#getAllRecipesFor} 返回的是 {@code RecipeHolder} 列表，
+     * 元素本身不是 {@code Recipe}——直接 {@code instanceof Recipe} 判类型会把整表跳过，
+     * 表现为"装了 AE2 却读不到任何配方"。
+     */
+    @Nullable
+    private static Recipe<?> recipeOf(@Nullable Object obj) {
+        if (obj instanceof RecipeHolder<?> holder) {
+            return holder.value();
+        }
+        return obj instanceof Recipe<?> recipe ? recipe : null;
     }
 
     /** 反射读取 Inscriber 配方 processType 名（INSCRIBE / PRESS），读不到返回 null */
@@ -560,7 +585,8 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
         try {
             Collection<?> all = level.getRecipeManager().getAllRecipesFor((RecipeType) type);
             for (Object obj : all) {
-                if (!(obj instanceof Recipe<?> recipe)) {
+                Recipe<?> recipe = recipeOf(obj);
+                if (recipe == null) {
                     continue;
                 }
                 if (!"INSCRIBE".equals(processName(recipe))) {
@@ -598,7 +624,8 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
         try {
             Collection<?> all = level.getRecipeManager().getAllRecipesFor((RecipeType) type);
             for (Object obj : all) {
-                if (!(obj instanceof Recipe<?> recipe)) {
+                Recipe<?> recipe = recipeOf(obj);
+                if (recipe == null) {
                     continue;
                 }
                 if (!"PRESS".equals(processName(recipe))) {

@@ -1,10 +1,10 @@
 {
   "type": "advanced_ae:reaction",
-  "energy": 3200000,
-  "fluid": {
-    "fluidStack": {
-      "Amount": 16000,
-      "FluidName": "advanced_ae:quantum_infusion_source"
+  "input_energy": 3200000,
+  "input_fluid": {
+    "amount": 16000,
+    "ingredient": {
+      "fluid": "advanced_ae:quantum_infusion_source"
     }
   },
   "input_items": [
@@ -29,7 +29,7 @@
   ],
   "output": {
     "#": 16,
-    "#c": "ae2:i",
+    "#t": "ae2:i",
     "id": "advanced_ae:quantum_alloy"
   },
   "neoforge:conditions": [

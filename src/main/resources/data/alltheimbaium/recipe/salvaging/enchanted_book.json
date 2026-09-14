@@ -5,12 +5,12 @@
   },
   "results": [
     {
-      "count": 1,
-      "item": "minecraft:book"
+      "id": "minecraft:book",
+      "count": 1
     },
     {
-      "count": 1,
-      "item": "minecraft:experience_bottle"
+      "id": "minecraft:experience_bottle",
+      "count": 1
     }
   ],
   "neoforge:conditions": [

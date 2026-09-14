@@ -3,6 +3,7 @@ package cn.sd.jrz.alltheimbaium.setup;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -18,6 +19,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
@@ -249,13 +251,15 @@ public class Tool {
         return data == null ? new CompoundTag() : data.copyTag();
     }
 
-    /** 写回物品上的方块实体数据（放置时会被 {@code BlockItem#updateCustomBlockEntityTag} 合并进方块实体） */
-    public static void setBlockEntityTag(@Nonnull ItemStack stack, @Nonnull CompoundTag tag) {
-        if (tag.isEmpty()) {
-            stack.remove(DataComponents.BLOCK_ENTITY_DATA);
-        } else {
-            stack.set(DataComponents.BLOCK_ENTITY_DATA, CustomData.of(tag));
-        }
+    /**
+     * 写回物品上的方块实体数据（放置时会被 {@code BlockItem#updateCustomBlockEntityTag} 合并进方块实体）。
+     * <p>
+     * <b>必须走 {@link BlockItem#setBlockEntityData}</b>：1.21 里 {@code BLOCK_ENTITY_DATA} 组件用的编解码器是
+     * {@code CustomData.CODEC_WITH_ID}，**标签里没有 {@code id} 键时连 {@code ItemStack#save} 都会抛异常**
+     * （"Missing id for entity in: …"），玩家背包一存档就崩；原版放置时也靠这个 {@code id} 才能把数据读回方块实体。
+     */
+    public static void setBlockEntityTag(@Nonnull ItemStack stack, @Nonnull BlockEntityType<?> type, @Nonnull CompoundTag tag) {
+        BlockItem.setBlockEntityData(stack, type, tag);
     }
 
     /**
@@ -280,7 +284,9 @@ public class Tool {
             ItemStack self = new ItemStack(be.getBlockState().getBlock().asItem());
             for (ItemStack stack : drops) {
                 if (ItemStack.isSameItem(stack, self)) {
-                    stack.set(DataComponents.BLOCK_ENTITY_DATA, CustomData.of(tag));
+                    // saveWithoutMetadata 不含 id，而 BLOCK_ENTITY_DATA 组件要求带 id：由原版工具补上，
+                    // 否则掉落物一存档就崩，放回方块时也读不回数据
+                    BlockItem.setBlockEntityData(stack, be.getType(), tag.copy());
                 }
             }
         } catch (Throwable e) {

@@ -5,8 +5,8 @@
   },
   "results": [
     {
-      "count": 2,
-      "item": "minecraft:leather"
+      "id": "minecraft:leather",
+      "count": 2
     }
   ],
   "neoforge:conditions": [

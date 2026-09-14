@@ -1,17 +1,16 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "itemInput": {
-    "ingredient": {
-      "item": "ae2:certus_quartz_dust"
-    }
+  "item_input": {
+    "item": "ae2:certus_quartz_dust"
   },
-  "chemicalInput": {
+  "chemical_input": {
     "amount": 5,
     "tag": "mekanism:carbon"
   },
   "output": {
-    "item": "ae2:sky_dust"
+    "id": "ae2:sky_dust"
   },
+  "per_tick_usage": false,
   "neoforge:conditions": [
     {
       "type": "neoforge:mod_loaded",

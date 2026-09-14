@@ -2,7 +2,7 @@
   "type": "thermal:bottler",
   "ingredients": [
     {
-      "tag": "c:stone"
+      "tag": "c:stones"
     },
     {
       "fluid": "bloodmagic:life_essence_fluid",
@@ -11,7 +11,7 @@
   ],
   "result": [
     {
-      "item": "bloodmagic:blankslate"
+      "id": "bloodmagic:blankslate"
     }
   ],
   "energy": 2000,

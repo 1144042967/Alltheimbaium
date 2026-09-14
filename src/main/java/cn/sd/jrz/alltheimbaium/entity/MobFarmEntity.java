@@ -245,18 +245,22 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
         if (stack.isEmpty()) {
             return null;
         }
-        if (stack.getItem() instanceof SpawnEggItem egg) {
-            //noinspection deprecation
-            return egg.getType(null);
-        }
-        EntityType<?> marker = MobFarmWhitelist.markerTypeOf(stack.getItem());
-        if (marker != null) {
-            return marker;
-        }
-        // 动态掉落物表只在服务端构建：任意"掉落物 → 收容生物"（白名单之外）
-        if (getLevel() instanceof ServerLevel serverLevel) {
-            MobFarmMarkerIndex.ensureBuilt(serverLevel);
-            return MobFarmMarkerIndex.lookup(stack.getItem());
+        try {
+            if (stack.getItem() instanceof SpawnEggItem egg) {
+                // 1.21：getType(ItemStack) 不接受 null（会 NPE），必须传手上这一份
+                return egg.getType(stack);
+            }
+            EntityType<?> marker = MobFarmWhitelist.markerTypeOf(stack.getItem());
+            if (marker != null) {
+                return marker;
+            }
+            // 动态掉落物表只在服务端构建：任意"掉落物 → 收容生物"（白名单之外）
+            if (getLevel() instanceof ServerLevel serverLevel) {
+                MobFarmMarkerIndex.ensureBuilt(serverLevel);
+                return MobFarmMarkerIndex.lookup(stack.getItem());
+            }
+        } catch (Throwable e) {
+            log.error("MobFarmEntity.resolveMarkerTarget error", e);
         }
         return null;
     }

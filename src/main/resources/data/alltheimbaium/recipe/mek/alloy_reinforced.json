@@ -1,18 +1,17 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "chemicalInput": {
+  "item_input": {
+    "tag": "c:storage_blocks/redstone"
+  },
+  "chemical_input": {
     "amount": 180,
     "tag": "mekanism:diamond"
   },
-  "itemInput": {
-    "ingredient": {
-      "tag": "c:storage_blocks/redstone"
-    }
-  },
   "output": {
-    "count": 9,
-    "item": "mekanism:alloy_reinforced"
+    "id": "mekanism:alloy_reinforced",
+    "count": 9
   },
+  "per_tick_usage": false,
   "neoforge:conditions": [
     {
       "type": "neoforge:mod_loaded",

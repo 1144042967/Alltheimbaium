@@ -2,7 +2,7 @@
   "type": "thermal:bottler",
   "ingredients": [
     {
-      "tag": "c:string"
+      "tag": "c:strings"
     },
     {
       "fluid": "bloodmagic:life_essence_fluid",
@@ -11,7 +11,7 @@
   ],
   "result": [
     {
-      "item": "bloodmagic:soulsnare"
+      "id": "bloodmagic:soulsnare"
     }
   ],
   "energy": 2000,

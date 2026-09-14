@@ -5,8 +5,8 @@
   },
   "results": [
     {
-      "count": 2,
-      "item": "allthemodium:vibranium_ingot"
+      "id": "allthemodium:vibranium_ingot",
+      "count": 2
     }
   ],
   "neoforge:conditions": [

@@ -9,8 +9,8 @@
   ],
   "result": [
     {
-      "chance": 3,
-      "item": "mekanism:bio_fuel"
+      "id": "mekanism:bio_fuel",
+      "chance": 3
     },
     {
       "amount": 1000,

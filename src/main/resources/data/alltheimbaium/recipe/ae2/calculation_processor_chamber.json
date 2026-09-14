@@ -1,10 +1,10 @@
 {
   "type": "advanced_ae:reaction",
-  "energy": 320000,
-  "fluid": {
-    "fluidStack": {
-      "Amount": 1600,
-      "FluidName": "minecraft:lava"
+  "input_energy": 320000,
+  "input_fluid": {
+    "amount": 1600,
+    "ingredient": {
+      "fluid": "minecraft:lava"
     }
   },
   "input_items": [
@@ -29,7 +29,7 @@
   ],
   "output": {
     "#": 64,
-    "#c": "ae2:i",
+    "#t": "ae2:i",
     "id": "ae2:calculation_processor"
   },
   "neoforge:conditions": [

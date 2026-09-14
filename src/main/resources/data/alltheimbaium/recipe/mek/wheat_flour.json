@@ -1,13 +1,11 @@
 {
   "type": "mekanism:enriching",
   "input": {
-    "ingredient": {
-      "item": "minecraft:wheat"
-    }
+    "item": "minecraft:wheat"
   },
   "output": {
-    "count": 2,
-    "item": "create:wheat_flour"
+    "id": "create:wheat_flour",
+    "count": 2
   },
   "neoforge:conditions": [
     {

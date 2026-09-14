@@ -2,7 +2,7 @@
 """
 ATI 配方总表生成器。
 
-扫描 src/main/resources/data/alltheimbaium/recipes/ 下的全部配方 JSON，
+扫描 src/main/resources/data/alltheimbaium/recipe/ 下的全部配方 JSON，
 按目录（即本模组的联动分类）整理成 RECIPES.md。
 
 配方有增删改后重新执行即可同步：
@@ -20,7 +20,7 @@ import re
 from collections import Counter, OrderedDict
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-RECIPE_DIR = os.path.join(ROOT, "src", "main", "resources", "data", "alltheimbaium", "recipes")
+RECIPE_DIR = os.path.join(ROOT, "src", "main", "resources", "data", "alltheimbaium", "recipe")
 OUT_FILE = os.path.join(ROOT, "RECIPES.md")
 
 # 目录 → 该分类的中文名（目录即本模组的联动分类）
@@ -307,8 +307,8 @@ def main():
     for folder, entries in sections.items():
         mods = sorted({m for _, _, ms in entries for m in ms})
         mods_text = "、".join(f"`{m}`" for m in mods) or "—"
-        out.append(f"| {section_titles[folder]} | `recipes/{folder}/` | {len(entries)} | {mods_text} |")
-    out.append(f"| {custom_title} | `recipes/*.json` | {len(code_driven)} | — |")
+        out.append(f"| {section_titles[folder]} | `recipe/{folder}/` | {len(entries)} | {mods_text} |")
+    out.append(f"| {custom_title} | `recipe/*.json` | {len(code_driven)} | — |")
     out.append("")
 
     # 目录
@@ -326,7 +326,7 @@ def main():
         title = section_titles[folder]
         out.append(f"## {i}. {title}")
         out.append("")
-        out.append(f"目录：`src/main/resources/data/alltheimbaium/recipes/{folder}/`")
+        out.append(f"目录：`src/main/resources/data/alltheimbaium/recipe/{folder}/`")
         out.append("")
         current_file = None
         for name, recipe, mods in sections[folder]:

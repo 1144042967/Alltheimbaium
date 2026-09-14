@@ -93,15 +93,11 @@ public class SupplyCrateBlock extends Block {
      * 写入菜单初始数据：方块坐标、10 个完整物品（含 NBT）、选中索引(无=-1 编码为0)、最大/已用补给点。
      * <p>
      * 物品按 NBT 写而不是只写注册 id：药水 / 附魔书 / 带 EntityTag 的刷怪蛋这类物品的信息全在 NBT 上，
-     * 只发 id 客户端会显示（并兑换）成默认版本。
+     * 只发 id 客户端会显示（并兑换）成默认版本。收发与 {@code SupplyCrateRollsPacket} 共用同一对方法。
      */
     private static void writeOpenData(RegistryFriendlyByteBuf buf, BlockPos pos, ItemStack[] rolls, int max, int used) {
         buf.writeBlockPos(pos);
-        for (int i = 0; i < SupplyCrateMenu.ROLL_SLOTS; i++) {
-            ItemStack stack = (rolls != null && i < rolls.length && rolls[i] != null) ? rolls[i] : ItemStack.EMPTY;
-            // 1.21：物品一律走 STREAM_CODEC（自带数据组件与注册表访问），不再手工 save/readNbt
-            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, stack);
-        }
+        SupplyCrateMenu.writeRolls(buf, rolls);
         buf.writeVarInt(0);
         buf.writeVarInt(max);
         buf.writeVarInt(used);

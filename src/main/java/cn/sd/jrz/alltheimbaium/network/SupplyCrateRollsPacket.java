@@ -21,8 +21,9 @@ import javax.annotation.Nonnull;
  * 不能像以前那样只发物品注册 id：一是药水 / 附魔书 / 带 EntityTag 的刷怪蛋这类物品的信息全在数据组件上，
  * 只发 id 客户端会显示成默认版本；二是数据槽只有 16 位，注册 id 超过 32767 时图标会整个消失。
  * <p>
- * 1.21.1：改用 {@code ItemStack.OPTIONAL_STREAM_CODEC}（自带数据组件与注册表访问），
- * 不再自己拿 NBT 序列化。
+ * 收发一律走 {@link SupplyCrateMenu#writeRolls} / {@link SupplyCrateMenu#readRolls}（NBT，按注册名），
+ * <b>不要</b>改用 {@code ItemStack.OPTIONAL_STREAM_CODEC}——它按注册表整数 id 同步附魔等组件，
+ * 注册表实例对不上时会在 Netty 线程抛 {@code Can't find id for '…/minecraft:impaling'} 直接掐断连接。
  */
 public record SupplyCrateRollsPacket(@Nonnull ItemStack[] rolls) implements CustomPacketPayload {
 
@@ -30,20 +31,8 @@ public record SupplyCrateRollsPacket(@Nonnull ItemStack[] rolls) implements Cust
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(Alltheimbaium.MODID, "supply_crate_rolls"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SupplyCrateRollsPacket> STREAM_CODEC = StreamCodec.of(
-            (buf, packet) -> {
-                for (int i = 0; i < SupplyCrateMenu.ROLL_SLOTS; i++) {
-                    ItemStack stack = (packet.rolls() != null && i < packet.rolls().length)
-                            ? packet.rolls()[i] : ItemStack.EMPTY;
-                    ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, stack);
-                }
-            },
-            buf -> {
-                ItemStack[] rolls = new ItemStack[SupplyCrateMenu.ROLL_SLOTS];
-                for (int i = 0; i < SupplyCrateMenu.ROLL_SLOTS; i++) {
-                    rolls[i] = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
-                }
-                return new SupplyCrateRollsPacket(rolls);
-            });
+            (buf, packet) -> SupplyCrateMenu.writeRolls(buf, packet.rolls()),
+            buf -> new SupplyCrateRollsPacket(SupplyCrateMenu.readRolls(buf)));
 
     @Override
     @Nonnull

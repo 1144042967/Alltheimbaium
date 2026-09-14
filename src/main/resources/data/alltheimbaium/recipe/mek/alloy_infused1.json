@@ -1,18 +1,17 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "chemicalInput": {
+  "item_input": {
+    "tag": "c:storage_blocks/iron"
+  },
+  "chemical_input": {
     "amount": 90,
     "tag": "mekanism:redstone"
   },
-  "itemInput": {
-    "ingredient": {
-      "tag": "c:storage_blocks/iron"
-    }
-  },
   "output": {
-    "count": 9,
-    "item": "mekanism:alloy_infused"
+    "id": "mekanism:alloy_infused",
+    "count": 9
   },
+  "per_tick_usage": false,
   "neoforge:conditions": [
     {
       "type": "neoforge:mod_loaded",

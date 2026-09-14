@@ -6,8 +6,14 @@ import cn.sd.jrz.alltheimbaium.network.SupplyCrateRollsPacket;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.SupplyData;
 import cn.sd.jrz.alltheimbaium.setup.SupplyRoll;
+import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,9 +25,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.mojang.serialization.DynamicOps;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
@@ -89,11 +97,58 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
         addDataSlot(makeDataSlot(() -> clientUsed, v -> clientUsed = v));
     }
 
-    private static ItemStack[] readRolls(RegistryFriendlyByteBuf data) {
-        ItemStack[] result = new ItemStack[ROLL_SLOTS];
+    /**
+     * 把 10 个物品写成 NBT 列表写进缓冲（开屏包与 {@link SupplyCrateRollsPacket} 共用）。
+     * <p>
+     * <b>这里不能用 {@code ItemStack.OPTIONAL_STREAM_CODEC}</b>：它给附魔、药水这类"引用注册表"的组件同步的是
+     * <b>注册表整数 id</b>，一旦编码用的那个 RegistryAccess 里的注册表实例和物品持有的不是同一个，
+     * 就会在 Netty 线程抛 {@code Can't find id for 'Reference{[minecraft:enchantment / minecraft:impaling]}'}
+     * 并直接掐断连接（ATM10 实测：抽到附魔书必崩）。走 NBT 则按**注册名**书写，与注册表实例无关。
+     */
+    public static void writeRolls(@Nonnull FriendlyByteBuf buf, @Nullable ItemStack[] rolls) {
+        HolderLookup.Provider registries = Tool.registries();
+        DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
+        ListTag list = new ListTag();
         for (int i = 0; i < ROLL_SLOTS; i++) {
-            // 1.21：与服务端 writeOpenData 对称，走 STREAM_CODEC（数据组件 + 注册表访问都带上）
-            result[i] = ItemStack.OPTIONAL_STREAM_CODEC.decode(data);
+            ItemStack stack = (rolls != null && i < rolls.length && rolls[i] != null) ? rolls[i] : ItemStack.EMPTY;
+            list.add(encodeStack(stack, ops));
+        }
+        CompoundTag wrapper = new CompoundTag();
+        wrapper.put("rolls", list);
+        buf.writeNbt(wrapper);
+    }
+
+    /** 单个物品转 NBT；编码失败只丢这一格（返回空标签 → 客户端读成空栈），不连累整包 */
+    @Nonnull
+    private static CompoundTag encodeStack(@Nonnull ItemStack stack, @Nonnull DynamicOps<Tag> ops) {
+        if (stack.isEmpty()) {
+            return new CompoundTag();
+        }
+        try {
+            return (CompoundTag) ItemStack.OPTIONAL_CODEC.encodeStart(ops, stack).result()
+                    .orElseGet(CompoundTag::new);
+        } catch (Throwable e) {
+            return new CompoundTag();
+        }
+    }
+
+    /** 与 {@link #writeRolls} 对称的读法；用缓冲区自带的注册表访问器按注册名解析 */
+    @Nonnull
+    public static ItemStack[] readRolls(@Nonnull RegistryFriendlyByteBuf data) {
+        ItemStack[] result = new ItemStack[ROLL_SLOTS];
+        Arrays.fill(result, ItemStack.EMPTY);
+        CompoundTag wrapper = data.readNbt();
+        if (wrapper == null) {
+            return result;
+        }
+        HolderLookup.Provider registries = data.registryAccess();
+        ListTag list = wrapper.getList("rolls", Tag.TAG_COMPOUND);
+        for (int i = 0; i < Math.min(ROLL_SLOTS, list.size()); i++) {
+            try {
+                result[i] = ItemStack.parseOptional(registries, list.getCompound(i));
+            } catch (Throwable ignored) {
+                // 单条坏数据只丢这一格
+            }
         }
         return result;
     }

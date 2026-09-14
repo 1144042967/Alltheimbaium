@@ -1,18 +1,17 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "chemicalInput": {
+  "item_input": {
+    "tag": "c:storage_blocks/quartz"
+  },
+  "chemical_input": {
     "amount": 320,
     "tag": "mekanism:redstone"
   },
-  "itemInput": {
-    "ingredient": {
-      "tag": "c:storage_blocks/quartz"
-    }
-  },
   "output": {
-    "count": 4,
-    "item": "create:rose_quartz"
+    "id": "create:rose_quartz",
+    "count": 4
   },
+  "per_tick_usage": false,
   "neoforge:conditions": [
     {
       "type": "neoforge:mod_loaded",
