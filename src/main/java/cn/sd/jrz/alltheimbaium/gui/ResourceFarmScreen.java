@@ -342,14 +342,14 @@ public class ResourceFarmScreen extends AbstractContainerScreen<ResourceFarmMenu
         int shown = Math.min(valid.size(), HELP_MAX_PRODUCTS_SHOWN);
         for (int k = 0; k < shown; k++) {
             if (!first) {
-                text.append(Component.literal("、").withStyle(ChatFormatting.GRAY));
+                text.append(Component.translatable("item.alltheimbaium.tooltip.separator").withStyle(ChatFormatting.GRAY));
             }
             text.append(new ItemStack(valid.get(k)).getHoverName().copy().withStyle(ChatFormatting.WHITE));
             first = false;
         }
         if (valid.size() > shown) {
             if (!first) {
-                text.append(Component.literal("、").withStyle(ChatFormatting.GRAY));
+                text.append(Component.translatable("item.alltheimbaium.tooltip.separator").withStyle(ChatFormatting.GRAY));
             }
             text.append(Component.translatable("screen.alltheimbaium.resource_farm.help.more",
                     valid.size() - shown).withStyle(ChatFormatting.GRAY));

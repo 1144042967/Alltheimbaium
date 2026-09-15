@@ -145,6 +145,8 @@
   "item.alltheimbaium.supply_crate.usage.2": "花 §e1 点§7 刷新可立即重掷整份列表",
   "item.alltheimbaium.supply_crate.usage.3": "补给点来源：游玩每 §e30 分钟 +1§7，每完成一个成就 §e+5",
   "item.alltheimbaium.supply_crate.warn.1": "列表每到整点自动重掷，界面开着也会刷新",
+  "item.alltheimbaium.tooltip.per_second": "/秒",
+  "item.alltheimbaium.tooltip.separator": "、",
   "itemGroup.alltheimbaium": "§6Alltheimbaium",
   "jei.alltheimbaium.inscriber.assembly": "零刻压印器 · 组装模式",
   "jei.alltheimbaium.inscriber.press": "零刻压印器 · 压板模式",
