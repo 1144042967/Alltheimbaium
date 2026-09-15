@@ -6,15 +6,9 @@
     "ADA"
   ],
   "key": {
-    "A": {
-      "item": "alltheimbaium:package_material"
-    },
-    "D": {
-      "item": "minecraft:dragon_head"
-    },
-    "L": {
-      "item": "minecraft:dragon_egg"
-    }
+    "A": "alltheimbaium:package_material",
+    "D": "minecraft:dragon_head",
+    "L": "minecraft:dragon_egg"
   },
   "result": {
     "id": "draconicevolution:small_chaos_frag",

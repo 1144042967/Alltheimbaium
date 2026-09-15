@@ -4,15 +4,18 @@ import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.entity.MobFarmEntity;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -21,8 +24,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
@@ -31,7 +32,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 生物农场 GUI（176 宽）。
@@ -40,9 +40,8 @@ import java.util.Optional;
  * 中部：27 个产物行虚拟槽（单击取 1、Shift 取 1 组、空格取到背包满，左下角缩写存量）。
  * 下部：六面输出状态按钮 + 主动输出开关 + 清空收容物按钮；最下方玩家背包。
  */
-@OnlyIn(Dist.CLIENT)
 public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/mob_farm_gui.png");
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath("alltheimbaium", "textures/gui/mob_farm_gui.png");
 
     // 六面状态按钮
     private static final int BTN_W = 48;
@@ -55,7 +54,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     private static final int OUTPUT_BTN_X = 176 - TOOL_BTN_W - 8;
     private static final int OUTPUT_BTN_Y = 145;
 
-    // 信息/进度条（renderBg 屏幕坐标用这些常量 + leftPos/topPos）
+    // 信息/进度条（extractContents 屏幕坐标用这些常量 + leftPos/topPos）
     private static final int INFO_X = 8;
     private static final int PROGRESS_X = 8;
     private static final int PROGRESS_Y = 37;
@@ -84,8 +83,6 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     private static final int HELP_MAX_PRODUCTS_SHOWN = 6;
     /** 帮助里的箭头符号 */
     private static final String HELP_ARROW = "→";
-    /** 自绘帮助卡片的抬升 z，确保盖过槽位里的物品贴图 */
-    private static final int HELP_Z = 400;
     /** 左 "?"(标记物→生物) 的水平位置（gui 局部坐标，init 计算） */
     private int helpX1 = 0;
     /** 右 "?"(生物→产物) 的水平位置（gui 局部坐标，init 计算） */
@@ -100,9 +97,8 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     private boolean spaceDown = false;
 
     public MobFarmScreen(MobFarmMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = 242;
+        // 26.x：imageWidth/imageHeight 是 final 字段，尺寸经由超类构造器传入
+        super(menu, playerInventory, title, 176, 242);
         this.inventoryLabelY = this.imageHeight - 94;
     }
 
@@ -137,23 +133,26 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_SPACE) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == GLFW.GLFW_KEY_SPACE) {
             this.spaceDown = true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
-    public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_SPACE) {
+    public boolean keyReleased(KeyEvent event) {
+        if (event.key() == GLFW.GLFW_KEY_SPACE) {
             this.spaceDown = false;
         }
-        return super.keyReleased(keyCode, scanCode, modifiers);
+        return super.keyReleased(event);
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         int mx = (int) mouseX;
         int my = (int) mouseY;
         if (button == 0) {
@@ -171,7 +170,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
                 Slot slot = this.menu.slots.get(MobFarmMenu.SLOT_PRODUCT_BASE + i);
                 if (this.isHovering(slot.x, slot.y, 16, 16, mouseX, mouseY)) {
                     int id;
-                    if (hasShiftDown()) {
+                    if (event.hasShiftDown()) {
                         id = MobFarmMenu.BUTTON_EXTRACT_STACK_BASE + i;
                     } else if (this.spaceDown) {
                         id = MobFarmMenu.BUTTON_EXTRACT_ALL_BASE + i;
@@ -183,12 +182,14 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
                 }
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
+    public void extractBackground(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 26.x：背景贴图改在 extractBackground 里绘制（renderBg 已删除），先让父类画好暗化/模糊底
+        super.extractBackground(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
         // 升级进度条
         int trackLeft = this.leftPos + PROGRESS_X;
         int trackTop = this.topPos + PROGRESS_Y;
@@ -201,11 +202,11 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         // 标题：金色，无阴影；收容/等级描述：白字 + 黑阴影（同补给箱风格）
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFAA00, true);
+        guiGraphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFFFAA00, true);
         // 物品栏标签：黑色、不加阴影
-        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x000000, false);
+        guiGraphics.text(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0xFF000000, false);
         // 收容生物
         int containedId = this.menu.getContainedEntityId();
         Component contained;
@@ -215,25 +216,24 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         } else {
             contained = Component.translatable("screen.alltheimbaium.mob_farm.empty");
         }
-        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.mob_farm.contained", contained), INFO_X, 16, 0xFFFFFF, true);
+        guiGraphics.text(this.font, Component.translatable("screen.alltheimbaium.mob_farm.contained", contained), INFO_X, 16, 0xFFFFFFFF, true);
         // 等级 + 升级百分比
-        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.mob_farm.level_progress",
-                this.menu.getLevel(), growthPercent()), INFO_X, 27, 0xFFFFFF, true);
+        guiGraphics.text(this.font, Component.translatable("screen.alltheimbaium.mob_farm.level_progress",
+                this.menu.getLevel(), growthPercent()), INFO_X, 27, 0xFFFFFFFF, true);
         // 右上标记槽上方两个黄色 "?"：左=A(标记物→生物)、右=B(生物→产物)，整体对槽中心线
-        guiGraphics.drawString(this.font, "?", this.helpX1, HELP_Y, HELP_COLOR, true);
-        guiGraphics.drawString(this.font, "?", this.helpX2, HELP_Y, HELP_COLOR, true);
+        guiGraphics.text(this.font, "?", this.helpX1, HELP_Y, HELP_COLOR, true);
+        guiGraphics.text(this.font, "?", this.helpX2, HELP_Y, HELP_COLOR, true);
     }
 
     @Override
-    public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.flush();
+    public void extractRenderState(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         drawSlotCounts(guiGraphics);
         this.outputButton.setState(this.menu.isOutputEnabled());
         // 六面按钮 tooltip
         for (FaceButton faceButton : this.faceButtons) {
             if (faceButton.isHovered()) {
-                guiGraphics.renderTooltip(this.font, faceButton.buildTooltip(), Optional.empty(), mouseX, mouseY);
+                guiGraphics.setComponentTooltipForNextFrame(this.font, faceButton.buildTooltip(), mouseX, mouseY);
             }
         }
         renderSpecialSlotTooltips(guiGraphics, mouseX, mouseY);
@@ -245,7 +245,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
             renderHelpCardB(guiGraphics, mouseX, mouseY);
         }
         // 经由本类重载：产物槽显示"数量+速度"，其它槽走默认
-        this.renderTooltip(guiGraphics, mouseX, mouseY);
+        this.extractTooltip(guiGraphics, mouseX, mouseY);
     }
 
     /** 某 "?" 字形是否被悬停 */
@@ -283,7 +283,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     }
 
     /** 半透明卡片底板：黑色 1px 边框 + 半透明底 */
-    private void drawHelpPanel(GuiGraphics guiGraphics, int bx, int by, int boxW, int boxH) {
+    private void drawHelpPanel(GuiGraphicsExtractor guiGraphics, int bx, int by, int boxW, int boxH) {
         guiGraphics.fill(bx - 1, by - 1, bx + boxW + 1, by, 0xFF000000);
         guiGraphics.fill(bx - 1, by + boxH, bx + boxW + 1, by + boxH + 1, 0xFF000000);
         guiGraphics.fill(bx - 1, by, bx, by + boxH, 0xFF000000);
@@ -312,9 +312,9 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
     /**
      * 自绘 卡片A：标记物 → 收容生物，每行两组（左右两栏），"→" 符号。
      * 各栏的 物品名/生物名 按本页该栏最长项的像素宽度留白，因此两栏箭头与生物名逐行对齐；
-     * 全角（中文等）/半角由字体实际像素宽自然区分。自绘前抬升 z，盖过槽位里的物品贴图。
+     * 全角（中文等）/半角由字体实际像素宽自然区分。自绘前 nextStratum()，盖过槽位里的物品贴图。
      */
-    private void renderHelpCardA(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderHelpCardA(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         int count = this.menu.markerCount();
         int pages = totalPages(count, HELP_PAGE_PAIRS);
         int from = Math.min(this.helpPageA * HELP_PAGE_PAIRS, count);
@@ -380,12 +380,12 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         int bx = cardX(mouseX, boxW);
         int by = cardY(mouseY, boxH);
 
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.nextStratum();
         drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
         int contentLeft = bx + hpad;
         int y = by + vpad;
-        guiGraphics.drawString(this.font, header, contentLeft, y, 0xFFFFFF, true);
+        guiGraphics.text(this.font, header, contentLeft, y, 0xFFFFFFFF, true);
         y += lineH;
         for (int r = 0; r < rows; r++) {
             int li = r * 2;
@@ -398,23 +398,23 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
             }
             y += lineH;
         }
-        guiGraphics.drawString(this.font, footer, contentLeft, y, 0xFFFFFF, true);
-        guiGraphics.pose().popPose();
+        guiGraphics.text(this.font, footer, contentLeft, y, 0xFFFFFFFF, true);
+        guiGraphics.pose().popMatrix();
     }
 
     /** 画一组 "物品 → 生物"（按传入的三列起点绘制，保证逐行对齐） */
-    private void drawHelpPair(GuiGraphics guiGraphics, int itemX, int arrowX, int mobX,
+    private void drawHelpPair(GuiGraphicsExtractor guiGraphics, int itemX, int arrowX, int mobX,
                               Component item, Component mob, int y) {
-        guiGraphics.drawString(this.font, item, itemX, y, 0xFFFFFF, true);
-        guiGraphics.drawString(this.font, HELP_ARROW, arrowX, y, 0xFFAAAAAA, true);
-        guiGraphics.drawString(this.font, mob, mobX, y, 0xFFFFFF, true);
+        guiGraphics.text(this.font, item, itemX, y, 0xFFFFFFFF, true);
+        guiGraphics.text(this.font, HELP_ARROW, arrowX, y, 0xFFAAAAAA, true);
+        guiGraphics.text(this.font, mob, mobX, y, 0xFFFFFFFF, true);
     }
 
     /**
      * 自绘 卡片B：生物 → 其全部产物（一行一个生物）。
      * 生物名列按本页最长生物像素宽留白使箭头对齐；产物列左对齐，过多时截断。
      */
-    private void renderHelpCardB(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderHelpCardB(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         int total = this.menu.productRowCount();
         int pages = totalPages(total, HELP_PAGE_LINES);
         int from = Math.min(this.helpPageB * HELP_PAGE_LINES, total);
@@ -465,21 +465,21 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         int bx = cardX(mouseX, boxW);
         int by = cardY(mouseY, boxH);
 
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.nextStratum();
         drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
         int contentLeft = bx + hpad;
         int y = by + vpad;
-        guiGraphics.drawString(this.font, header, contentLeft, y, 0xFFFFFF, true);
+        guiGraphics.text(this.font, header, contentLeft, y, 0xFFFFFFFF, true);
         y += lineH;
         for (int i = 0; i < rows; i++) {
-            guiGraphics.drawString(this.font, bios.get(i), contentLeft, y, 0xFFFFFF, true);
-            guiGraphics.drawString(this.font, HELP_ARROW, contentLeft + arrowLeft, y, 0xFFAAAAAA, true);
-            guiGraphics.drawString(this.font, prodTexts.get(i), contentLeft + itemsLeft, y, 0xFFFFFF, true);
+            guiGraphics.text(this.font, bios.get(i), contentLeft, y, 0xFFFFFFFF, true);
+            guiGraphics.text(this.font, HELP_ARROW, contentLeft + arrowLeft, y, 0xFFAAAAAA, true);
+            guiGraphics.text(this.font, prodTexts.get(i), contentLeft + itemsLeft, y, 0xFFFFFFFF, true);
             y += lineH;
         }
-        guiGraphics.drawString(this.font, footer, contentLeft, y, 0xFFFFFF, true);
-        guiGraphics.pose().popPose();
+        guiGraphics.text(this.font, footer, contentLeft, y, 0xFFFFFFFF, true);
+        guiGraphics.pose().popMatrix();
     }
 
     /** 组装某行的产物文本：前 HELP_MAX_PRODUCTS_SHOWN 个产物名 顿号连接，超出加 "…等 N 项" */
@@ -499,14 +499,14 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         int shown = Math.min(valid.size(), HELP_MAX_PRODUCTS_SHOWN);
         for (int k = 0; k < shown; k++) {
             if (!first) {
-                text.append(Component.literal("、").withStyle(ChatFormatting.GRAY));
+                text.append(Component.translatable("item.alltheimbaium.tooltip.separator").withStyle(ChatFormatting.GRAY));
             }
             text.append(new ItemStack(valid.get(k)).getHoverName().copy().withStyle(ChatFormatting.WHITE));
             first = false;
         }
         if (valid.size() > shown) {
             if (!first) {
-                text.append(Component.literal("、").withStyle(ChatFormatting.GRAY));
+                text.append(Component.translatable("item.alltheimbaium.tooltip.separator").withStyle(ChatFormatting.GRAY));
             }
             text.append(Component.translatable("screen.alltheimbaium.mob_farm.help2.more",
                     valid.size() - shown).withStyle(ChatFormatting.GRAY));
@@ -521,7 +521,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
      * 空态卡片：帮助数据为空（白名单为空、或动态标记表构建失败）时给一句提示。
      * 以前这种情况直接不画卡片，玩家 hover "?" 什么都没有，和"这台机器没有帮助"无法区分。
      */
-    private void renderEmptyCard(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, @Nonnull String headerKey) {
+    private void renderEmptyCard(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, @Nonnull String headerKey) {
         int hpad = 4;
         int vpad = 4;
         int lineH = this.font.lineHeight + 1;
@@ -531,12 +531,12 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         int boxH = vpad * 2 + lineH * 2;
         int bx = cardX(mouseX, boxW);
         int by = cardY(mouseY, boxH);
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.nextStratum();
         drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
-        guiGraphics.drawString(this.font, header, bx + hpad, by + vpad, 0xFFFFFF, true);
-        guiGraphics.drawString(this.font, empty, bx + hpad, by + vpad + lineH, 0xFFFFFF, true);
-        guiGraphics.pose().popPose();
+        guiGraphics.text(this.font, header, bx + hpad, by + vpad, 0xFFFFFFFF, true);
+        guiGraphics.text(this.font, empty, bx + hpad, by + vpad + lineH, 0xFFFFFFFF, true);
+        guiGraphics.pose().popMatrix();
     }
 
     /** 找到鼠标悬浮的槽位（在渲染 tooltip 时机，容器内部 hoveredSlot 不可靠，自行用 isHovering 判断） */
@@ -552,7 +552,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
 
     /** 产物槽自定义 tooltip（数量 + 生成速度），覆盖默认单件 tooltip */
     @Override
-    protected void renderTooltip(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractTooltip(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         Slot slot = this.findHoveredSlot(mouseX, mouseY);
         if (slot != null && !slot.getItem().isEmpty()) {
             int idx = slot.index;
@@ -581,31 +581,31 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
                 } else if (weight <= 0) {
                     lines.add(Component.translatable("screen.alltheimbaium.mob_farm.manual"));
                 }
-                guiGraphics.renderTooltip(this.font, lines, Optional.empty(), mouseX, mouseY);
+                guiGraphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
                 return;
             }
         }
-        super.renderTooltip(guiGraphics, mouseX, mouseY);
+        super.extractTooltip(guiGraphics, mouseX, mouseY);
     }
 
-    private void renderSpecialSlotTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderSpecialSlotTooltips(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         // 收容/使用合一槽（槽空时按状态显示说明）
         Slot special = this.menu.slots.get(MobFarmMenu.SLOT_SPECIAL);
         if (!special.hasItem() && this.isHovering(special.x, special.y, 16, 16, mouseX, mouseY)) {
             boolean contained = this.menu.getContainedEntityId() > 0;
-            guiGraphics.renderTooltip(this.font, List.of(
+            guiGraphics.setComponentTooltipForNextFrame(this.font, List.of(
                     Component.translatable(contained
                             ? "screen.alltheimbaium.mob_farm.use_tooltip.1"
                             : "screen.alltheimbaium.mob_farm.marker_tooltip.1"),
                     Component.translatable(contained
                             ? "screen.alltheimbaium.mob_farm.use_tooltip.2"
                             : "screen.alltheimbaium.mob_farm.marker_tooltip.2")
-            ), Optional.empty(), mouseX, mouseY);
+            ), mouseX, mouseY);
         }
     }
 
     /** 绘制 27 个产物槽左下角的存量缩写 */
-    private void drawSlotCounts(GuiGraphics guiGraphics) {
+    private void drawSlotCounts(GuiGraphicsExtractor guiGraphics) {
         for (int i = 0; i < MobFarmMenu.MAX_PRODUCTS; i++) {
             long stock = this.menu.getProductStock(i);
             if (stock <= 0) {
@@ -615,11 +615,10 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
             Slot slot = this.menu.slots.get(MobFarmMenu.SLOT_PRODUCT_BASE + i);
             int x = this.leftPos + slot.x;
             int y = this.topPos + slot.y + 12;
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(0, 0, 300);
-            guiGraphics.pose().scale(COUNT_SCALE, COUNT_SCALE, 1.0F);
-            guiGraphics.drawString(this.font, text, (int) (x / COUNT_SCALE), (int) (y / COUNT_SCALE), 0xFFFFFF, true);
-            guiGraphics.pose().popPose();
+            guiGraphics.pose().pushMatrix();
+            guiGraphics.pose().scale(COUNT_SCALE, COUNT_SCALE);
+            guiGraphics.text(this.font, text, (int) (x / COUNT_SCALE), (int) (y / COUNT_SCALE), 0xFFFFFFFF, true);
+            guiGraphics.pose().popMatrix();
         }
     }
 
@@ -699,17 +698,18 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
          * 左键沿用 onPress 的正向循环；右键发反向 id，由菜单侧反向循环。
          */
         @Override
-        public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (button == 1 && this.active && this.visible && this.clicked(mouseX, mouseY)) {
+        public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+            // 26.x：clicked(x, y) 改为 isMouseOver(x, y)，事件参数改为 MouseButtonEvent
+            if (event.button() == 1 && this.active && this.visible && this.isMouseOver(event.x(), event.y())) {
                 this.playDownSound(Minecraft.getInstance().getSoundManager());
                 MobFarmScreen.this.sendButton(MobFarmMenu.BUTTON_DIR_REVERSE_BASE + this.direction.ordinal());
                 return true;
             }
-            return super.mouseClicked(mouseX, mouseY, button);
+            return super.mouseClicked(event, doubleClick);
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             int state = MobFarmScreen.this.menu.getDirectionState(this.direction);
             int color;
             if (state == MobFarmEntity.STATE_DISABLED) {
@@ -756,18 +756,18 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
             int iconY = this.getY();
             int textY = this.getY() + 4;
             if (hasTargetIcon) {
-                guiGraphics.renderItem(neighborIcon, x, iconY);
+                guiGraphics.item(neighborIcon, x, iconY);
                 x += 18;
             } else {
-                guiGraphics.drawString(MobFarmScreen.this.font, dirName, x, textY, 0xFFFFFFFF, true);
+                guiGraphics.text(MobFarmScreen.this.font, dirName, x, textY, 0xFFFFFFFF, true);
                 x += MobFarmScreen.this.font.width(dirName) + 2;
             }
-            guiGraphics.drawString(MobFarmScreen.this.font, "←", x, textY, 0xFFFFFFFF, true);
+            guiGraphics.text(MobFarmScreen.this.font, "←", x, textY, 0xFFFFFFFF, true);
             x += MobFarmScreen.this.font.width("←") + 2;
             if (hasSlotIcon) {
-                guiGraphics.renderItem(slotIcon, x, iconY);
+                guiGraphics.item(slotIcon, x, iconY);
             } else {
-                guiGraphics.drawString(MobFarmScreen.this.font, rightText, x, textY, 0xFFFFFFFF, true);
+                guiGraphics.text(MobFarmScreen.this.font, rightText, x, textY, 0xFFFFFFFF, true);
             }
         }
 
@@ -807,7 +807,7 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             renderButton(guiGraphics, this.state ? 0xFF00AA00 : 0xFFAA0000);
         }
     }
@@ -817,14 +817,14 @@ public class MobFarmScreen extends AbstractContainerScreen<MobFarmMenu> {
             super(x, y, width, height, label, onPress, DEFAULT_NARRATION);
         }
 
-        protected void renderButton(GuiGraphics guiGraphics, int color) {
+        protected void renderButton(GuiGraphicsExtractor guiGraphics, int color) {
             guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), color);
             int borderColor = this.isHovered() ? 0xFFFFFF00 : 0xFF000000;
             guiGraphics.fill(this.getX() - 1, this.getY() - 1, this.getX() + this.getWidth() + 1, this.getY(), borderColor);
             guiGraphics.fill(this.getX() - 1, this.getY() + this.getHeight(), this.getX() + this.getWidth() + 1, this.getY() + this.getHeight() + 1, borderColor);
             guiGraphics.fill(this.getX() - 1, this.getY(), this.getX(), this.getY() + this.getHeight(), borderColor);
             guiGraphics.fill(this.getX() + this.getWidth(), this.getY(), this.getX() + this.getWidth() + 1, this.getY() + this.getHeight(), borderColor);
-            guiGraphics.drawCenteredString(MobFarmScreen.this.font, this.getMessage(), this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
+            guiGraphics.centeredText(MobFarmScreen.this.font, this.getMessage(), this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
         }
     }
 }

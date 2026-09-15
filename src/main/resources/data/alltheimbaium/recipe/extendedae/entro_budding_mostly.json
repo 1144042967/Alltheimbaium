@@ -8,9 +8,7 @@
   "type": "minecraft:crafting_shaped",
   "group": "entro",
   "key": {
-    "#": {
-      "item": "extendedae:entro_budding_half"
-    }
+    "#": "extendedae:entro_budding_half"
   },
   "pattern": [
     "##",

@@ -9,9 +9,7 @@
   "category": "misc",
   "group": "forbidden_arcanus",
   "ingredients": [
-    {
-      "item": "forbidden_arcanus:crescent_moon"
-    }
+    "forbidden_arcanus:crescent_moon"
   ],
   "result": {
     "id": "forbidden_arcanus:crimson_stone"

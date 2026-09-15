@@ -2,8 +2,7 @@ package cn.sd.jrz.alltheimbaium.setup;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -70,17 +69,14 @@ public final class MobFarmInteraction {
     /** 羊当前羊毛颜色对应的羊毛物品（按羊 NBT 的 Color，默认白色） */
     @Nonnull
     private static Item woolForSheep(CompoundTag entityTag) {
-        int id = 0;
-        if (entityTag.contains("Color", Tag.TAG_BYTE)) {
-            id = entityTag.getByte("Color") & 0xFF;
-        } else if (entityTag.contains("Color", Tag.TAG_INT)) {
-            id = entityTag.getInt("Color");
-        }
+        // 26.x 的 CompoundTag 不再有 contains(名字, 类型)，数值读取一律走 NumericTag 化的 getXxxOr，
+        // 它既认旧存档里的 TAG_Byte 也认 TAG_Int，等价于原来的两段判定
+        int id = entityTag.getIntOr("Color", 0);
         id = ((id % 16) + 16) % 16;
         String[] dyeNames = {"white", "orange", "magenta", "light_blue", "yellow", "lime", "pink",
                 "gray", "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"};
         try {
-            Item wool = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("minecraft", dyeNames[id] + "_wool"));
+            Item wool = BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath("minecraft", dyeNames[id] + "_wool"));
             if (wool != null && wool != Items.AIR) {
                 return wool;
             }
@@ -92,12 +88,9 @@ public final class MobFarmInteraction {
     /** 哞菇变体对应的蘑菇物品（默认红色） */
     @Nonnull
     private static Item mushroomForCow(CompoundTag entityTag) {
-        boolean brown = false;
-        if (entityTag.contains("Type", Tag.TAG_STRING)) {
-            brown = "brown".equals(entityTag.getString("Type"));
-        } else if (entityTag.contains("Type", Tag.TAG_BYTE)) {
-            brown = entityTag.getByte("Type") == 1;
-        }
+        // 26.x：getStringOr 只认字符串，旧存档里的 TAG_Byte 变体走 getByteOr 兜底
+        boolean brown = "brown".equals(entityTag.getStringOr("Type", ""))
+                || entityTag.getByteOr("Type", (byte) 0) == 1;
         return brown ? Blocks.BROWN_MUSHROOM.asItem() : Blocks.RED_MUSHROOM.asItem();
     }
 }

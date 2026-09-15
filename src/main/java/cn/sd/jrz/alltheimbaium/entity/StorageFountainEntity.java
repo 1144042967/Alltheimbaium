@@ -1,20 +1,18 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
+import static cn.sd.jrz.alltheimbaium.setup.Registration.STORAGE_FOUNTAIN_ENTITY;
+import static cn.sd.jrz.alltheimbaium.setup.Registration.STORAGE_FOUNTAIN_ITEM;
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.connection.StorageFountainConnection;
 import cn.sd.jrz.alltheimbaium.gui.StorageFountainMenu;
 import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Config;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -28,8 +26,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,12 +45,13 @@ public class StorageFountainEntity extends BlockEntity implements MenuProvider {
 
     /**
      * 六面 + 无方向(任意) 的对外能力缓存：索引 0~5 与 Direction.values() 顺序一致，索引 6 表示不限定方向。
-     * NeoForge 不再实现 ICapabilityProvider，由 {@code Registration.registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取。
+     * NeoForge 不再实现 ICapabilityProvider，由 {@code registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取。
      */
     private final StorageFountainConnection[] itemHandlers = new StorageFountainConnection[7];
 
+    /** 26.x：{@link Capabilities.Item#BLOCK} 要求的是 {@code ResourceHandler<ItemResource>}，实现类见 StorageFountainConnection */
     @Nullable
-    public StorageFountainConnection getItemHandler(@Nullable Direction side) {
+    public ResourceHandler<ItemResource> getItemHandler(@Nullable Direction side) {
         int idx = side == null ? 6 : side.ordinal();
         if (itemHandlers[idx] == null) {
             itemHandlers[idx] = new StorageFountainConnection(this, side);
@@ -94,7 +97,7 @@ public class StorageFountainEntity extends BlockEntity implements MenuProvider {
     public long tickCount = 0;
 
     public StorageFountainEntity(BlockPos pos, BlockState state) {
-        super(Registration.STORAGE_FOUNTAIN_ENTITY.get(), pos, state);
+        super(STORAGE_FOUNTAIN_ENTITY.get(), pos, state);
         this.output = initialOutput;
     }
 
@@ -130,7 +133,7 @@ public class StorageFountainEntity extends BlockEntity implements MenuProvider {
             if (level == null) {
                 return;
             }
-            if (level.isClientSide) {
+            if (level.isClientSide()) {
                 // 客户端：立即清空标记槽，避免残留物品影响后续点击（标记逻辑由服务端处理）
                 if (!markerSlot.getStackInSlot(0).isEmpty()) {
                     markerSlot.setStackInSlot(0, ItemStack.EMPTY);
@@ -168,7 +171,7 @@ public class StorageFountainEntity extends BlockEntity implements MenuProvider {
      */
     private void processMarkerSlot() {
         Level level = getLevel();
-        if (level == null || level.isClientSide) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         ItemStack stack = markerSlot.getStackInSlot(0);
@@ -195,7 +198,8 @@ public class StorageFountainEntity extends BlockEntity implements MenuProvider {
             markerSlot.setStackInSlot(0, ItemStack.EMPTY);
             setChanged();
             sendUpdatePacket();
-            String name = single.getItem().getName(single).getString();
+            // 26.x：Item#getName(ItemStack) 只读 ITEM_NAME 组件，取显示名一律用 getHoverName()
+            String name = new ItemStack(single.getItem()).getHoverName().getString();
             sendMessageToNearbyPlayer(marked
                     ? "chat.alltheimbaium.storage_fountain.unmark"
                     : "chat.alltheimbaium.storage_fountain.mark", name);
@@ -312,7 +316,7 @@ public class StorageFountainEntity extends BlockEntity implements MenuProvider {
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.storage_fountain").withStyle(Tip.rarityColor(Registration.STORAGE_FOUNTAIN_ITEM.get()));
+        return Component.translatable("block.alltheimbaium.storage_fountain").withStyle(Tip.rarityColor(STORAGE_FOUNTAIN_ITEM.get()));
     }
 
     @Nullable
@@ -322,53 +326,78 @@ public class StorageFountainEntity extends BlockEntity implements MenuProvider {
     }
 
 
+    private static final String KEY_OUTPUT = "output";
+    private static final String KEY_STICK = "save_stick";
+    private static final String KEY_DIR = "directionState";
+    private static final String KEY_OUTPUT_ENABLED = "outputEnabled";
+    private static final String KEY_MARKER_SLOT = "markerSlot";
+
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.saveAdditional(nbt, registries);
+    protected void saveAdditional(@Nonnull ValueOutput output) {
+        super.saveAdditional(output);
         try {
-            nbt.putLong("output", output);
-            nbt.put("save_stick", Tool.toJsonArray(itemList, blockList));
-            nbt.putIntArray("directionState", directionState);
-            nbt.putBoolean("outputEnabled", outputEnabled);
-            nbt.put("markerSlot", markerSlot.serializeNBT(registries));
+            output.putLong(KEY_OUTPUT, this.output);
+            // 26.x：已标记物品列表改由 ValueOutput 列表托管（记录类型见 Tool.StockRow），不再手写物品 NBT
+            Tool.writeRows(output, KEY_STICK, toStockRows(), Tool.StockRow.CODEC);
+            output.putIntArray(KEY_DIR, directionState);
+            output.putBoolean(KEY_OUTPUT_ENABLED, outputEnabled);
+            output.putChild(KEY_MARKER_SLOT, markerSlot);
         } catch (Throwable e) {
             log.error("StorageFountainEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.loadAdditional(nbt, registries);
+    protected void loadAdditional(@Nonnull ValueInput input) {
+        super.loadAdditional(input);
         try {
-            if (nbt.contains("output", Tag.TAG_LONG)) {
-                this.output = Tool.suit(nbt.getLong("output"));
-            }
-            if (nbt.contains("save_stick")) {
-                ListTag list = (ListTag) nbt.get("save_stick");
-                if (list != null) {
-                    this.itemList = Tool.toItemList(list);
-                    this.blockList = Tool.toBlockList(list);
-                    Tool.sort(itemList, blockList);
-                }
-            }
-            if (nbt.contains("directionState")) {
-                int[] arr = nbt.getIntArray("directionState");
+            this.output = Tool.suit(input.getLongOr(KEY_OUTPUT, 0L));
+            applyStockRows(Tool.readRows(input, KEY_STICK, Tool.StockRow.CODEC));
+            int[] arr = input.getIntArray(KEY_DIR).orElse(null);
+            if (arr != null) {
                 for (int i = 0; i < Math.min(6, arr.length); i++) {
                     directionState[i] = Math.max(0, Math.min(STATE_COUNT - 1, arr[i]));
                 }
             }
-            if (nbt.contains("outputEnabled", Tag.TAG_BYTE)) {
-                outputEnabled = nbt.getBoolean("outputEnabled");
-            }
-            if (nbt.contains("markerSlot", Tag.TAG_COMPOUND)) {
-                markerSlot.deserializeNBT(registries, nbt.getCompound("markerSlot"));
-            }
+            outputEnabled = input.getBooleanOr(KEY_OUTPUT_ENABLED, outputEnabled);
+            input.readChild(KEY_MARKER_SLOT, markerSlot);
         } catch (Throwable e) {
-            log.error("StorageFountainEntity.load error", e);
+            log.error("StorageFountainEntity.loadAdditional error", e);
         }
     }
 
+    /** 已标记物品列表 → 持久化记录（数量沿用内部单位，即 CARRY 个内部单位折合 1 件） */
+    @Nonnull
+    private List<Tool.StockRow> toStockRows() {
+        List<Tool.StockRow> list = new ArrayList<>(itemList.size());
+        for (int i = 0; i < itemList.size(); i++) {
+            list.add(new Tool.StockRow(Tool.oneOf(itemList.get(i)), i < blockList.size() ? blockList.get(i) : 0L));
+        }
+        return list;
+    }
+
+    private void applyStockRows(@Nonnull List<Tool.StockRow> list) {
+        List<ItemStack> newItems = new ArrayList<>(list.size());
+        List<Long> newCounts = new ArrayList<>(list.size());
+        for (Tool.StockRow record : list) {
+            try {
+                ItemStack stack = record.item();
+                if (stack == null || stack.isEmpty()) {
+                    continue;
+                }
+                newItems.add(Tool.oneOf(stack));
+                newCounts.add(Tool.suit(record.count()));
+            } catch (Throwable e) {
+                log.warn("StorageFountainEntity.applyStockRows entry error", e);
+            }
+        }
+        this.itemList = newItems;
+        this.blockList = newCounts;
+        Tool.sort(itemList, blockList);
+    }
+
     // ==================== 客户端同步（供 BER 渲染已标记物品贴图） ====================
+    // 26.x：handleUpdateTag / onDataPacket 的覆写已删除，改由原版 loadWithComponents(ValueInput) 默认接管。
 
     /**
      * 区块加载/方块放置时同步全部数据（含已标记物品列表）到客户端
@@ -380,20 +409,9 @@ public class StorageFountainEntity extends BlockEntity implements MenuProvider {
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
-        this.loadAdditional(tag, registries);
-    }
-
-    @Override
     @Nonnull
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
-        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
-        this.loadAdditional(pkt.getTag(), registries);
     }
 
     /**
@@ -401,7 +419,7 @@ public class StorageFountainEntity extends BlockEntity implements MenuProvider {
      */
     private void sendUpdatePacket() {
         Level level = getLevel();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }

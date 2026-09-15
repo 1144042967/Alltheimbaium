@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "item": "bloodmagic:demonslate"
-    },
+    "bloodmagic:demonslate",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 30000

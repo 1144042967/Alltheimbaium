@@ -3,15 +3,9 @@
   "group": "botania_life_essence",
   "category": "misc",
   "ingredients": [
-    {
-      "item": "mysticalagriculture:gaia_spirit_essence"
-    },
-    {
-      "item": "mysticalagriculture:gaia_spirit_essence"
-    },
-    {
-      "item": "mysticalagriculture:gaia_spirit_essence"
-    }
+    "mysticalagriculture:gaia_spirit_essence",
+    "mysticalagriculture:gaia_spirit_essence",
+    "mysticalagriculture:gaia_spirit_essence"
   ],
   "result": {
     "count": 1,

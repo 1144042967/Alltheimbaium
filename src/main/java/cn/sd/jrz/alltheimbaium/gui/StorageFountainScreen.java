@@ -4,14 +4,17 @@ import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
@@ -19,14 +22,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 存储方块制造机 GUI（新材质 GUI，176 宽）。
@@ -36,11 +36,10 @@ import java.util.Optional;
  * 槽位左下角以缩写显示数量）。再下方为六面输出状态按钮（随机/禁用/槽1~槽9，槽位状态显示对应物品图标），
  * 左下物品栏标签 + 右侧"输出"总开关按钮，最下方为玩家物品栏。
  */
-@OnlyIn(Dist.CLIENT)
 public class StorageFountainScreen extends AbstractContainerScreen<StorageFountainMenu> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/storage_fountain_gui.png");
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath("alltheimbaium", "textures/gui/storage_fountain_gui.png");
     /** 黑色信息面板上的浅色文字 */
-    private static final int TEXT_COLOR = 0xC6C6C6;
+    private static final int TEXT_COLOR = 0xFFC6C6C6;
 
     // 增长进度条（黑色背景区域第一行）
     private static final int PROGRESS_X = 10;
@@ -82,15 +81,12 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     private static final int HELP_MAX_W = 220;
     /** 标签列与值列之间的间距（像素） */
     private static final int HELP_COL_GAP = 6;
-    /** 自绘帮助卡的抬升 z，确保盖过槽位里的物品贴图 */
-    private static final int HELP_Z = 400;
     /** "?" 的水平位置（gui 局部坐标，init 计算） */
     private int helpX = 0;
 
     public StorageFountainScreen(StorageFountainMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = 233;
+        // 26.x：imageWidth/imageHeight 是 final 字段，尺寸经由超类构造器传入
+        super(menu, playerInventory, title, 176, 233);
         this.inventoryLabelY = this.imageHeight - 94;
     }
 
@@ -123,32 +119,35 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_SPACE) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == GLFW.GLFW_KEY_SPACE) {
             this.spaceDown = true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
-    public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_SPACE) {
+    public boolean keyReleased(KeyEvent event) {
+        if (event.key() == GLFW.GLFW_KEY_SPACE) {
             this.spaceDown = false;
         }
-        return super.keyReleased(keyCode, scanCode, modifiers);
+        return super.keyReleased(event);
     }
 
     /**
      * 拦截已标记物品槽的点击：单击提取一个、Shift+单击提取一组、空格+单击提取到背包满
      */
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (button == 0) {
             for (int i = 0; i < 9; i++) {
                 Slot slot = this.menu.slots.get(1 + i);
                 if (this.isHovering(slot.x, slot.y, 16, 16, mouseX, mouseY)) {
                     int id;
-                    if (hasShiftDown()) {
+                    if (event.hasShiftDown()) {
                         id = StorageFountainMenu.BUTTON_EXTRACT_STACK_BASE + i;
                     } else if (this.spaceDown) {
                         id = StorageFountainMenu.BUTTON_EXTRACT_ALL_BASE + i;
@@ -160,13 +159,15 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
                 }
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 26.x：背景贴图改在 extractBackground 里绘制（renderBg 已删除），先让父类画好暗化/模糊底
+        super.extractBackground(guiGraphics, mouseX, mouseY, partialTick);
         // 主背景（槽位框、黑色信息面板、标记槽、物品栏槽位均已绘制在图上）
-        guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
         // 第一行：增长进度条
         int trackLeft = this.leftPos + PROGRESS_X;
         int trackTop = this.topPos + PROGRESS_Y;
@@ -179,12 +180,12 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         // 标题与物品栏标签：亮色背景上用深色文字
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, true);
-        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
+        guiGraphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFF404040, true);
+        guiGraphics.text(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0xFF404040, false);
         // 标题栏右侧黄色 "?"：hover 展示可复制物品的三条判定依据
-        guiGraphics.drawString(this.font, "?", this.helpX, HELP_Y, HELP_COLOR, true);
+        guiGraphics.text(this.font, "?", this.helpX, HELP_Y, HELP_COLOR, true);
         // 黑色信息面板上的四行信息（局部坐标）：产量/下次增长均以 /tick 为单位。
         // 下次增长 = 下次要增长的数值（增量），不是增长后的值。
         long output = this.menu.getOutput();
@@ -192,24 +193,22 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
         double carry = StorageFountainBlock.getCarry();
         double currentRate = output / carry;
         double nextIncrease = step / carry;
-        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.storage_fountain.growth", growthPercent()), INFO_X, INFO_Y, TEXT_COLOR, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.storage_fountain.next", formatRate(nextIncrease)), INFO_X, INFO_Y + INFO_LINE, TEXT_COLOR, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.storage_fountain.output_rate", formatRate(currentRate)), INFO_X, INFO_Y + INFO_LINE * 2, TEXT_COLOR, false);
+        guiGraphics.text(this.font, Component.translatable("screen.alltheimbaium.storage_fountain.growth", growthPercent()), INFO_X, INFO_Y, TEXT_COLOR, false);
+        guiGraphics.text(this.font, Component.translatable("screen.alltheimbaium.storage_fountain.next", formatRate(nextIncrease)), INFO_X, INFO_Y + INFO_LINE, TEXT_COLOR, false);
+        guiGraphics.text(this.font, Component.translatable("screen.alltheimbaium.storage_fountain.output_rate", formatRate(currentRate)), INFO_X, INFO_Y + INFO_LINE * 2, TEXT_COLOR, false);
     }
 
     @Override
-    public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        // 先刷新已绘制的内容（物品图标已通过 renderItem 内部 flush 到屏幕），
-        // 确保随后绘制的数量文字位于物品图标之上
-        guiGraphics.flush();
+    public void extractRenderState(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+        // 26.x：extractor 按提交顺序分层，super 已提交完槽位物品，此处提交的数量文字天然盖在其上
         drawSlotCounts(guiGraphics);
         // 刷新开关状态
         this.outputButton.setState(this.menu.isOutputEnabled());
         // 渲染六面按钮 tooltip（始终显示完整的输出目的/输出方向/输出材料说明）
         for (FaceButton faceButton : this.faceButtons) {
             if (faceButton.isHovered()) {
-                guiGraphics.renderTooltip(this.font, faceButton.buildTooltip(), Optional.empty(), mouseX, mouseY);
+                guiGraphics.setComponentTooltipForNextFrame(this.font, faceButton.buildTooltip(), mouseX, mouseY);
             }
         }
         // 标记槽 hover 提示：槽内无物品时显示使用方法说明
@@ -219,7 +218,7 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
             renderHelpCard(guiGraphics, mouseX, mouseY);
         }
         // 渲染鼠标悬浮物品的信息提示窗
-        super.renderTooltip(guiGraphics, mouseX, mouseY);
+        super.extractTooltip(guiGraphics, mouseX, mouseY);
     }
 
     // ==================== 标题栏 "?" 帮助卡 ====================
@@ -232,7 +231,7 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
     }
 
     /** 半透明卡片底板：黑色 1px 边框 + 半透明底 */
-    private void drawHelpPanel(GuiGraphics guiGraphics, int bx, int by, int boxW, int boxH) {
+    private void drawHelpPanel(GuiGraphicsExtractor guiGraphics, int bx, int by, int boxW, int boxH) {
         guiGraphics.fill(bx - 1, by - 1, bx + boxW + 1, by, 0xFF000000);
         guiGraphics.fill(bx - 1, by + boxH, bx + boxW + 1, by + boxH + 1, 0xFF000000);
         guiGraphics.fill(bx - 1, by, bx, by + boxH, 0xFF000000);
@@ -262,7 +261,7 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
      * 自绘 "?" 帮助卡：一行一类判定依据，列出白名单 / MOD / 标签。
      * 值过长时按像素宽换行，续行缩进到值列，保证左侧标签始终对齐。
      */
-    private void renderHelpCard(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderHelpCard(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         int hpad = 4;
         int vpad = 4;
         int lineH = this.font.lineHeight + 1;
@@ -301,34 +300,34 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
         int bx = cardX(mouseX, boxW);
         int by = cardY(mouseY, boxH);
 
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.nextStratum();
         drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
         int left = bx + hpad;
         int y = by + vpad;
-        guiGraphics.drawString(this.font, header, left, y, 0xFFFFFF, true);
+        guiGraphics.text(this.font, header, left, y, 0xFFFFFFFF, true);
         y += lineH;
         for (int i = 0; i < labels.size(); i++) {
-            guiGraphics.drawString(this.font, labels.get(i), left, y, 0xFFFFFF, true);
+            guiGraphics.text(this.font, labels.get(i), left, y, 0xFFFFFFFF, true);
             int valueX = left + labelW + HELP_COL_GAP;
             for (FormattedCharSequence line : wrapped.get(i)) {
-                guiGraphics.drawString(this.font, line, valueX, y, 0xFFFFFF, true);
+                guiGraphics.text(this.font, line, valueX, y, 0xFFFFFFFF, true);
                 y += lineH;
             }
         }
-        guiGraphics.drawString(this.font,
+        guiGraphics.text(this.font,
                 Component.translatable("screen.alltheimbaium.storage_fountain.help.hint").withStyle(ChatFormatting.GRAY),
-                left, y, 0xFFFFFF, true);
-        guiGraphics.pose().popPose();
+                left, y, 0xFFFFFFFF, true);
+        guiGraphics.pose().popMatrix();
     }
 
     /**
      * 绘制 9 个已标记物品槽左下角的存量数量（缩写，如 1.1K、2.1M）。
      * 显示方式：缩小字体（0.5 倍）。
-     * 深度层级：物品 z≈250 < 数量文字 z=300 < tooltip 背景 z=400，
-     * 因此数量文字盖在物品之上，又位于 tooltip 背景之下（tooltip 显示时背景可覆盖它）。
+     * 深度层级：26.x 由 extractor 按提交顺序自动分层——数量文字在 super 提交的物品之后提交，
+     * 因此盖在物品之上；tooltip 在更靠后的 stratum 里绘制，仍会覆盖它。
      */
-    private void drawSlotCounts(GuiGraphics guiGraphics) {
+    private void drawSlotCounts(GuiGraphicsExtractor guiGraphics) {
         for (int i = 0; i < 9; i++) {
             long units = this.menu.getMarkedCount(i);
             if (units <= 0) {
@@ -342,27 +341,26 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
             Slot slot = this.menu.slots.get(1 + i);
             int x = this.leftPos + slot.x + COUNT_X;
             int y = this.topPos + slot.y + COUNT_Y;
-            guiGraphics.pose().pushPose();
+            guiGraphics.pose().pushMatrix();
             // 缩放 XY 实现小字体（坐标相应放大绘制）
-            guiGraphics.pose().translate(0, 0, 300);
-            guiGraphics.pose().scale(COUNT_SCALE, COUNT_SCALE, 1.0F);
-            guiGraphics.drawString(this.font, text, (int) (x / COUNT_SCALE), (int) (y / COUNT_SCALE), 0xFFFFFF, true);
-            guiGraphics.pose().popPose();
+            guiGraphics.pose().scale(COUNT_SCALE, COUNT_SCALE);
+            guiGraphics.text(this.font, text, (int) (x / COUNT_SCALE), (int) (y / COUNT_SCALE), 0xFFFFFFFF, true);
+            guiGraphics.pose().popMatrix();
         }
     }
 
     /**
      * 标记槽 hover 提示：鼠标悬浮在标记槽（槽内无物品，避免与物品自身提示冲突）时显示使用方法说明。
      */
-    private void renderMarkerSlotTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderMarkerSlotTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         Slot markerSlot = this.menu.slots.get(0);
         if (markerSlot.hasItem() || !this.isHovering(markerSlot.x, markerSlot.y, 16, 16, mouseX, mouseY)) {
             return;
         }
-        guiGraphics.renderTooltip(this.font, List.of(
+        guiGraphics.setComponentTooltipForNextFrame(this.font, List.of(
                 Component.translatable("screen.alltheimbaium.storage_fountain.marker_tooltip.1"),
                 Component.translatable("screen.alltheimbaium.storage_fountain.marker_tooltip.2")
-        ), Optional.empty(), mouseX, mouseY);
+        ), mouseX, mouseY);
     }
 
     /**
@@ -487,17 +485,18 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
          * 左键沿用 onPress 的正向循环；右键发反向 id，由菜单侧反向循环。
          */
         @Override
-        public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (button == 1 && this.active && this.visible && this.clicked(mouseX, mouseY)) {
+        public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+            // 26.x：clicked(x, y) 改为 isMouseOver(x, y)，事件参数改为 MouseButtonEvent
+            if (event.button() == 1 && this.active && this.visible && this.isMouseOver(event.x(), event.y())) {
                 this.playDownSound(Minecraft.getInstance().getSoundManager());
                 StorageFountainScreen.this.sendButton(StorageFountainMenu.BUTTON_DIR_REVERSE_BASE + this.direction.ordinal());
                 return true;
             }
-            return super.mouseClicked(mouseX, mouseY, button);
+            return super.mouseClicked(event, doubleClick);
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             int state = StorageFountainScreen.this.menu.getDirectionState(this.direction);
             // 背景色：禁用=红，随机=绿，槽位=蓝灰
             int color;
@@ -551,20 +550,20 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
             int textY = this.getY() + 4;
             // 左段：相邻方块贴图（有贴图时不显示方向名）
             if (hasTargetIcon) {
-                guiGraphics.renderItem(neighborIcon, x, iconY);
+                guiGraphics.item(neighborIcon, x, iconY);
                 x += 18;
             } else {
-                guiGraphics.drawString(StorageFountainScreen.this.font, dirName, x, textY, 0xFFFFFFFF, true);
+                guiGraphics.text(StorageFountainScreen.this.font, dirName, x, textY, 0xFFFFFFFF, true);
                 x += StorageFountainScreen.this.font.width(dirName) + 2;
             }
             // 左箭头：表示右段物品输出到左段目的
-            guiGraphics.drawString(StorageFountainScreen.this.font, "←", x, textY, 0xFFFFFFFF, true);
+            guiGraphics.text(StorageFountainScreen.this.font, "←", x, textY, 0xFFFFFFFF, true);
             x += StorageFountainScreen.this.font.width("←") + 2;
             // 右段：槽位贴图（有贴图时不显示槽号）或 随机/禁用
             if (hasSlotIcon) {
-                guiGraphics.renderItem(slotIcon, x, iconY);
+                guiGraphics.item(slotIcon, x, iconY);
             } else {
-                guiGraphics.drawString(StorageFountainScreen.this.font, rightText, x, textY, 0xFFFFFFFF, true);
+                guiGraphics.text(StorageFountainScreen.this.font, rightText, x, textY, 0xFFFFFFFF, true);
             }
         }
 
@@ -610,7 +609,7 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             renderButton(guiGraphics, this.state ? 0xFF00AA00 : 0xFFAA0000);
         }
     }
@@ -623,7 +622,7 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
             super(x, y, width, height, label, onPress, DEFAULT_NARRATION);
         }
 
-        protected void renderButton(GuiGraphics guiGraphics, int color) {
+        protected void renderButton(GuiGraphicsExtractor guiGraphics, int color) {
             guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), color);
             // 1px 边框（鼠标悬浮时边框变亮，用于指示可交互）
             int borderColor = this.isHovered() ? 0xFFFFFF00 : 0xFF000000;
@@ -631,7 +630,7 @@ public class StorageFountainScreen extends AbstractContainerScreen<StorageFounta
             guiGraphics.fill(this.getX() - 1, this.getY() + this.getHeight(), this.getX() + this.getWidth() + 1, this.getY() + this.getHeight() + 1, borderColor);
             guiGraphics.fill(this.getX() - 1, this.getY(), this.getX(), this.getY() + this.getHeight(), borderColor);
             guiGraphics.fill(this.getX() + this.getWidth(), this.getY(), this.getX() + this.getWidth() + 1, this.getY() + this.getHeight(), borderColor);
-            guiGraphics.drawCenteredString(StorageFountainScreen.this.font, this.getMessage(), this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
+            guiGraphics.centeredText(StorageFountainScreen.this.font, this.getMessage(), this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
         }
     }
 }

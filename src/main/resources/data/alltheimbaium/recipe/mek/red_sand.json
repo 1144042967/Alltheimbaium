@@ -1,8 +1,6 @@
 {
   "type": "mekanism:crushing",
-  "input": {
-    "item": "minecraft:granite"
-  },
+  "input": "minecraft:granite",
   "output": {
     "id": "minecraft:red_sand"
   },

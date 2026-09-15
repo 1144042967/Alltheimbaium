@@ -3,7 +3,7 @@ package cn.sd.jrz.alltheimbaium.setup;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -51,7 +51,7 @@ public final class ResourceData {
     // ==================== 树苗扫描参数 ====================
 
     /** 树苗识别兜底：模组树苗多半会加入 minecraft:saplings 标签，但也有只继承 SaplingBlock 的 */
-    private static final TagKey<Item> SAPLINGS_TAG = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("minecraft", "saplings"));
+    private static final TagKey<Item> SAPLINGS_TAG = TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("minecraft", "saplings"));
 
     /** 树干 id 后缀，按优先级逐个尝试（X_sapling → X_log / X_wood / X_stem…） */
     private static final String[] STEM_SUFFIXES = {"_log", "_wood", "_stem", "_hyphae", "_trunk"};
@@ -280,7 +280,7 @@ public final class ResourceData {
                     continue;
                 }
                 if (token.startsWith("tag:")) {
-                    ResourceLocation tagId = ResourceLocation.tryParse(token.substring(4).trim());
+                    Identifier tagId = Identifier.tryParse(token.substring(4).trim());
                     if (tagId == null) {
                         log.warn("ResourceData.parse marker {} error: 非法标签 id", token);
                         continue;
@@ -322,7 +322,7 @@ public final class ResourceData {
         List<TreeResource> found = new ArrayList<>();
         for (Item item : saplingCandidates()) {
             try {
-                ResourceLocation key = BuiltInRegistries.ITEM.getKey(item);
+                Identifier key = BuiltInRegistries.ITEM.getKey(item);
                 String base = saplingBase(key.getPath());
                 List<Product> products = new ArrayList<>();
                 TreeStem stem = treeStem(key, base);
@@ -364,7 +364,8 @@ public final class ResourceData {
                 candidates.add(item);
             }
         }
-        BuiltInRegistries.ITEM.getTag(SAPLINGS_TAG).ifPresent(named -> {
+        // 26.x：Registry.getTag(TagKey) 已删除，标签查询走 HolderGetter#get(TagKey)
+        BuiltInRegistries.ITEM.get(SAPLINGS_TAG).ifPresent(named -> {
             for (Holder<Item> holder : named) {
                 Item item = holder.value();
                 if (item != Items.AIR) {
@@ -392,7 +393,7 @@ public final class ResourceData {
 
     /** 推导树苗对应的树干（注册名约定 + 显式例外），推不出返回 null */
     @Nullable
-    private static TreeStem treeStem(@Nonnull ResourceLocation saplingKey, @Nonnull String base) {
+    private static TreeStem treeStem(@Nonnull Identifier saplingKey, @Nonnull String base) {
         String override = STEM_OVERRIDES.get(saplingKey.toString());
         if (override != null) {
             Item item = lookupItem(override);
@@ -434,18 +435,19 @@ public final class ResourceData {
     }
 
     // ==================== 解析工具 ====================
-    // 注意：BuiltInRegistries 的 ITEM / ENTITY_TYPE 都被 Forge 包成了"带默认值"的注册表——
-    // get() 查不到时返回默认值（AIR / PIG）而不是 null，所以判空写 `!= null` 恒真、永远拦不住拼错的 id。
+    // 注意：BuiltInRegistries 的 ITEM / ENTITY_TYPE 都被包成了"带默认值"的注册表——
+    // 查不到时返回默认值（AIR / PIG）而不是 null，所以判空写 `!= null` 恒真、永远拦不住拼错的 id。
     // 一律改用 containsKey 判定"是否注册"，再取默认值兜底。
+    // 26.x：取值走 getValue(Identifier)（可空语义不变），get(Identifier) 已改成返回 Optional<Holder>。
 
     /** 物品 id 解析：非法 id、未注册或 air 一律返回 null */
     @Nullable
     private static Item lookupItem(@Nonnull String id) {
-        ResourceLocation key = ResourceLocation.tryParse(id.trim());
+        Identifier key = Identifier.tryParse(id.trim());
         if (key == null || !BuiltInRegistries.ITEM.containsKey(key)) {
             return null;
         }
-        Item item = BuiltInRegistries.ITEM.get(key);
+        Item item = BuiltInRegistries.ITEM.getValue(key);
         return item == null || item == Items.AIR ? null : item;
     }
 

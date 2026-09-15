@@ -2,15 +2,16 @@ package cn.sd.jrz.alltheimbaium.gui;
 
 import cn.sd.jrz.alltheimbaium.item.EternalSwordItem;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+
+import javax.annotation.Nonnull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,21 +25,19 @@ import java.util.List;
  * - 底部：玩家背包与快捷栏
  * 按钮点击通过 handleInventoryButtonClick 发送给服务端菜单处理。
  */
-@OnlyIn(Dist.CLIENT)
 public class EternalSwordScreen extends AbstractContainerScreen<EternalSwordMenu> {
 
     /**
      * 原版箱子（54 格）背景纹理，176×222
      */
-    private static final ResourceLocation CONTAINER_BACKGROUND = ResourceLocation.tryBuild("alltheimbaium", "textures/gui/eternal_sword_gui.png");
+    private static final Identifier CONTAINER_BACKGROUND = Identifier.tryBuild("alltheimbaium", "textures/gui/eternal_sword_gui.png");
 
     private Button modeButton;
     private final Button[] rangeButtons = new Button[EternalSwordItem.RANGES.length];
 
     public EternalSwordScreen(EternalSwordMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = 222;
+        // 26.x：imageWidth/imageHeight 是 final 字段，尺寸经由超类构造器传入
+        super(menu, playerInventory, title, 176, 222);
         this.inventoryLabelY = 125;
     }
 
@@ -79,27 +78,24 @@ public class EternalSwordScreen extends AbstractContainerScreen<EternalSwordMenu
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 26.x：背景贴图改在 extractBackground 里绘制（renderBg 已删除），先让父类画好暗化/模糊底
+        super.extractBackground(guiGraphics, mouseX, mouseY, partialTick);
         // 箱子背景纹理（自带槽位底与边框）
-        guiGraphics.blit(CONTAINER_BACKGROUND, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_BACKGROUND, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, true);
-        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
+    protected void extractLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+        guiGraphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFF404040, true);
+        guiGraphics.text(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0xFF404040, false);
     }
 
-    @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        // 1.20.1 的 AbstractContainerScreen.render 不会主动调用 renderTooltip，
-        // 这里显式渲染物品 tooltip（super.render 已设置 hoveredSlot）
-        this.renderTooltip(guiGraphics, mouseX, mouseY);
-    }
+    // 26.x：AbstractContainerScreen#extractRenderState 已内含 extractTooltip（其中 hoveredSlot 已由
+    // extractContents 设置好），旧版为绕开 1.20.1 缺陷而手写的重复调用不再需要
 
     @Override
-    protected void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         // 剑槽物品：标准物品 tooltip + 追加该物品对剑伤害的贡献
         if (this.hoveredSlot != null && this.hoveredSlot.hasItem()
                 && this.hoveredSlot.index < EternalSwordItem.INVENTORY_SIZE) {
@@ -109,10 +105,10 @@ public class EternalSwordScreen extends AbstractContainerScreen<EternalSwordMenu
             if (contribution > 0F) {
                 lines.add(Component.translatable("screen.alltheimbaium.eternal_sword.slot_damage", contribution));
             }
-            guiGraphics.renderTooltip(this.font, lines, stack.getTooltipImage(), stack, mouseX, mouseY);
+            guiGraphics.setTooltipForNextFrame(this.font, lines, stack.getTooltipImage(), mouseX, mouseY);
         } else {
             // 其它槽位：标准物品 tooltip
-            super.renderTooltip(guiGraphics, mouseX, mouseY);
+            super.extractTooltip(guiGraphics, mouseX, mouseY);
         }
     }
 }

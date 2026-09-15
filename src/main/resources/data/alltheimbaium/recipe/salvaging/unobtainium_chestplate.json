@@ -1,8 +1,6 @@
 {
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "allthemodium:unobtainium_chestplate"
-  },
+  "ingredient": "allthemodium:unobtainium_chestplate",
   "results": [
     {
       "id": "allthemodium:unobtainium_ingot",

@@ -1,8 +1,6 @@
 {
   "type": "mekanism:crushing",
-  "input": {
-    "item": "minecraft:end_stone"
-  },
+  "input": "minecraft:end_stone",
   "output": {
     "id": "exdeorum:crushed_end_stone"
   },

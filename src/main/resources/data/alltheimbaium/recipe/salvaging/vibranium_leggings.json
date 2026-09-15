@@ -1,8 +1,6 @@
 {
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "allthemodium:vibranium_leggings"
-  },
+  "ingredient": "allthemodium:vibranium_leggings",
   "results": [
     {
       "id": "allthemodium:vibranium_ingot",

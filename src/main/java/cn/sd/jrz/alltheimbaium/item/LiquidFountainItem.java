@@ -1,30 +1,26 @@
 package cn.sd.jrz.alltheimbaium.item;
 
-import net.minecraft.world.item.Item;
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * ATI 液体无限制造机物品。
@@ -35,32 +31,45 @@ import java.util.List;
 public class LiquidFountainItem extends BlockItem {
     private static final Logger log = LoggerFactory.getLogger(LiquidFountainItem.class);
 
-    public LiquidFountainItem(Block block) {
-        super(block, new Properties().rarity(Rarity.EPIC).fireResistant());
+    /**
+     * 26.x：注册 id 与 block. 语言键前缀由 Registration 的 blockItemProps(key) 灌进属性里，这里只加品级
+     */
+    public LiquidFountainItem(Block block, Item.Properties properties) {
+        super(block, properties.rarity(Rarity.EPIC).fireResistant());
     }
 
+    /**
+     * 26.x：tooltip 出口由 List&lt;Component&gt; 换成 Consumer&lt;Component&gt;，@OnlyIn 已删除
+     */
     @Override
-    @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, context, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context,
+                                @Nonnull TooltipDisplay display, @Nonnull Consumer<Component> tooltip,
+                                @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, display, tooltip, flagIn);
         try {
             FluidStack fluidStack = FluidStack.EMPTY;
             CompoundTag tag = Tool.getBlockEntityTag(stack);
                 if (tag != null) {
                 if (tag != null) {
-                    if (tag.contains("fluid_id", Tag.TAG_STRING)) {
+                    // 26.x：CompoundTag 的取值方法一律返回 Optional，"按类型判断"的 contains 重载已删除，
+                    // 带默认值的读法统一走 getXOr
+                    String fluidId = tag.getStringOr("fluid_id", "");
+                    if (!fluidId.isEmpty()) {
                         Fluid fluid = null;
                         try {
                             //noinspection deprecation
-                            fluid = BuiltInRegistries.FLUID.get(ResourceLocation.tryParse(tag.getString("fluid_id")));
+                            Identifier parsed = Identifier.tryParse(fluidId);
+                            // 26.x：Registry#get 返回 Optional<Holder.Reference>，取实际对象改走 getValue
+                            // （FLUID 是"带默认值"的注册表，查不到时返回 Fluids.EMPTY，不会为 null）
+                            fluid = parsed == null ? null : BuiltInRegistries.FLUID.getValue(parsed);
                         } catch (Exception ignored) {
                         }
                         if (fluid != null && fluid != Fluids.EMPTY) {
                             fluidStack = new FluidStack(fluid, 0);
                         }
                     }
-                    if (tag.contains("fluid_amount", Tag.TAG_INT) && fluidStack != FluidStack.EMPTY) {
-                        fluidStack.setAmount(tag.getInt("fluid_amount"));
+                    if (fluidStack != FluidStack.EMPTY) {
+                        fluidStack.setAmount(tag.getIntOr("fluid_amount", 0));
                     }
                 }
             }

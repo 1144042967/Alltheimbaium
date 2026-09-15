@@ -89,6 +89,13 @@ def walk(node, out, count=1, hint=""):
         for item in node:
             walk(item, out, count, hint)
         return
+    # 26.x 的 Ingredient 走 HolderSet 编解码：单个物品写成 "ns:path"，标签写成 "#ns:path"
+    if isinstance(node, str):
+        if node.startswith("#"):
+            out.append(("chemical" if "chemical" in hint.lower() else "tag", node[1:], count))
+        else:
+            out.append(("item", node, count))
+        return
     if not isinstance(node, dict):
         return
 
@@ -99,7 +106,8 @@ def walk(node, out, count=1, hint=""):
         out.append(("item", node["item"], _short_count(node, count)))
         return
     # 高级 AE 的序列化物品：{"id": "ns:path", "#": n}
-    if isinstance(node.get("id"), str) and "#" in node:
+    # 1.21 起原版产物也写成 {"id": "ns:path"(, "count": n)}，键只可能有这两个
+    if isinstance(node.get("id"), str) and set(node) <= {"id", "count", "#"}:
         out.append(("item", node["id"], _short_count(node, count)))
         return
     # 流体（1.20.1 序列化形式）：{"FluidName": "...", "Amount": n}

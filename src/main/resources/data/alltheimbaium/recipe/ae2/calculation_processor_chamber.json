@@ -10,21 +10,15 @@
   "input_items": [
     {
       "amount": 64,
-      "ingredient": {
-        "item": "ae2:printed_calculation_processor"
-      }
+      "ingredient": "ae2:printed_calculation_processor"
     },
     {
       "amount": 64,
-      "ingredient": {
-        "item": "ae2:printed_silicon"
-      }
+      "ingredient": "ae2:printed_silicon"
     },
     {
       "amount": 64,
-      "ingredient": {
-        "tag": "c:dusts/redstone"
-      }
+      "ingredient": "#c:dusts/redstone"
     }
   ],
   "output": {

@@ -1,8 +1,6 @@
 {
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "allthemodium:vibranium_helmet"
-  },
+  "ingredient": "allthemodium:vibranium_helmet",
   "results": [
     {
       "id": "allthemodium:vibranium_ingot",

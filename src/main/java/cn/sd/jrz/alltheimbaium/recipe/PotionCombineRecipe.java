@@ -1,10 +1,12 @@
 package cn.sd.jrz.alltheimbaium.recipe;
 
 import cn.sd.jrz.alltheimbaium.setup.Config;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.item.Item;
@@ -48,8 +50,32 @@ import java.util.*;
  */
 public class PotionCombineRecipe extends CustomRecipe {
 
+    /**
+     * 26.x：序列化器改为 {@code record RecipeSerializer<T>(MapCodec<T>, StreamCodec<...>)}，
+     * 无自定义 JSON 字段的配方用一个"无字段"的编解码器即可。
+     * MAP_CODEC 与 STREAM_CODEC 都按「每次解码新建实例」处理：cachedResult 是 matches/assemble
+     * 之间的有状态缓存，各实例之间必须相互隔离（与 1.21.1 的 SimpleCraftingRecipeSerializer 一致）。
+     */
+    public static final MapCodec<PotionCombineRecipe> MAP_CODEC = MapCodec.unit(PotionCombineRecipe::new);
+    public static final StreamCodec<RegistryFriendlyByteBuf, PotionCombineRecipe> STREAM_CODEC =
+            new StreamCodec<>() {
+                @Override
+                public @Nonnull PotionCombineRecipe decode(@Nonnull RegistryFriendlyByteBuf buf) {
+                    // 本配方没有任何需要传输的字段：解码时新建实例即可。
+                    // 不能用 StreamCodec.unit —— 它会校验 value.equals(instance)，
+                    // 而本配方未重写 equals，会让整个配方同步包编码失败。
+                    return new PotionCombineRecipe();
+                }
+
+                @Override
+                public void encode(@Nonnull RegistryFriendlyByteBuf buf, @Nonnull PotionCombineRecipe recipe) {
+                    // 无字段可写
+                }
+            };
+
+    @SuppressWarnings("deprecation")
     public static final RecipeSerializer<PotionCombineRecipe> SERIALIZER =
-            new SimpleCraftingRecipeSerializer<>(PotionCombineRecipe::new);
+            new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
 
     // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
     private static double durationFactor;
@@ -66,15 +92,11 @@ public class PotionCombineRecipe extends CustomRecipe {
      */
     private ItemStack cachedResult = ItemStack.EMPTY;
 
-    public PotionCombineRecipe(CraftingBookCategory category) {
-        super(category);
-    }
-
     // ==================== 配方方法覆写 ====================
 
     @Override
     public boolean matches(@Nonnull CraftingInput input, @Nonnull Level level) {
-        // 每次匹配都先清空缓存，以本次网格为准，避免旧结果残留被 assemble/getResultItem 读到
+        // 每次匹配都先清空缓存，以本次网格为准，避免旧结果残留被 assemble 读到
         this.cachedResult = ItemStack.EMPTY;
         // 统计非空格子数量，必须恰好为 2
         ItemStack itemA = ItemStack.EMPTY;
@@ -247,9 +269,11 @@ public class PotionCombineRecipe extends CustomRecipe {
     /**
      * 构造"只有自定义效果、没有基础药水类型"的 {@link PotionContents}。
      * 对应旧版的 {@code PotionUtils.setCustomEffects}。
+     * <p>
+     * 26.x：{@link PotionContents} 多了一个 {@code customName} 组件，构造器变成 4 参。
      */
     private static PotionContents customEffectsOnly(Collection<MobEffectInstance> effects) {
-        return new PotionContents(Optional.empty(), Optional.empty(), List.copyOf(effects));
+        return new PotionContents(Optional.empty(), Optional.empty(), List.copyOf(effects), Optional.empty());
     }
 
     /**
@@ -333,26 +357,15 @@ public class PotionCombineRecipe extends CustomRecipe {
 
     // ==================== 标准配方方法 ====================
 
-    @Override
-    public boolean canCraftInDimensions(int width, int height) {
-        return width * height >= 2;
-    }
-
     @Nonnull
     @Override
-    public ItemStack assemble(@Nonnull CraftingInput input, @Nonnull HolderLookup.Provider registries) {
+    public ItemStack assemble(@Nonnull CraftingInput input) {
         // 只读取 matches() 缓存的结果，不再清空。
         // 原因：Polymorph / FastWorkbench 等 mod 会在一次合成流程中对本配方多次调用
-        // getResultItem()/assemble()，若这里清空缓存，后续 getResultItem() 会读到空物品，
-        // 导致手工放置时结果槽被错误覆盖为空。网格变化时 matches() 会重新计算并覆盖缓存。
+        // assemble()，若这里清空缓存，后续读取会拿到空物品，导致手工放置时结果槽被错误覆盖为空。
+        // 网格变化时 matches() 会重新计算并覆盖缓存。
         ItemStack result = this.cachedResult.copy();
         return result;
-    }
-
-    @Nonnull
-    @Override
-    public ItemStack getResultItem(@Nonnull HolderLookup.Provider registries) {
-        return ItemStack.EMPTY;
     }
 
     @Override
@@ -362,13 +375,7 @@ public class PotionCombineRecipe extends CustomRecipe {
 
     @Nonnull
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<? extends CustomRecipe> getSerializer() {
         return SERIALIZER;
-    }
-
-    @Nonnull
-    @Override
-    public RecipeType<?> getType() {
-        return RecipeType.CRAFTING;
     }
 }

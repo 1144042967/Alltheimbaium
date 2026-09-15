@@ -1,15 +1,9 @@
 {
   "type": "minecraft:crafting_shaped",
   "key": {
-    "A": {
-      "tag": "c:storage_blocks/redstone"
-    },
-    "#": {
-      "tag": "c:ingots/iron"
-    },
-    "B": {
-      "item": "bloodmagic:infusedslate"
-    }
+    "A": "#c:storage_blocks/redstone",
+    "#": "#c:ingots/iron",
+    "B": "bloodmagic:infusedslate"
   },
   "pattern": [
     "#A",

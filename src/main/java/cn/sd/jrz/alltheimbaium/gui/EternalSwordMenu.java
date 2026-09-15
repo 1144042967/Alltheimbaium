@@ -5,12 +5,11 @@ import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Container;
-import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -25,9 +24,9 @@ import net.minecraft.world.item.ItemStack;
 public class EternalSwordMenu extends AbstractContainerMenu {
 
     /**
-     * 27 格剑槽
+     * 27 格剑槽（变更时回调 saveInventory 写回剑 NBT）
      */
-    private final SimpleContainer swordInv = new SimpleContainer(EternalSwordItem.INVENTORY_SIZE);
+    private final CallbackContainer swordInv = new CallbackContainer(EternalSwordItem.INVENTORY_SIZE);
     /**
      * 服务端持有剑引用；客户端为 null
      */
@@ -64,12 +63,8 @@ public class EternalSwordMenu extends AbstractContainerMenu {
             EternalSwordItem.loadInventory(sword, swordInv, player.level().registryAccess());
         }
         // 剑槽内容变化时实时保存到剑 NBT
-        swordInv.addListener(new ContainerListener() {
-            @Override
-            public void containerChanged(Container container) {
-                saveInventory();
-            }
-        });
+        // 26.x 已删除 Container#addListener，改为给容器挂 setChanged 回调（与旧 ContainerListener 同一切点）
+        swordInv.setOnChanged(this::saveInventory);
         // 27 个剑槽（顶部 3 行 9 列），禁止放入永恒之剑
         for (int i = 0; i < EternalSwordItem.INVENTORY_SIZE; i++) {
             addSlot(new SwordSlot(swordInv, i, 8 + (i % 9) * 18, 18 + (i / 9) * 18));
@@ -137,7 +132,7 @@ public class EternalSwordMenu extends AbstractContainerMenu {
      * 拦截所有鼠标/键盘点击：任何涉及打开之剑的操作（拿起、放下、shift、数字键交换）都会被拒绝
      */
     @Override
-    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+    public void clicked(int slotId, int button, ContainerInput clickType, Player player) {
         if (sword != null && !sword.isEmpty() && this.player != null
                 && wouldMoveSword(slotId, button, clickType, player)) {
             return;
@@ -148,14 +143,14 @@ public class EternalSwordMenu extends AbstractContainerMenu {
     /**
      * 本次点击是否会移动打开的剑：拖拽中的剑、点击的槽位是剑、或数字键交换目标含剑
      */
-    private boolean wouldMoveSword(int slotId, int button, ClickType clickType, Player player) {
+    private boolean wouldMoveSword(int slotId, int button, ContainerInput clickType, Player player) {
         if (!this.getCarried().isEmpty() && isSword(this.getCarried())) return true;
         if (slotId >= 0 && slotId < this.slots.size()) {
             Slot slot = this.slots.get(slotId);
             if (slot != null && isSword(slot.getItem())) return true;
         }
         // 数字键交换：button 是目标快捷栏（0-8），对应菜单槽 27+27+button
-        if (clickType == ClickType.SWAP) {
+        if (clickType == ContainerInput.SWAP) {
             int hotbarSlot = 2 * EternalSwordItem.INVENTORY_SIZE + 9 + button;
             if (hotbarSlot >= 0 && hotbarSlot < this.slots.size()) {
                 Slot hb = this.slots.get(hotbarSlot);
@@ -228,6 +223,30 @@ public class EternalSwordMenu extends AbstractContainerMenu {
         @Override
         public boolean mayPlace(ItemStack stack) {
             return !stack.is(Registration.ETERNAL_SWORD.get());
+        }
+    }
+
+    /**
+     * 带变更回调的容器：替代已删除的 {@code Container#addListener}。
+     * <p>
+     * 回调在**加载完槽位之后**才挂上（构造器里 setOnChanged），因此读档不会触发一次多余的写回。
+     */
+    private static class CallbackContainer extends SimpleContainer {
+        private Runnable onChanged = () -> {
+        };
+
+        CallbackContainer(int size) {
+            super(size);
+        }
+
+        void setOnChanged(Runnable onChanged) {
+            this.onChanged = onChanged;
+        }
+
+        @Override
+        public void setChanged() {
+            super.setChanged();
+            onChanged.run();
         }
     }
 }

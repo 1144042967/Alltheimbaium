@@ -8,12 +8,8 @@
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
-    {
-      "item": "justdirethings:gooblock_tier1"
-    },
-    {
-      "item": "minecraft:coal_block"
-    }
+    "justdirethings:gooblock_tier1",
+    "minecraft:coal_block"
   ],
   "result": {
     "count": 9,

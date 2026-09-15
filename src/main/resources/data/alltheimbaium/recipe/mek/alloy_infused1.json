@@ -1,8 +1,6 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "item_input": {
-    "tag": "c:storage_blocks/iron"
-  },
+  "item_input": "#c:storage_blocks/iron",
   "chemical_input": {
     "amount": 90,
     "tag": "mekanism:redstone"

@@ -10,9 +10,7 @@
     }
   ],
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "allthemodium:vibranium_mace"
-  },
+  "ingredient": "allthemodium:vibranium_mace",
   "results": [
     {
       "count": 2,

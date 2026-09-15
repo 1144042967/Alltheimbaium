@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "item": "bloodmagic:teleposerfocus"
-    },
+    "bloodmagic:teleposerfocus",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 10000

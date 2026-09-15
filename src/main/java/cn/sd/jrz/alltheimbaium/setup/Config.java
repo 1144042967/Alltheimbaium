@@ -29,7 +29,7 @@ import java.util.List;
  * 监听 {@link ModConfigEvent.Loading} 事件，在 Forge 完成配置文件加载后，
  * 将配置值统一分发到各模块的静态字段中，确保运行时无需直接调用 Config.get()。
  */
-@EventBusSubscriber(modid = "alltheimbaium", bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = "alltheimbaium")
 public class Config {
 
     // ==================== ATI 耕地 ====================

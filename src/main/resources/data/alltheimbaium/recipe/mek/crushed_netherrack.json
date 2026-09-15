@@ -1,8 +1,6 @@
 {
   "type": "mekanism:crushing",
-  "input": {
-    "item": "minecraft:netherrack"
-  },
+  "input": "minecraft:netherrack",
   "output": {
     "id": "exdeorum:crushed_netherrack"
   },

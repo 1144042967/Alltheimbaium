@@ -1,18 +1,16 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
+import static cn.sd.jrz.alltheimbaium.setup.Registration.INSTANT_FURNACE_ENTITY;
+import static cn.sd.jrz.alltheimbaium.setup.Registration.INSTANT_FURNACE_ITEM;
 import cn.sd.jrz.alltheimbaium.connection.InstantFurnaceConnection;
 import cn.sd.jrz.alltheimbaium.gui.InstantFurnaceMenu;
 import cn.sd.jrz.alltheimbaium.item.Tip;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -24,17 +22,21 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.energy.EnergyStorage;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+import net.neoforged.neoforge.transfer.energy.SimpleEnergyHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,23 +113,24 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
 
     /**
      * 对外 IItemHandler 能力（行为方向无关：插入进输入区、抽取自输出区）。
-     * NeoForge 不再实现 ICapabilityProvider，由 {@code Registration.registerCapabilities} 拉取。
+     * NeoForge 不再实现 ICapabilityProvider，由 {@code registerCapabilities} 拉取。
      */
     private final InstantFurnaceConnection itemHandler = new InstantFurnaceConnection(this);
 
+    /** 26.x：{@link Capabilities.Item#BLOCK} 要求的是 {@code ResourceHandler<ItemResource>} */
     @Nonnull
-    public InstantFurnaceConnection getItemHandler(@Nullable Direction side) {
+    public ResourceHandler<ItemResource> getItemHandler(@Nullable Direction side) {
         return itemHandler;
     }
 
-    /** 对外能量能力（任意方向均返回同一存储） */
+    /** 对外能量能力（任意方向均返回同一存储）；26.x 的能力类型是 {@link EnergyHandler} */
     @Nonnull
-    public EnergyStorage getEnergyStorage(@Nullable Direction side) {
+    public EnergyHandler getEnergyStorage(@Nullable Direction side) {
         return energy;
     }
 
     public InstantFurnaceEntity(BlockPos pos, BlockState state) {
-        super(Registration.INSTANT_FURNACE_ENTITY.get(), pos, state);
+        super(INSTANT_FURNACE_ENTITY.get(), pos, state);
         // 六面输出默认全关：刚放下时不该把产物主动推给相邻方块，要玩家在界面里逐面打开
         Arrays.fill(directionState, STATE_DISABLED);
     }
@@ -288,11 +291,26 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
     private final Map<Item, ItemStack> cookCache = new HashMap<>();
 
     private void ensureCookCache(@Nonnull Level level) {
-        RecipeManager rm = level.getRecipeManager();
+        RecipeManager rm = recipeManager(level);
         if (rm != cookCacheManager) {
             cookCacheManager = rm;
             cookCache.clear();
         }
+    }
+
+    /**
+     * 取当前可用的配方管理器。
+     * <p>
+     * 26.x：{@code Level#getRecipeManager()} 已删除，改走 {@code Level#recipeAccess()}；而 26.x 起
+     * <b>客户端不再同步完整配方表</b>（{@code ClientLevel.recipeAccess()} 只有属性集与切石机配方），
+     * 因此这里做类型判定，取不到时按"没有配方"处理。熔炉的产物查询本来就只在服务端生效。
+     */
+    @Nullable
+    private static RecipeManager recipeManager(@Nonnull Level level) {
+        if (level.isClientSide()) {
+            return null;
+        }
+        return level.recipeAccess() instanceof RecipeManager manager ? manager : null;
     }
 
     /**
@@ -338,35 +356,48 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
         return moved;
     }
 
-    /** 通配 {@code RecipeType<? extends AbstractCookingRecipe>} 下的配方表读取（消除类型捕获带来的编译错误） */
+    /**
+     * 通配 {@code RecipeType<? extends AbstractCookingRecipe>} 下的配方表读取（消除类型捕获带来的编译错误）。
+     * <p>
+     * 26.x：{@code RecipeManager#getAllRecipesFor} 已删除，改成从全表里按配方类型筛。
+     */
     @SuppressWarnings("unchecked")
     public static List<RecipeHolder<? extends AbstractCookingRecipe>> getAllCookingRecipes(
             @Nonnull RecipeManager manager, @Nonnull RecipeType<? extends AbstractCookingRecipe> type) {
-        return (List<RecipeHolder<? extends AbstractCookingRecipe>>) (List<?>) manager.getAllRecipesFor((RecipeType) type);
+        List<RecipeHolder<? extends AbstractCookingRecipe>> list = new ArrayList<>();
+        for (RecipeHolder<?> holder : manager.getRecipes()) {
+            if (holder.value() instanceof AbstractCookingRecipe cooking && cooking.getType() == type) {
+                list.add((RecipeHolder<? extends AbstractCookingRecipe>) holder);
+            }
+        }
+        return list;
     }
 
     /**
      * 查询物品的烧炼配方结果（仅在缓存 miss 时调用一次）：按 SMELTING→BLASTING→SMOKING 三级兜底。
      * 不可烧返回 EMPTY（同样入缓存作哨兵，避免反复查表）；客户端不查。
+     * <p>
+     * 26.x：{@code Recipe#getIngredients}/{@code getResultItem} 已删除，改用
+     * {@code RecipeManager#getRecipeFor(RecipeType, RecipeInput, Level)} 直接按输入查表，
+     * 产物走 {@code Recipe#assemble(RecipeInput)}。
      */
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @Nonnull
     private static ItemStack findCookResult(@Nonnull Item item, @Nonnull Level level) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return ItemStack.EMPTY;
         }
         try {
-            RecipeManager recipeManager = level.getRecipeManager();
-            ItemStack single = new ItemStack(item, 1);
+            RecipeManager manager = recipeManager(level);
+            if (manager == null) {
+                return ItemStack.EMPTY;
+            }
+            SingleRecipeInput input = new SingleRecipeInput(new ItemStack(item, 1));
             for (RecipeType<? extends AbstractCookingRecipe> type : FURNACE_TYPES) {
-                // 1.21：getAllRecipesFor 的返回类型与 RecipeType 的类型参数绑定，
-                // 通配类型下用 RecipeHolder<? extends AbstractCookingRecipe> 接住
-                for (RecipeHolder<? extends AbstractCookingRecipe> __htype : getAllCookingRecipes(recipeManager, type)) {
-                    AbstractCookingRecipe recipe = __htype.value();
-                    for (Ingredient ingredient : recipe.getIngredients()) {
-                        if (ingredient.test(single)) {
-                            return recipe.getResultItem(level.registryAccess()).copy();
-                        }
-                    }
+                // 通配类型下泛型没法直接调用，用原始类型摊平（具体类型由 FURNACE_TYPES 保证）
+                Object found = manager.getRecipeFor((RecipeType) type, input, level).orElse(null);
+                if (found instanceof RecipeHolder<?> holder && holder.value() instanceof AbstractCookingRecipe recipe) {
+                    return recipe.assemble(input).copy();
                 }
             }
         } catch (Throwable e) {
@@ -386,7 +417,7 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
      */
     public void serverTick() {
         Level level = getLevel();
-        if (level == null || level.isClientSide) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         try {
@@ -422,7 +453,7 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
             if (neighbor == null) {
                 continue;
             }
-            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
+            ResourceHandler<ItemResource> handler = level.getCapability(Capabilities.Item.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
             if (handler == null) {
                 continue;
             }
@@ -430,14 +461,15 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
                 if (row.stock <= 0) {
                     continue;
                 }
+                ItemResource resource = ItemResource.of(row.item);
                 long remaining = row.stock;
                 while (remaining > 0) {
                     int amount = (int) Math.min(remaining, PUSH_BATCH);
                     if (amount <= 0) {
                         break;
                     }
-                    ItemStack leftover = ItemHandlerHelper.insertItemStacked(handler, new ItemStack(row.item, amount), false);
-                    int inserted = amount - leftover.getCount();
+                    // 26.x：insertStacking 内部会开一个根事务并在结束时提交，等价于旧的 ItemHandlerHelper.insertItemStacked
+                    int inserted = ResourceHandlerUtil.insertStacking(handler, resource, amount, null);
                     if (inserted <= 0) {
                         break; // 该面已满：顺延下一面
                     }
@@ -504,11 +536,13 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
     /**
      * 可被机器直控的 FE 能量存储（上限 2 亿、只接收不放出）。
      * <p>
-     * receiveEnergy 注入能量后回调机器尝试熔炼；spendEnergy / setEnergyStored 直接操作
-     * EnergyStorage 的 protected energy 字段完成"扣电/写存量"，避免走 receiveEnergy/extractEnergy
-     * 的开关限制与回调，防止熔炼扣电时自触发递归熔炼。
+     * 26.x：能力类型是 {@link EnergyHandler}，基类因此从 {@code EnergyStorage} 换成
+     * {@code SimpleEnergyHandler}——外部注入走它自带的事务日志（回滚/提交由框架保证），
+     * {@code onEnergyChanged} 里再补脏标记；spendEnergy / setEnergyStored 直接操作
+     * protected 的 energy 字段完成"扣电/写存量"，不走 insert/extract 的限额与事务，
+     * 防止熔炼扣电时自触发递归熔炼。
      */
-    private static class SmeltEnergy extends EnergyStorage {
+    private static class SmeltEnergy extends SimpleEnergyHandler {
         private final InstantFurnaceEntity owner;
 
         SmeltEnergy(InstantFurnaceEntity owner) {
@@ -516,13 +550,18 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
             this.owner = owner;
         }
 
+        /** 注入能量后脏标记持久化（事务提交时回调）；合成由每 tick 统一执行 */
         @Override
-        public int receiveEnergy(int maxReceive, boolean simulate) {
-            int received = super.receiveEnergy(maxReceive, simulate);
-            if (!simulate && received > 0) {
-                owner.setChanged(); // 能量须脏标记持久化；合成由每 tick 统一执行
-            }
-            return received;
+        protected void onEnergyChanged(int previousAmount) {
+            owner.setChanged();
+        }
+
+        public int getEnergyStored() {
+            return this.energy;
+        }
+
+        public int getMaxEnergyStored() {
+            return this.capacity;
         }
 
         /** 直接写入存量（加载/恢复用），自动裁剪到 [0, 上限] */
@@ -530,7 +569,7 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
             this.energy = Math.max(0, Math.min(MAX_ENERGY, amount));
         }
 
-        /** 直接扣减存量（熔炼用），不走 extractEnergy 的 canExtract 限制与回调 */
+        /** 直接扣减存量（熔炼用），不走 extract 的 maxExtract 限制与事务 */
         public int spendEnergy(int amount) {
             int deducted = Math.min(this.energy, Math.max(0, amount));
             this.energy -= deducted;
@@ -543,7 +582,7 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.instant_furnace").withStyle(Tip.rarityColor(Registration.INSTANT_FURNACE_ITEM.get()));
+        return Component.translatable("block.alltheimbaium.instant_furnace").withStyle(Tip.rarityColor(INSTANT_FURNACE_ITEM.get()));
     }
 
     @Nullable
@@ -563,65 +602,58 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
     private static final String KEY_DIR = "directionState";
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.saveAdditional(nbt, registries);
+    protected void saveAdditional(@Nonnull ValueOutput output) {
+        super.saveAdditional(output);
         try {
-            nbt.put(KEY_INPUT, saveRows(inputRows, registries));
-            nbt.put(KEY_OUTPUT, saveRows(outputRows, registries));
-            nbt.putInt(KEY_ENERGY, energy.getEnergyStored());
-            nbt.putIntArray(KEY_DIR, directionState);
+            // 26.x：产物行改由 ValueOutput 列表托管，物品组件自动按当前注册表访问器编解码
+            Tool.writeRows(output, KEY_INPUT, toStockRows(inputRows), Tool.StockRow.CODEC);
+            Tool.writeRows(output, KEY_OUTPUT, toStockRows(outputRows), Tool.StockRow.CODEC);
+            output.putInt(KEY_ENERGY, energy.getEnergyStored());
+            output.putIntArray(KEY_DIR, directionState);
         } catch (Throwable e) {
             log.error("InstantFurnaceEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.loadAdditional(nbt, registries);
+    protected void loadAdditional(@Nonnull ValueInput input) {
+        super.loadAdditional(input);
         try {
             // 反序列化只恢复状态；合成由每 tick 统一执行
-            if (nbt.contains(KEY_INPUT, Tag.TAG_LIST)) {
-                loadRows(inputRows, (ListTag) nbt.get(KEY_INPUT), registries);
-            }
-            if (nbt.contains(KEY_OUTPUT, Tag.TAG_LIST)) {
-                loadRows(outputRows, (ListTag) nbt.get(KEY_OUTPUT), registries);
-            }
-            if (nbt.contains(KEY_ENERGY, Tag.TAG_INT)) {
-                energy.setEnergyStored(nbt.getInt(KEY_ENERGY));
-            }
-            if (nbt.contains(KEY_DIR)) {
-                int[] arr = nbt.getIntArray(KEY_DIR);
+            loadRows(inputRows, Tool.readRows(input, KEY_INPUT, Tool.StockRow.CODEC));
+            loadRows(outputRows, Tool.readRows(input, KEY_OUTPUT, Tool.StockRow.CODEC));
+            energy.setEnergyStored(input.getIntOr(KEY_ENERGY, energy.getEnergyStored()));
+            int[] arr = input.getIntArray(KEY_DIR).orElse(null);
+            if (arr != null) {
                 for (int i = 0; i < Math.min(6, arr.length); i++) {
                     directionState[i] = Math.max(0, Math.min(STATE_COUNT - 1, arr[i]));
                 }
             }
         } catch (Throwable e) {
-            log.error("InstantFurnaceEntity.load error", e);
+            log.error("InstantFurnaceEntity.loadAdditional error", e);
         }
     }
 
-    private static ListTag saveRows(List<Row> rows, @Nonnull HolderLookup.Provider registries) {
-        ListTag list = new ListTag();
+    /** 内部可变行 → 持久化记录 */
+    @Nonnull
+    private static List<Tool.StockRow> toStockRows(@Nonnull List<Row> rows) {
+        List<Tool.StockRow> list = new ArrayList<>(rows.size());
         for (Row row : rows) {
-            // 1.21：save 需要注册表访问器，且一律以返回值为准
-            CompoundTag c = (CompoundTag) new ItemStack(row.item, 1).save(registries, new CompoundTag());
-            c.putLong("Stock", row.stock);
-            list.add(c);
+            list.add(new Tool.StockRow(Tool.oneOf(new ItemStack(row.item)), row.stock));
         }
         return list;
     }
 
-    private static void loadRows(List<Row> target, ListTag list, @Nonnull HolderLookup.Provider registries) {
+    private static void loadRows(@Nonnull List<Row> target, @Nonnull List<Tool.StockRow> list) {
         target.clear();
-        for (int i = 0; i < list.size(); i++) {
+        for (Tool.StockRow record : list) {
             try {
-                CompoundTag c = list.getCompound(i);
-                ItemStack stack = ItemStack.parseOptional(registries, c);
-                if (stack.isEmpty()) {
+                ItemStack stack = record.item();
+                if (stack == null || stack.isEmpty()) {
                     continue;
                 }
                 Row row = new Row(stack.getItem());
-                row.stock = c.contains("Stock", Tag.TAG_LONG) ? Tool.suit(c.getLong("Stock")) : 0;
+                row.stock = Tool.suit(record.count());
                 target.add(row);
             } catch (Throwable e) {
                 log.warn("InstantFurnaceEntity.loadRows entry error", e);
@@ -631,6 +663,7 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
     }
 
     // ==================== 客户端同步 ====================
+    // 26.x：handleUpdateTag / onDataPacket 的覆写已删除，改由原版 loadWithComponents(ValueInput) 默认接管。
 
     @Override
     @Nonnull
@@ -639,19 +672,8 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
-        this.loadAdditional(tag, registries);
-    }
-
-    @Override
     @Nonnull
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
-        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
-        this.loadAdditional(pkt.getTag(), registries);
     }
 }

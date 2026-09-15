@@ -3,12 +3,11 @@ package cn.sd.jrz.alltheimbaium.gui;
 import cn.sd.jrz.alltheimbaium.item.EternalTotemItem;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.world.Container;
-import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.PotionItem;
@@ -27,7 +26,7 @@ public class EternalTotemMenu extends AbstractContainerMenu {
      */
     private static final int CONTAINER_SIZE = EternalTotemItem.STORAGE_INVENTORY_SIZE;
 
-    private final SimpleContainer container = new SimpleContainer(CONTAINER_SIZE);
+    private final CallbackContainer container = new CallbackContainer(CONTAINER_SIZE);
     /**
      * 服务端持有图腾引用；客户端为 null
      */
@@ -56,12 +55,8 @@ public class EternalTotemMenu extends AbstractContainerMenu {
             EternalTotemItem.loadPotionItems(totem, container, player.level().registryAccess());
         }
         // 槽位变化：保存药水 / 食物槽到图腾 NBT
-        container.addListener(new ContainerListener() {
-            @Override
-            public void containerChanged(Container c) {
-                savePotionItems();
-            }
-        });
+        // 26.x 已删除 Container#addListener，改为给容器挂 setChanged 回调（与旧 ContainerListener 同一切点）
+        container.setOnChanged(this::savePotionItems);
         // 27 个药水 / 食物槽（顶部 3 行 9 列）
         for (int i = 0; i < EternalTotemItem.STORAGE_INVENTORY_SIZE; i++) {
             addSlot(new PotionFoodSlot(container, i, 8 + (i % 9) * 18, 18 + (i / 9) * 18));
@@ -124,7 +119,7 @@ public class EternalTotemMenu extends AbstractContainerMenu {
      * 拦截所有鼠标/键盘点击：任何涉及打开的图腾的操作（拿起、放下、shift、数字键交换）都会被拒绝
      */
     @Override
-    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+    public void clicked(int slotId, int button, ContainerInput clickType, Player player) {
         if (totem != null && !totem.isEmpty() && this.player != null
                 && wouldMoveTotem(slotId, button, clickType, player)) {
             return;
@@ -135,14 +130,14 @@ public class EternalTotemMenu extends AbstractContainerMenu {
     /**
      * 本次点击是否会移动打开的图腾：拖拽中的图腾，或点击的槽位/数字键目标槽是图腾
      */
-    private boolean wouldMoveTotem(int slotId, int button, ClickType clickType, Player player) {
+    private boolean wouldMoveTotem(int slotId, int button, ContainerInput clickType, Player player) {
         if (!this.getCarried().isEmpty() && isTotem(this.getCarried())) return true;
         if (slotId >= 0 && slotId < this.slots.size()) {
             Slot slot = this.slots.get(slotId);
             if (slot != null && isTotem(slot.getItem())) return true;
         }
         // 数字键交换：button 是目标快捷栏（0-8），对应菜单槽 药水27 + 背包27 = 54 起
-        if (clickType == ClickType.SWAP) {
+        if (clickType == ContainerInput.SWAP) {
             int hotbarStart = CONTAINER_SIZE + 27;
             int hotbarSlot = hotbarStart + button;
             if (hotbarSlot >= 0 && hotbarSlot < this.slots.size()) {
@@ -180,6 +175,30 @@ public class EternalTotemMenu extends AbstractContainerMenu {
         @Override
         public boolean mayPlace(ItemStack stack) {
             return stack.getItem() instanceof PotionItem || stack.has(net.minecraft.core.component.DataComponents.FOOD);
+        }
+    }
+
+    /**
+     * 带变更回调的容器：替代已删除的 {@code Container#addListener}。
+     * <p>
+     * 回调在**加载完槽位之后**才挂上（构造器里 setOnChanged），因此读档不会触发一次多余的写回。
+     */
+    private static class CallbackContainer extends SimpleContainer {
+        private Runnable onChanged = () -> {
+        };
+
+        CallbackContainer(int size) {
+            super(size);
+        }
+
+        void setOnChanged(Runnable onChanged) {
+            this.onChanged = onChanged;
+        }
+
+        @Override
+        public void setChanged() {
+            super.setChanged();
+            onChanged.run();
         }
     }
 }

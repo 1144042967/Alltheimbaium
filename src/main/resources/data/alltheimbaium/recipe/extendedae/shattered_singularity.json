@@ -19,21 +19,15 @@
   "input_items": [
     {
       "amount": 32,
-      "ingredient": {
-        "item": "ae2:singularity"
-      }
+      "ingredient": "ae2:singularity"
     },
     {
       "amount": 64,
-      "ingredient": {
-        "item": "ae2:ender_dust"
-      }
+      "ingredient": "ae2:ender_dust"
     },
     {
       "amount": 64,
-      "ingredient": {
-        "item": "ae2:sky_dust"
-      }
+      "ingredient": "ae2:sky_dust"
     }
   ],
   "output": {

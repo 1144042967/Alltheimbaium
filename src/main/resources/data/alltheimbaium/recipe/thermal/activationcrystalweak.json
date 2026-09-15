@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "item": "bloodmagic:lavacrystal"
-    },
+    "bloodmagic:lavacrystal",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 10000

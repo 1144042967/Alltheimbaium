@@ -13,7 +13,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -105,7 +104,7 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
      * 就会在 Netty 线程抛 {@code Can't find id for 'Reference{[minecraft:enchantment / minecraft:impaling]}'}
      * 并直接掐断连接（ATM10 实测：抽到附魔书必崩）。走 NBT 则按**注册名**书写，与注册表实例无关。
      */
-    public static void writeRolls(@Nonnull FriendlyByteBuf buf, @Nullable ItemStack[] rolls) {
+    public static void writeRolls(@Nonnull RegistryFriendlyByteBuf buf, @Nullable ItemStack[] rolls) {
         HolderLookup.Provider registries = Tool.registries();
         DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
         ListTag list = new ListTag();
@@ -142,10 +141,12 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
             return result;
         }
         HolderLookup.Provider registries = data.registryAccess();
-        ListTag list = wrapper.getList("rolls", Tag.TAG_COMPOUND);
+        ListTag list = wrapper.getListOrEmpty("rolls");
         for (int i = 0; i < Math.min(ROLL_SLOTS, list.size()); i++) {
             try {
-                result[i] = ItemStack.parseOptional(registries, list.getCompound(i));
+                result[i] = ItemStack.OPTIONAL_CODEC
+                        .parse(registries.createSerializationContext(NbtOps.INSTANCE), list.getCompoundOrEmpty(i))
+                        .result().orElse(ItemStack.EMPTY);
             } catch (Throwable ignored) {
                 // 单条坏数据只丢这一格
             }
@@ -221,7 +222,7 @@ public class SupplyCrateMenu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(@Nonnull Player player, int id) {
-        if (player.level().isClientSide) {
+        if (player.level().isClientSide()) {
             return false;
         }
         if (id >= BUTTON_SELECT_BASE && id < BUTTON_SELECT_BASE + ROLL_SLOTS) {

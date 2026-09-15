@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "item": "bloodmagic:weakbloodshard"
-    },
+    "bloodmagic:weakbloodshard",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 40000

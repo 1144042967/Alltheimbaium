@@ -18,7 +18,7 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
-import net.neoforged.neoforge.common.util.TriState;
+import net.minecraft.util.TriState;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock implements EntityBlock {
+public class FarmlandBlock extends net.minecraft.world.level.block.FarmlandBlock implements EntityBlock {
     private static final Logger log = LoggerFactory.getLogger(FarmlandBlock.class);
 
     // 从配置文件加载的本地缓存值，由 Config.onConfigLoad() 在配置加载后调用 loadConfig() 填入
@@ -44,9 +44,9 @@ public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock imp
         bonemealInterval = Config.FARMLAND_BONEMEAL_INTERVAL.get();
     }
 
-    public FarmlandBlock() {
-        // 1.21：Properties.copy(Block) 改名为 ofFullCopy(BlockBehaviour)
-        super(Properties.ofFullCopy(Blocks.FARMLAND));
+    public FarmlandBlock(Properties properties) {
+        // 26.x：方块必须在属性里带注册 id（由 Registration 传入），不能再自己造属性
+        super(properties);
     }
 
     @Override
@@ -77,7 +77,7 @@ public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock imp
         if (!level.hasChunkAt(tile.getBlockPos())) {
             return;
         }
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
 
@@ -94,7 +94,7 @@ public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock imp
         // 骨粉效果
         if (bonemealEnabled && tickCounter % bonemealInterval == 0) {
             if (block instanceof BonemealableBlock bonemealable) {
-                bonemealable.performBonemeal((ServerLevel) level, level.random, pos, state);
+                bonemealable.performBonemeal((ServerLevel) level, level.getRandom(), pos, state);
             }
         }
 
@@ -134,7 +134,7 @@ public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock imp
     }
 
     @Override
-    public void fallOn(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockPos pos, @Nonnull Entity entity, float fallDistance) {
+    public void fallOn(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockPos pos, @Nonnull Entity entity, double fallDistance) {
         try {
             entity.causeFallDamage(fallDistance, 1.0F, level.damageSources().fall());
         } catch (Throwable e) {
@@ -160,11 +160,8 @@ public class FarmlandBlock extends net.minecraft.world.level.block.FarmBlock imp
         return TriState.DEFAULT;
     }
 
-    @Override
-    public boolean isFertile(BlockState state, BlockGetter level, BlockPos pos) {
-        // 去掉湿润判断：耕地始终肥沃
-        return true;
-    }
+    // 26.x：原版把「是否肥沃」的判定挪进了作物自己的生长逻辑，Block#isFertile 已删除。
+    // 这里「耕地始终肥沃」由 randomTick 不退化 + canSurvive 恒真共同保证。
 
     @SuppressWarnings("deprecation")
     @Override

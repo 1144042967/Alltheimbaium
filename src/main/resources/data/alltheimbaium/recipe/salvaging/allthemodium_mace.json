@@ -10,9 +10,7 @@
     }
   ],
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "allthemodium:allthemodium_mace"
-  },
+  "ingredient": "allthemodium:allthemodium_mace",
   "results": [
     {
       "count": 2,

@@ -1,6 +1,6 @@
 package cn.sd.jrz.alltheimbaium.block;
 
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import cn.sd.jrz.alltheimbaium.gui.PlatformMenu;
 import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Config;
@@ -167,7 +167,8 @@ public class PlatformBlock extends Block {
     }
 
     private static void applyDisguiseColumn(ServerLevel level, int x, int z, boolean on) {
-        for (int y = level.getMinBuildHeight(); y < level.getMaxBuildHeight(); y++) {
+        // 26.x：LevelHeightAccessor 的 getMinBuildHeight/getMaxBuildHeight 已改名，改为 getMinY/getMaxY
+        for (int y = level.getMinY(); y <= level.getMaxY(); y++) {
             BlockPos p = new BlockPos(x, y, z);
             BlockState state = level.getBlockState(p);
             if (state.getBlock() instanceof PlatformBlock) {
@@ -184,7 +185,7 @@ public class PlatformBlock extends Block {
     @SuppressWarnings("deprecation")
     private InteractionResult doUse(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         try {
-            if (level.isClientSide) {
+            if (level.isClientSide()) {
                 return InteractionResult.SUCCESS;
             }
             ItemStack stack = player.getMainHandItem();
@@ -222,15 +223,17 @@ public class PlatformBlock extends Block {
     }
 
     @Override
-    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+    protected @Nonnull InteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         InteractionResult result = doUse(state, level, pos, player, handIn, hit);
-        if (result == InteractionResult.SUCCESS) {
-            return ItemInteractionResult.SUCCESS;
+        // 26.x：InteractionResult 是 sealed 接口，判定改用 instanceof；
+        // 旧的 ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION 对应 TRY_WITH_EMPTY_HAND（表示"再试一次空手交互"）
+        if (result instanceof InteractionResult.Success) {
+            return InteractionResult.SUCCESS;
         }
-        if (result == InteractionResult.FAIL) {
-            return ItemInteractionResult.FAIL;
+        if (result instanceof InteractionResult.Fail) {
+            return InteractionResult.FAIL;
         }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
 

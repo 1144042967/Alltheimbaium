@@ -1,8 +1,6 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "item_input": {
-    "tag": "c:storage_blocks/diamond"
-  },
+  "item_input": "#c:storage_blocks/diamond",
   "chemical_input": {
     "amount": 360,
     "tag": "mekanism:refined_obsidian"

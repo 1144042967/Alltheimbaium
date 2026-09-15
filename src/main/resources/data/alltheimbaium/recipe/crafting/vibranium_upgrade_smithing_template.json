@@ -2,15 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "group": "template",
   "key": {
-    "A": {
-      "item": "allthemodium:vibranium_ingot"
-    },
-    "B": {
-      "item": "minecraft:gilded_blackstone"
-    },
-    "#": {
-      "item": "allthemodium:allthemodium_ingot"
-    }
+    "A": "allthemodium:vibranium_ingot",
+    "B": "minecraft:gilded_blackstone",
+    "#": "allthemodium:allthemodium_ingot"
   },
   "pattern": [
     "#A#",

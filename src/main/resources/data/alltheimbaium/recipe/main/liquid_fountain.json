@@ -7,15 +7,9 @@
     "BBB"
   ],
   "key": {
-    "X": {
-      "item": "alltheimbaium:package_material"
-    },
-    "B": {
-      "item": "minecraft:diamond_block"
-    },
-    "C": {
-      "item": "minecraft:bucket"
-    }
+    "X": "alltheimbaium:package_material",
+    "B": "minecraft:diamond_block",
+    "C": "minecraft:bucket"
   },
   "result": {
     "id": "alltheimbaium:liquid_fountain"

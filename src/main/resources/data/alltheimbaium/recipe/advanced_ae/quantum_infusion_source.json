@@ -16,9 +16,7 @@
   "input_items": [
     {
       "amount": 16,
-      "ingredient": {
-        "item": "advanced_ae:quantum_infused_dust"
-      }
+      "ingredient": "advanced_ae:quantum_infused_dust"
     }
   ],
   "output": {

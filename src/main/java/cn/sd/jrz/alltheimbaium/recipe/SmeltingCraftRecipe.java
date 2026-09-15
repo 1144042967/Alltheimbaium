@@ -1,6 +1,8 @@
 package cn.sd.jrz.alltheimbaium.recipe;
 
-import net.minecraft.core.HolderLookup;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.*;
@@ -24,7 +26,7 @@ import java.util.List;
  * <p>
  * Output: 8 × the furnace recipe's result (capped at max stack size).
  * <p>
- * This recipe dynamically queries the server's {@link net.minecraft.world.item.crafting.RecipeManager}
+ * This recipe dynamically queries the server's {@link RecipeManager}
  * at craft time, so it works with furnace recipes from any mod.
  */
 public class SmeltingCraftRecipe extends CustomRecipe {
@@ -43,30 +45,49 @@ public class SmeltingCraftRecipe extends CustomRecipe {
             RecipeType.SMOKING
     );
 
-    /**
-     * The serializer instance. Uses {@link SimpleCraftingRecipeSerializer} because
-     * this recipe needs no custom JSON data beyond the type discriminator.
+    /**     * {@code MAP_CODEC} 与 {@code STREAM_CODEC} 都按「每次解码新建实例」处理：{@code cachedResult}
+     * 是 matches/assemble 之间的有状态缓存，各实例之间必须相互隔离（与 1.21.1 的
+     * {@code SimpleCraftingRecipeSerializer} 行为一致）。
+
      */
+    public static final MapCodec<SmeltingCraftRecipe> MAP_CODEC = MapCodec.unit(SmeltingCraftRecipe::new);
+    public static final StreamCodec<RegistryFriendlyByteBuf, SmeltingCraftRecipe> STREAM_CODEC =
+            new StreamCodec<>() {
+                @Override
+                public @Nonnull SmeltingCraftRecipe decode(@Nonnull RegistryFriendlyByteBuf buf) {
+                    // 本配方没有任何需要传输的字段：解码时新建实例即可。
+                    // 不能用 StreamCodec.unit —— 它会校验 value.equals(instance)，
+                    // 而本配方未重写 equals，会让整个配方同步包编码失败。
+                    return new SmeltingCraftRecipe();
+                }
+
+                @Override
+                public void encode(@Nonnull RegistryFriendlyByteBuf buf, @Nonnull SmeltingCraftRecipe recipe) {
+                    // 无字段可写
+                }
+            };
+
+    /**
+     * The serializer instance. The stream codec component of {@link RecipeSerializer} is marked
+     * deprecated by vanilla (it is only kept for network sync), hence the suppression.
+     */
+    @SuppressWarnings("deprecation")
     public static final RecipeSerializer<SmeltingCraftRecipe> SERIALIZER =
-            new SimpleCraftingRecipeSerializer<>(SmeltingCraftRecipe::new);
+            new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
 
     /**
      * Cached smelting result set by {@link #matches} and consumed by {@link #assemble}.
      * Reset to EMPTY after consumption. This pattern is necessary because
-     * {@code assemble()} receives {@link HolderLookup.Provider} but not {@link Level},
+     * {@code assemble()} no longer receives the {@link Level},
      * so it cannot access the world-specific {@code RecipeManager}.
      */
     private ItemStack cachedResult = ItemStack.EMPTY;
-
-    public SmeltingCraftRecipe(CraftingBookCategory category) {
-        super(category);
-    }
 
     // ==================== Recipe overrides ====================
 
     @Override
     public boolean matches(@Nonnull CraftingInput input, @Nonnull Level level) {
-        // 每次匹配都先清空缓存，以本次网格为准，避免旧结果残留被 assemble/getResultItem 读到
+        // 每次匹配都先清空缓存，以本次网格为准，避免旧结果残留被 assemble 读到
         this.cachedResult = ItemStack.EMPTY;
 
         // (1) Require 3×3 crafting grid (not the player's 2×2 grid)
@@ -103,18 +124,13 @@ public class SmeltingCraftRecipe extends CustomRecipe {
         return true;
     }
 
-    @Override
-    public boolean canCraftInDimensions(int width, int height) {
-        return width >= 3 && height >= 3;
-    }
-
     @Nonnull
     @Override
-    public ItemStack assemble(@Nonnull CraftingInput input, @Nonnull HolderLookup.Provider registries) {
+    public ItemStack assemble(@Nonnull CraftingInput input) {
         // 只读取 matches() 缓存的结果，不再清空。
         // 原因：Polymorph / FastWorkbench 等 mod 会在一次合成流程中对本配方多次调用
-        // getResultItem()/assemble()（遍历配方列表、刷新客户端预览等），若这里清空缓存，
-        // 后续 getResultItem() 会读到空物品，导致手工放置时结果槽被错误覆盖为空。
+        // assemble()（遍历配方列表、刷新客户端预览等），若这里清空缓存，
+        // 后续读取会拿到空物品，导致手工放置时结果槽被错误覆盖为空。
         // 网格变化时 matches() 会重新计算并覆盖缓存，因此只读是安全的。
         ItemStack result = this.cachedResult.copy();
 
@@ -128,13 +144,6 @@ public class SmeltingCraftRecipe extends CustomRecipe {
         return result;
     }
 
-    @Nonnull
-    @Override
-    public ItemStack getResultItem(@Nonnull HolderLookup.Provider registries) {
-        // Dynamic recipe — no constant output to preview
-        return ItemStack.EMPTY;
-    }
-
     @Override
     public boolean isSpecial() {
         // Exclude from recipe book (cannot auto-fill a dynamic pattern)
@@ -143,14 +152,8 @@ public class SmeltingCraftRecipe extends CustomRecipe {
 
     @Nonnull
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<? extends CustomRecipe> getSerializer() {
         return SERIALIZER;
-    }
-
-    @Nonnull
-    @Override
-    public RecipeType<?> getType() {
-        return RecipeType.CRAFTING;
     }
 
     // ==================== Furnace lookup ====================
@@ -158,37 +161,60 @@ public class SmeltingCraftRecipe extends CustomRecipe {
     /**
      * Searches smelting, blasting, and smoking recipe lists (in that order)
      * for a recipe whose ingredient accepts {@code input}.
+     * <p>
+     * 26.x：{@code Recipe#getIngredients()} / {@code getResultItem()} 已删除，改成按输入直接查表
+     * （{@code RecipeManager#getRecipeFor}）+ {@code assemble(RecipeInput)} 取产物；
+     * {@code Level#getRecipeManager()} 也改成了 {@code Level#recipeAccess()}，后者只在服务端返回
+     * {@link RecipeManager}（客户端的 {@code ClientRecipeContainer} 没有配方表），查不到就当作没有配方。
      *
      * @return the matching furnace recipe's result item (copy), or {@code null} if none found
      */
     @javax.annotation.Nullable
     private static ItemStack findFurnaceResult(@Nonnull ItemStack input, @Nonnull Level level) {
         // Client does not have the authoritative recipe manager — skip
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return null;
         }
 
-        RecipeManager recipeManager = level.getRecipeManager();
-        ItemStack singleItem = input.copyWithCount(1);
+        if (!(level.recipeAccess() instanceof RecipeManager recipeManager)) {
+            return null;
+        }
+
+        SingleRecipeInput singleInput = new SingleRecipeInput(input.copyWithCount(1));
 
         for (RecipeType<? extends AbstractCookingRecipe> type : FURNACE_TYPES) {
-            // 1.21.1 起 getAllRecipesFor 返回 RecipeHolder 列表，需 .value() 取配方本体
-            for (RecipeHolder<? extends AbstractCookingRecipe> holder : recipeManager.getAllRecipesFor(type)) {
-                AbstractCookingRecipe recipe = holder.value();
-                for (Ingredient ingredient : recipe.getIngredients()) {
-                    if (ingredient.test(singleItem)) {
-                        ItemStack result = recipe.getResultItem(level.registryAccess()).copy();
-                        // 空产物配方（数据包里写了 air、或产物物品被移除后配方仍能加载）不能算匹配成功——
-                        // 否则 matches() 判定成立、assemble() 却吐不出东西，玩家放进去的材料会被白白吞掉。
-                        if (result.isEmpty()) {
-                            continue;
-                        }
-                        return result;
-                    }
-                }
+            ItemStack result = findMatchingResult(recipeManager, type, singleInput, level);
+            if (result != null) {
+                return result;
             }
         }
 
         return null;
+    }
+
+    /**
+     * 按输入查一条烧炼类配方并取出它的产物。
+     * <p>
+     * {@code FURNACE_TYPES} 里的元素是通配类型 {@code RecipeType<? extends AbstractCookingRecipe>}，
+     * 直接调用会把泛型摊平成原始类型；这里用一个"上界是 {@code Recipe<SingleRecipeInput>}"的辅助方法
+     * 让类型推断自己接上（{@link AbstractCookingRecipe} 正是这条路），避免 raw type 告警。
+     *
+     * @return 该输入命中的产物（copy），无配方或产物为空时返回 {@code null}
+     */
+    @javax.annotation.Nullable
+    private static <T extends Recipe<SingleRecipeInput>> ItemStack findMatchingResult(
+            @Nonnull RecipeManager manager, @Nonnull RecipeType<T> type,
+            @Nonnull SingleRecipeInput input, @Nonnull Level level) {
+        RecipeHolder<T> holder = manager.getRecipeFor(type, input, level).orElse(null);
+        if (holder == null) {
+            return null;
+        }
+        ItemStack result = holder.value().assemble(input).copy();
+        // 空产物配方（数据包里写了 air、或产物物品被移除后配方仍能加载）不能算匹配成功——
+        // 否则 matches() 判定成立、assemble() 却吐不出东西，玩家放进去的材料会被白白吞掉。
+        if (result.isEmpty()) {
+            return null;
+        }
+        return result;
     }
 }

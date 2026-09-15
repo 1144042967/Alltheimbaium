@@ -1,8 +1,6 @@
 {
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "minecraft:enchanted_book"
-  },
+  "ingredient": "minecraft:enchanted_book",
   "results": [
     {
       "id": "minecraft:book",

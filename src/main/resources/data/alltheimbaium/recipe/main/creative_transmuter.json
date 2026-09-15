@@ -7,12 +7,8 @@
     "NNN"
   ],
   "key": {
-    "N": {
-      "item": "minecraft:netherite_block"
-    },
-    "P": {
-      "item": "alltheimbaium:package_material"
-    }
+    "N": "minecraft:netherite_block",
+    "P": "alltheimbaium:package_material"
   },
   "result": {
     "id": "alltheimbaium:creative_transmuter"

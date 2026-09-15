@@ -9,9 +9,7 @@
   "category": "misc",
   "group": "forbidden_arcanus",
   "ingredients": [
-    {
-      "item": "forbidden_arcanus:maledictus_pact"
-    }
+    "forbidden_arcanus:maledictus_pact"
   ],
   "result": {
     "id": "forbidden_arcanus:artisan_relic"

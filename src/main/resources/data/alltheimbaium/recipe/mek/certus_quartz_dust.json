@@ -1,8 +1,6 @@
 {
   "type": "mekanism:crushing",
-  "input": {
-    "item": "ae2:chipped_budding_quartz"
-  },
+  "input": "ae2:chipped_budding_quartz",
   "output": {
     "id": "ae2:certus_quartz_dust",
     "count": 64

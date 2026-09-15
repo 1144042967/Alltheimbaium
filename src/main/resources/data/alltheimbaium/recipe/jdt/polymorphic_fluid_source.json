@@ -20,9 +20,7 @@
   "input_items": [
     {
       "amount": 1,
-      "ingredient": {
-        "item": "justdirethings:polymorphic_catalyst"
-      }
+      "ingredient": "justdirethings:polymorphic_catalyst"
     }
   ],
   "output": {

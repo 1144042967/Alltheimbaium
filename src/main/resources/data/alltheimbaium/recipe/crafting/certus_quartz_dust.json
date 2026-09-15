@@ -3,12 +3,8 @@
   "category": "misc",
   "group": "dust",
   "ingredients": [
-    {
-      "item": "enderio:powdered_quartz"
-    },
-    {
-      "item": "minecraft:water_bucket"
-    }
+    "enderio:powdered_quartz",
+    "minecraft:water_bucket"
   ],
   "result": {
     "id": "ae2:certus_quartz_dust"

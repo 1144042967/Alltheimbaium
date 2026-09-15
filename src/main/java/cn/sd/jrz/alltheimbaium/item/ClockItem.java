@@ -6,28 +6,32 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * 加速时钟物品。
  */
 public class ClockItem extends BlockItem {
 
-    public ClockItem(Block block) {
-        super(block, new Item.Properties().rarity(Rarity.UNCOMMON));
+    /**
+     * 26.x：注册 id 与 block. 语言键前缀由 Registration 的 blockItemProps(key) 灌进属性里，这里只加品级
+     */
+    public ClockItem(Block block, Item.Properties properties) {
+        super(block, properties.rarity(Rarity.UNCOMMON));
     }
 
+    /**
+     * 26.x：tooltip 出口由 List&lt;Component&gt; 换成 Consumer&lt;Component&gt;，@OnlyIn 已删除
+     */
     @Override
-    @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, context, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context,
+                                @Nonnull TooltipDisplay display, @Nonnull Consumer<Component> tooltip,
+                                @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, display, tooltip, flagIn);
         Tip.of(tooltip)
                 .head(stack, "tip.alltheimbaium.type.accelerator")
                 .summary("item.alltheimbaium.clock.summary")

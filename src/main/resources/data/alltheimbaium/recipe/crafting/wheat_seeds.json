@@ -3,9 +3,7 @@
   "category": "misc",
   "group": "seed",
   "ingredients": [
-    {
-      "item": "minecraft:wheat"
-    }
+    "minecraft:wheat"
   ],
   "result": {
     "id": "minecraft:wheat_seeds"

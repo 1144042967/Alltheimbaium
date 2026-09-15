@@ -1,25 +1,21 @@
 package cn.sd.jrz.alltheimbaium.item;
 
-import net.minecraft.world.item.Item;
 import cn.sd.jrz.alltheimbaium.entity.InstantInscriberEntity;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * 零刻压印器方块物品：tooltip 显示已存电量与压板 / 组装两种模式的精确区别。
@@ -27,20 +23,29 @@ import java.util.List;
 public class InstantInscriberItem extends BlockItem {
     private static final Logger log = LoggerFactory.getLogger(InstantInscriberItem.class);
 
-    public InstantInscriberItem(Block block) {
-        super(block, new Properties().rarity(Rarity.RARE).fireResistant());
+    /**
+     * 26.x：注册 id 与 block. 语言键前缀由 Registration 的 blockItemProps(key) 灌进属性里，这里只加品级
+     */
+    public InstantInscriberItem(Block block, Item.Properties properties) {
+        super(block, properties.rarity(Rarity.RARE).fireResistant());
     }
 
+    /**
+     * 26.x：tooltip 出口由 List&lt;Component&gt; 换成 Consumer&lt;Component&gt;，@OnlyIn 已删除
+     */
     @Override
-    @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, context, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context,
+                                @Nonnull TooltipDisplay display, @Nonnull Consumer<Component> tooltip,
+                                @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, display, tooltip, flagIn);
         try {
             int stored = 0;
             CompoundTag tag = Tool.getBlockEntityTag(stack);
                 if (tag != null) {
-                if (tag != null && tag.contains("energy", Tag.TAG_INT)) {
-                    stored = Math.max(0, tag.getInt("energy"));
+                // 26.x：CompoundTag 的取值方法一律返回 Optional，"按类型判断"的 contains 重载已删除，
+                // 带默认值的读法统一走 getXOr
+                if (tag.contains("energy")) {
+                    stored = Math.max(0, tag.getIntOr("energy", 0));
                 }
             }
             Tip.of(tooltip)

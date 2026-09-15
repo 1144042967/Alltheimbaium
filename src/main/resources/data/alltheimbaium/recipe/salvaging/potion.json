@@ -1,8 +1,6 @@
 {
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "minecraft:potion"
-  },
+  "ingredient": "minecraft:potion",
   "results": [
     {
       "id": "minecraft:glass_bottle",

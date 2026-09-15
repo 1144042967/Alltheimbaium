@@ -9,9 +9,7 @@
   "category": "misc",
   "group": "forbidden_arcanus",
   "ingredients": [
-    {
-      "item": "forbidden_arcanus:elementarium"
-    }
+    "forbidden_arcanus:elementarium"
   ],
   "result": {
     "id": "forbidden_arcanus:divine_pact"

@@ -24,9 +24,7 @@
   "input_items": [
     {
       "amount": 16,
-      "ingredient": {
-        "item": "minecraft:charcoal"
-      }
+      "ingredient": "minecraft:charcoal"
     }
   ],
   "output": {

@@ -6,18 +6,10 @@
     "BBB"
   ],
   "key": {
-    "X": {
-      "item": "alltheimbaium:package_material"
-    },
-    "A": {
-      "item": "minecraft:netherite_block"
-    },
-    "B": {
-      "item": "minecraft:golden_apple"
-    },
-    "C": {
-      "item": "minecraft:netherite_sword"
-    }
+    "X": "alltheimbaium:package_material",
+    "A": "minecraft:netherite_block",
+    "B": "minecraft:golden_apple",
+    "C": "minecraft:netherite_sword"
   },
   "result": {
     "id": "alltheimbaium:eternal_sword"

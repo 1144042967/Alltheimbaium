@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "tag": "c:gems/diamond"
-    },
+    "#c:gems/diamond",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 2000

@@ -9,9 +9,7 @@
   "category": "misc",
   "group": "forbidden_arcanus",
   "ingredients": [
-    {
-      "item": "forbidden_arcanus:artisan_relic"
-    }
+    "forbidden_arcanus:artisan_relic"
   ],
   "result": {
     "id": "forbidden_arcanus:crescent_moon"

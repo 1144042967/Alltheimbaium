@@ -20,9 +20,7 @@
   "input_items": [
     {
       "amount": 1,
-      "ingredient": {
-        "item": "justdirethings:gooblock_tier2"
-      }
+      "ingredient": "justdirethings:gooblock_tier2"
     }
   ],
   "output": {

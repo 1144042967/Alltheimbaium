@@ -1,9 +1,7 @@
 {
   "type": "minecraft:crafting_shaped",
   "key": {
-    "#": {
-      "item": "bloodmagic:weak_tau"
-    }
+    "#": "bloodmagic:weak_tau"
   },
   "pattern": [
     "##",

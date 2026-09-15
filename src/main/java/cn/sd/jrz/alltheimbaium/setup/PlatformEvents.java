@@ -6,12 +6,11 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.Mod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +64,8 @@ public class PlatformEvents {
                 if (pending == null) {
                     break;
                 }
-                LevelChunk chunk = pending.level().getChunkSource().getChunkNow(pending.pos().x, pending.pos().z);
+                // 26.x 的 ChunkPos 是 record，字段访问改成 x() / z()
+                LevelChunk chunk = pending.level().getChunkSource().getChunkNow(pending.pos().x(), pending.pos().z());
                 if (chunk != null) {
                     PlatformBlock.correctChunkDisguise(pending.level(), chunk);
                 }
@@ -91,7 +91,9 @@ public class PlatformEvents {
     }
 
     @SubscribeEvent
-    public static void onBlockBreak(BlockEvent.BreakEvent event) {
+    public static void onBlockBreak(BreakBlockEvent event) {
+        // 26.x：BlockEvent.BreakEvent 已挪到 event.level.block.BreakBlockEvent（仍是 BlockEvent 的子类，
+        // getLevel()/getPos()/getState() 的语义与旧版一致）
         try {
             if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
                 return;

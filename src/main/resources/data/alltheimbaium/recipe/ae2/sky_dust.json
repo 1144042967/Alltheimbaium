@@ -10,9 +10,7 @@
   "input_items": [
     {
       "amount": 64,
-      "ingredient": {
-        "item": "ae2:sky_stone_block"
-      }
+      "ingredient": "ae2:sky_stone_block"
     }
   ],
   "output": {

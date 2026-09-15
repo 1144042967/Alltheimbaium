@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "tag": "c:storage_blocks/gold"
-    },
+    "#c:storage_blocks/gold",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 25000

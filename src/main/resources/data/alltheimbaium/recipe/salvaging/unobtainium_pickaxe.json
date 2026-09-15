@@ -1,8 +1,6 @@
 {
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "allthemodium:unobtainium_pickaxe"
-  },
+  "ingredient": "allthemodium:unobtainium_pickaxe",
   "results": [
     {
       "id": "allthemodium:unobtainium_ingot",

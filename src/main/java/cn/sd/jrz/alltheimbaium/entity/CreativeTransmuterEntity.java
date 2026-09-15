@@ -1,15 +1,15 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
+import static cn.sd.jrz.alltheimbaium.setup.Registration.CREATIVE_TRANSMUTER_ENTITY;
+import static cn.sd.jrz.alltheimbaium.setup.Registration.CREATIVE_TRANSMUTER_ITEM;
 import cn.sd.jrz.alltheimbaium.connection.CreativeTransmuterConnection;
 import cn.sd.jrz.alltheimbaium.gui.CreativeTransmuterMenu;
 import cn.sd.jrz.alltheimbaium.item.Tip;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.TransmuteCatalog;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -21,9 +21,12 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,17 +80,18 @@ public class CreativeTransmuterEntity extends BlockEntity implements MenuProvide
 
     /**
      * 对外物品能力（方向无关）。NeoForge 不再实现 ICapabilityProvider，
-     * 由 {@code Registration.registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取。
+     * 由 {@code registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取。
      */
     private final CreativeTransmuterConnection itemHandler = new CreativeTransmuterConnection(this);
 
+    /** 26.x：{@link Capabilities.Item#BLOCK} 要求的是 {@code ResourceHandler<ItemResource>} */
     @Nonnull
-    public CreativeTransmuterConnection getItemHandler(@Nullable Direction side) {
+    public ResourceHandler<ItemResource> getItemHandler(@Nullable Direction side) {
         return itemHandler;
     }
 
     public CreativeTransmuterEntity(BlockPos pos, BlockState state) {
-        super(Registration.CREATIVE_TRANSMUTER_ENTITY.get(), pos, state);
+        super(CREATIVE_TRANSMUTER_ENTITY.get(), pos, state);
     }
 
     @Nonnull
@@ -137,7 +141,7 @@ public class CreativeTransmuterEntity extends BlockEntity implements MenuProvide
     // ==================== 能力 ====================
     // 1.21：方块实体不再实现 ICapabilityProvider、也没有 LazyOptional，
     // 因此旧版 invalidateCaps() 里"让能力缓存失效"这件事整个消失——
-    // 能力由 Registration.registerCapabilities 按方块实体类型静态注册，无需逐实例失效。
+    // 能力由 registerCapabilities 按方块实体类型静态注册，无需逐实例失效。
 
     // ==================== 菜单提供 ====================
 
@@ -145,7 +149,7 @@ public class CreativeTransmuterEntity extends BlockEntity implements MenuProvide
     @Nonnull
     public Component getDisplayName() {
         return Component.translatable("block.alltheimbaium.creative_transmuter")
-                .withStyle(Tip.rarityColor(Registration.CREATIVE_TRANSMUTER_ITEM.get()));
+                .withStyle(Tip.rarityColor(CREATIVE_TRANSMUTER_ITEM.get()));
     }
 
     @Nullable
@@ -157,28 +161,28 @@ public class CreativeTransmuterEntity extends BlockEntity implements MenuProvide
     // ==================== NBT 持久化 ====================
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.saveAdditional(nbt, registries);
+    protected void saveAdditional(@Nonnull ValueOutput output) {
+        super.saveAdditional(output);
         try {
-            nbt.put(TAG_INVENTORY, inventory.serializeNBT(registries));
+            // 26.x：ItemStackHandler 改实现 ValueIOSerializable，用 putChild/readChild 存取（serializeNBT 已删除）
+            output.putChild(TAG_INVENTORY, inventory);
         } catch (Throwable e) {
             log.error("CreativeTransmuterEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.loadAdditional(nbt, registries);
+    protected void loadAdditional(@Nonnull ValueInput input) {
+        super.loadAdditional(input);
         try {
-            if (nbt.contains(TAG_INVENTORY)) {
-                inventory.deserializeNBT(registries, nbt.getCompound(TAG_INVENTORY));
-            }
+            input.readChild(TAG_INVENTORY, inventory);
         } catch (Throwable e) {
-            log.error("CreativeTransmuterEntity.load error", e);
+            log.error("CreativeTransmuterEntity.loadAdditional error", e);
         }
     }
 
     // ==================== 客户端同步 ====================
+    // 26.x：handleUpdateTag / onDataPacket 的覆写已删除，改由原版 loadWithComponents(ValueInput) 默认接管。
 
     @Override
     @Nonnull
@@ -187,21 +191,8 @@ public class CreativeTransmuterEntity extends BlockEntity implements MenuProvide
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
-        this.loadAdditional(tag, registries);
-    }
-
-    @Override
     @Nonnull
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
-        CompoundTag tag = pkt.getTag();
-        if (tag != null) {
-            this.loadAdditional(tag, registries);
-        }
     }
 }

@@ -1,20 +1,19 @@
 package cn.sd.jrz.alltheimbaium.item;
 
-import net.minecraft.world.item.Item;
 import cn.sd.jrz.alltheimbaium.block.StorageFountainBlock;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraft.world.level.storage.TagValueInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +23,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * ATI 存储方块制造机物品。
@@ -34,34 +34,54 @@ import java.util.List;
 public class StorageFountainItem extends BlockItem {
     private static final Logger log = LoggerFactory.getLogger(StorageFountainItem.class);
 
+    /**
+     * 已标记物品列表在方块实体数据里的键（与 StorageFountainEntity 的 KEY_STICK 一致，
+     * 沿用旧名以免存档里的标记丢失）
+     */
+    private static final String STOCK_ROWS_KEY = "save_stick";
+
     /** 可复制范围说明里最多列出的标签 / MOD 数量 */
     private static final int MAX_ACCEPT_LISTED = 4;
 
 
-    public StorageFountainItem(Block block) {
-        super(block, new Properties().rarity(Rarity.EPIC).fireResistant());
+    /**
+     * 26.x：注册 id 与 block. 语言键前缀由 Registration 的 blockItemProps(key) 灌进属性里，这里只加品级
+     */
+    public StorageFountainItem(Block block, Item.Properties properties) {
+        super(block, properties.rarity(Rarity.EPIC).fireResistant());
     }
 
+    /**
+     * 26.x：tooltip 出口由 List&lt;Component&gt; 换成 Consumer&lt;Component&gt;，@OnlyIn 已删除
+     */
     @Override
-    @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, context, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context,
+                                @Nonnull TooltipDisplay display, @Nonnull Consumer<Component> tooltip,
+                                @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, display, tooltip, flagIn);
         try {
             long output = 5;
             List<ItemStack> stackList = new ArrayList<>();
             List<Long> blockList = new ArrayList<>();
+            // 26.x：已标记物品列表不再手写 NBT，改由方块实体的 ValueOutput + Tool.StockRow 记录类型托管，
+            // 这里用 TagValueInput 把物品上的 BlockEntityTag 当成 ValueInput 读回来（与实体侧对称）
+            HolderLookup.Provider registries = registriesOf(context);
             CompoundTag tag = Tool.getBlockEntityTag(stack);
                 if (tag != null) {
                 if (tag != null) {
-                    if (tag.contains("output", Tag.TAG_LONG)) {
-                        output = Tool.suit(tag.getLong("output"));
+                    // 26.x：CompoundTag 的取值方法一律返回 Optional，"按类型判断"的 contains 重载已删除，
+                    // 带默认值的读法统一走 getXOr
+                    if (tag.contains("output")) {
+                        output = Tool.suit(tag.getLongOr("output", output));
                     }
-                    if (tag.contains("save_stick")) {
-                        ListTag array = (ListTag) tag.get("save_stick");
-                        if (array != null) {
-                            stackList = Tool.toItemList(array);
-                            blockList = Tool.toBlockList(array);
+                    for (Tool.StockRow row : Tool.readRows(
+                            TagValueInput.create(ProblemReporter.DISCARDING, registries, tag),
+                            STOCK_ROWS_KEY, Tool.StockRow.CODEC)) {
+                        if (row == null || row.item() == null || row.item().isEmpty()) {
+                            continue;
                         }
+                        stackList.add(row.item());
+                        blockList.add(Tool.suit(row.count()));
                     }
                 }
             }
@@ -98,6 +118,15 @@ public class StorageFountainItem extends BlockItem {
         } catch (Throwable e) {
             log.error("StorageFountainItem.appendHoverText error", e);
         }
+    }
+
+    /**
+     * tooltip 上下文带注册表访问器（物品组件里的注册名靠它解析）；客户端拿不到时回退到 Tool 的兜底
+     */
+    @Nonnull
+    private static HolderLookup.Provider registriesOf(@Nonnull Item.TooltipContext context) {
+        HolderLookup.Provider registries = context.registries();
+        return registries != null ? registries : Tool.registries();
     }
 
     /**

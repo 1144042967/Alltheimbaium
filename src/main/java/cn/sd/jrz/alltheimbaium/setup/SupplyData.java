@@ -26,12 +26,13 @@ public class SupplyData {
     private SupplyData() {
     }
 
+    // 26.x：CompoundTag#getInt 改成了返回 Optional<Integer>，读取数值一律用 getIntOr 带默认值
     public static int getMax(@Nonnull Player player) {
-        return player.getPersistentData().getInt(KEY_MAX);
+        return player.getPersistentData().getIntOr(KEY_MAX, 0);
     }
 
     public static int getUsed(@Nonnull Player player) {
-        return player.getPersistentData().getInt(KEY_USED);
+        return player.getPersistentData().getIntOr(KEY_USED, 0);
     }
 
     /** 当前剩余可用的补给点 */
@@ -40,7 +41,7 @@ public class SupplyData {
     }
 
     public static int getSeconds(@Nonnull Player player) {
-        return player.getPersistentData().getInt(KEY_SEC);
+        return player.getPersistentData().getIntOr(KEY_SEC, 0);
     }
 
     public static void setMax(@Nonnull Player player, int value) {

@@ -2,13 +2,16 @@ package cn.sd.jrz.alltheimbaium.gui;
 
 import cn.sd.jrz.alltheimbaium.entity.InstantInscriberEntity;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
@@ -16,14 +19,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 零刻压印器 GUI（大数版）。
@@ -31,9 +31,8 @@ import java.util.Optional;
  * 顶部标题 + FE 能量条；两行输入格（18，可投料/取回）、一行输出格（9，取成品）；
  * 中间一排：6 个六面推送开关 + 模式切换按钮（显示当前 压板/组装，点击切换）。格内缩写存量小字。
  */
-@OnlyIn(Dist.CLIENT)
 public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscriberMenu> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/instant_inscriber_gui.png");
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath("alltheimbaium", "textures/gui/instant_inscriber_gui.png");
 
     // FE 能量条：贴图已经画好凹陷槽位（内嵌区域 x 8~167、y 16~22，共 160×7），
     // 代码只负责在槽位内填色块，不画边框也不画底槽
@@ -72,8 +71,6 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     private static final String HELP_ARROW = "←";
     /** 压板卡的箭头符号：输入 → 输出（压板卡与组装卡列方向相反，输入在左） */
     private static final String HELP_ARROW_PRESS = "→";
-    /** 自绘帮助卡片的抬升 z，确保盖过槽位里的物品贴图 */
-    private static final int HELP_Z = 400;
 
     /** 左 "?"(压板) 的水平位置（gui 局部坐标，init 计算） */
     private int helpX1 = 0;
@@ -90,9 +87,8 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     private boolean spaceDown = false;
 
     public InstantInscriberScreen(InstantInscriberMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = InstantInscriberMenu.IMAGE_HEIGHT;
+        // 26.x：imageWidth/imageHeight 是 final 字段，尺寸经由超类构造器传入
+        super(menu, playerInventory, title, 176, InstantInscriberMenu.IMAGE_HEIGHT);
         this.inventoryLabelY = this.imageHeight - 94;
     }
 
@@ -127,23 +123,26 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_SPACE) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == GLFW.GLFW_KEY_SPACE) {
             this.spaceDown = true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
-    public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_SPACE) {
+    public boolean keyReleased(KeyEvent event) {
+        if (event.key() == GLFW.GLFW_KEY_SPACE) {
             this.spaceDown = false;
         }
-        return super.keyReleased(keyCode, scanCode, modifiers);
+        return super.keyReleased(event);
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (button == 0) {
             int mx = (int) mouseX;
             int my = (int) mouseY;
@@ -170,21 +169,21 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
                 }
                 if (isInput) {
                     sendButton(pickExtractButton(InstantInscriberMenu.BUTTON_INPUT_ONE_BASE,
-                            InstantInscriberMenu.BUTTON_INPUT_STACK_BASE, InstantInscriberMenu.BUTTON_INPUT_ALL_BASE, cell));
+                            InstantInscriberMenu.BUTTON_INPUT_STACK_BASE, InstantInscriberMenu.BUTTON_INPUT_ALL_BASE, cell, event.hasShiftDown()));
                 } else if (this.menu.getCarried().isEmpty()) {
                     sendButton(pickExtractButton(InstantInscriberMenu.BUTTON_OUTPUT_ONE_BASE,
-                            InstantInscriberMenu.BUTTON_OUTPUT_STACK_BASE, InstantInscriberMenu.BUTTON_OUTPUT_ALL_BASE, cell));
+                            InstantInscriberMenu.BUTTON_OUTPUT_STACK_BASE, InstantInscriberMenu.BUTTON_OUTPUT_ALL_BASE, cell, event.hasShiftDown()));
                 } else {
                     return true; // 输出格不可投料
                 }
                 return true;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
-    private int pickExtractButton(int oneBase, int stackBase, int allBase, int cell) {
-        if (hasShiftDown()) {
+    private int pickExtractButton(int oneBase, int stackBase, int allBase, int cell, boolean shiftDown) {
+        if (shiftDown) {
             return stackBase + cell;
         }
         if (this.spaceDown) {
@@ -194,19 +193,21 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     }
 
     @Override
-    protected void renderLabels(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractLabels(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         // 标题：颜色由菜单标题组件携带品级样式决定，此处带阴影保证在浅色底上可读
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, true);
+        guiGraphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFF404040, true);
         // 物品栏标签：保持原版观感，不加阴影
-        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
+        guiGraphics.text(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0xFF404040, false);
         // 标题栏右侧两个黄色 "?"：左=压板配方、右=组装配方
-        guiGraphics.drawString(this.font, "?", this.helpX1, HELP_Y, HELP_COLOR, true);
-        guiGraphics.drawString(this.font, "?", this.helpX2, HELP_Y, HELP_COLOR, true);
+        guiGraphics.text(this.font, "?", this.helpX1, HELP_Y, HELP_COLOR, true);
+        guiGraphics.text(this.font, "?", this.helpX2, HELP_Y, HELP_COLOR, true);
     }
 
     @Override
-    protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
+    public void extractBackground(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 26.x：背景贴图改在 extractBackground 里绘制（renderBg 已删除），先让父类画好暗化/模糊底
+        super.extractBackground(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
         // FE 能量条：只画填充色块，槽位边框由贴图提供
         int max = Math.max(1, this.menu.getMaxEnergy());
         int energy = Math.max(0, Math.min(max, this.menu.getEnergy()));
@@ -220,17 +221,16 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     }
 
     @Override
-    public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         // 模式按钮文案随时刷新（显示当前模式）
         this.modeButton.setMessage(Component.translatable("screen.alltheimbaium.instant_inscriber.mode." + modeKey(this.menu.getMode())));
         // 模式按钮点击后无需保持焦点，避免残留原版按钮的白色聚焦描边
         this.modeButton.setFocused(false);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.flush();
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         drawSlotCounts(guiGraphics);
         // FE 能量条 hover
         if (this.isHovering(ENERGY_X, ENERGY_Y, ENERGY_W, ENERGY_H, mouseX, mouseY)) {
-            guiGraphics.renderTooltip(this.font, buildEnergyTooltip(), Optional.empty(), mouseX, mouseY);
+            guiGraphics.setComponentTooltipForNextFrame(this.font, buildEnergyTooltip(), mouseX, mouseY);
         }
         // 模式按钮 hover：目标模式说明
         if (this.modeButton.isHovered()) {
@@ -241,12 +241,12 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
                     Component.translatable("screen.alltheimbaium.instant_inscriber.mode." + modeKey(this.menu.getMode()))));
             lines.add(Component.translatable("screen.alltheimbaium.instant_inscriber.mode_tooltip.next",
                     Component.translatable("screen.alltheimbaium.instant_inscriber.mode." + modeKey(next))));
-            guiGraphics.renderTooltip(this.font, lines, Optional.empty(), mouseX, mouseY);
+            guiGraphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
         }
         // 六面开关 tooltip
         for (FaceButton faceButton : this.faceButtons) {
             if (faceButton.isHovered()) {
-                guiGraphics.renderTooltip(this.font, faceButton.buildTooltip(), Optional.empty(), mouseX, mouseY);
+                guiGraphics.setComponentTooltipForNextFrame(this.font, faceButton.buildTooltip(), mouseX, mouseY);
             }
         }
         // 两个 "?" 帮助卡片
@@ -257,7 +257,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
             renderRecipeCard(guiGraphics, mouseX, mouseY, assemblyRecipes(), this.helpPageB,
                     "screen.alltheimbaium.instant_inscriber.help.assembly.header");
         }
-        renderTooltip(guiGraphics, mouseX, mouseY);
+        extractTooltip(guiGraphics, mouseX, mouseY);
     }
 
     // ==================== 两个 "?" 配方帮助卡 ====================
@@ -320,7 +320,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     }
 
     /** 半透明卡片底板：黑色 1px 边框 + 半透明底 */
-    private void drawHelpPanel(GuiGraphics guiGraphics, int bx, int by, int boxW, int boxH) {
+    private void drawHelpPanel(GuiGraphicsExtractor guiGraphics, int bx, int by, int boxW, int boxH) {
         guiGraphics.fill(bx - 1, by - 1, bx + boxW + 1, by, 0xFF000000);
         guiGraphics.fill(bx - 1, by + boxH, bx + boxW + 1, by + boxH + 1, 0xFF000000);
         guiGraphics.fill(bx - 1, by, bx, by + boxH, 0xFF000000);
@@ -373,7 +373,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
      * 自绘配方帮助卡：一行一条配方，格式 {@code 输出物品 ← 输入物品…}。
      * 输出列按本页最长项留白，使各行的箭头与输入列逐行对齐。
      */
-    private void renderRecipeCard(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY,
+    private void renderRecipeCard(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY,
                                   @Nonnull List<InstantInscriberEntity.RecipeSummary> recipes,
                                   int page, @Nonnull String headerKey) {
         Component header = Component.translatable(headerKey).withStyle(ChatFormatting.GRAY);
@@ -422,21 +422,21 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
         int bx = cardX(mouseX, boxW);
         int by = cardY(mouseY, boxH);
 
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.nextStratum();
         drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
         int left = bx + hpad;
         int y = by + vpad;
-        guiGraphics.drawString(this.font, header, left, y, 0xFFFFFF, true);
+        guiGraphics.text(this.font, header, left, y, 0xFFFFFFFF, true);
         y += lineH;
         for (int i = 0; i < outputs.size(); i++) {
-            guiGraphics.drawString(this.font, outputs.get(i), left, y, 0xFFFFFF, true);
-            guiGraphics.drawString(this.font, HELP_ARROW, left + arrowX, y, 0xFFAAAAAA, true);
-            guiGraphics.drawString(this.font, inputLines.get(i), left + inX, y, 0xFFFFFF, true);
+            guiGraphics.text(this.font, outputs.get(i), left, y, 0xFFFFFFFF, true);
+            guiGraphics.text(this.font, HELP_ARROW, left + arrowX, y, 0xFFAAAAAA, true);
+            guiGraphics.text(this.font, inputLines.get(i), left + inX, y, 0xFFFFFFFF, true);
             y += lineH;
         }
-        guiGraphics.drawString(this.font, footer, left, y, 0xFFFFFF, true);
-        guiGraphics.pose().popPose();
+        guiGraphics.text(this.font, footer, left, y, 0xFFFFFFFF, true);
+        guiGraphics.pose().popMatrix();
     }
 
     /**
@@ -445,7 +445,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
      * 方向与组装卡相反——压板是"1 份原料吃出多种压板"，所以**输入排在左侧、输出排在右侧**；
      * 同一份原料支持的多个压板并排在该行后半段（数据侧已在 {@code inscribeSummaries} 里按输入聚合去重）。
      */
-    private void renderPressCard(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderPressCard(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         Component header = Component.translatable("screen.alltheimbaium.instant_inscriber.help.press.header").withStyle(ChatFormatting.GRAY);
         List<InstantInscriberEntity.PressSummary> recipes = pressRecipes();
         int hpad = 4;
@@ -491,25 +491,25 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
         int bx = cardX(mouseX, boxW);
         int by = cardY(mouseY, boxH);
 
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.nextStratum();
         drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
         int left = bx + hpad;
         int y = by + vpad;
-        guiGraphics.drawString(this.font, header, left, y, 0xFFFFFF, true);
+        guiGraphics.text(this.font, header, left, y, 0xFFFFFFFF, true);
         y += lineH;
         for (int i = 0; i < inputNames.size(); i++) {
-            guiGraphics.drawString(this.font, inputNames.get(i), left, y, 0xFFFFFF, true);
-            guiGraphics.drawString(this.font, HELP_ARROW_PRESS, left + arrowX, y, 0xFFAAAAAA, true);
-            guiGraphics.drawString(this.font, outputNames.get(i), left + outX, y, 0xFFFFFF, true);
+            guiGraphics.text(this.font, inputNames.get(i), left, y, 0xFFFFFFFF, true);
+            guiGraphics.text(this.font, HELP_ARROW_PRESS, left + arrowX, y, 0xFFAAAAAA, true);
+            guiGraphics.text(this.font, outputNames.get(i), left + outX, y, 0xFFFFFFFF, true);
             y += lineH;
         }
-        guiGraphics.drawString(this.font, footer, left, y, 0xFFFFFF, true);
-        guiGraphics.pose().popPose();
+        guiGraphics.text(this.font, footer, left, y, 0xFFFFFFFF, true);
+        guiGraphics.pose().popMatrix();
     }
 
     /** 空态卡片：未装 AE2 或没有可用配方时，只画标题 + 一句提示 */
-    private void renderEmptyCard(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, @Nonnull Component header) {
+    private void renderEmptyCard(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, @Nonnull Component header) {
         int hpad = 4;
         int vpad = 4;
         int lineH = this.font.lineHeight + 1;
@@ -518,12 +518,12 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
         int boxH = vpad * 2 + lineH * 2;
         int bx = cardX(mouseX, boxW);
         int by = cardY(mouseY, boxH);
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0.0D, 0.0D, HELP_Z);
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.nextStratum();
         drawHelpPanel(guiGraphics, bx, by, boxW, boxH);
-        guiGraphics.drawString(this.font, header, bx + hpad, by + vpad, 0xFFFFFF, true);
-        guiGraphics.drawString(this.font, empty, bx + hpad, by + vpad + lineH, 0xFFFFFF, true);
-        guiGraphics.pose().popPose();
+        guiGraphics.text(this.font, header, bx + hpad, by + vpad, 0xFFFFFFFF, true);
+        guiGraphics.text(this.font, empty, bx + hpad, by + vpad + lineH, 0xFFFFFFFF, true);
+        guiGraphics.pose().popMatrix();
     }
 
     /** 把一组物品名用 {@code " / "} 连起来，数量 > 1 时带 ×N */
@@ -547,7 +547,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     }
 
     @Override
-    protected void renderTooltip(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractTooltip(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         Slot slot = findRowSlot(mouseX, mouseY);
         if (slot != null) {
             int idx = slot.index;
@@ -559,17 +559,17 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
                 lines.add(Component.translatable("screen.alltheimbaium.instant_inscriber.deposit_hint",
                         this.menu.getCarried().getHoverName()));
             } else if (!cur.isEmpty()) {
-                lines.add(cur.getHoverName().copy().withStyle(style -> style.withColor(0xFFFFFF)));
+                lines.add(cur.getHoverName().copy().withStyle(style -> style.withColor(0xFFFFFFFF)));
                 lines.add(Component.translatable("screen.alltheimbaium.instant_inscriber.row_count",
                         isInput ? this.menu.getInputStock(cell) : this.menu.getOutputStock(cell)));
                 lines.add(Component.translatable("screen.alltheimbaium.instant_inscriber.extract_usage"));
             } else {
                 return;
             }
-            guiGraphics.renderTooltip(this.font, lines, Optional.empty(), mouseX, mouseY);
+            guiGraphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
             return;
         }
-        super.renderTooltip(guiGraphics, mouseX, mouseY);
+        super.extractTooltip(guiGraphics, mouseX, mouseY);
     }
 
     private Slot findRowSlot(int mouseX, int mouseY) {
@@ -583,7 +583,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
         return null;
     }
 
-    private void drawSlotCounts(GuiGraphics guiGraphics) {
+    private void drawSlotCounts(GuiGraphicsExtractor guiGraphics) {
         for (int i = 0; i < InstantInscriberEntity.INPUT_MAX_TYPES; i++) {
             drawCount(guiGraphics, this.menu.getInputStock(i), this.menu.slots.get(i));
         }
@@ -593,17 +593,16 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
         }
     }
 
-    private void drawCount(GuiGraphics guiGraphics, long stock, Slot slot) {
+    private void drawCount(GuiGraphicsExtractor guiGraphics, long stock, Slot slot) {
         if (stock <= 0) {
             return;
         }
         int x = this.leftPos + slot.x;
         int y = this.topPos + slot.y + 12;
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0, 0, 300);
-        guiGraphics.pose().scale(COUNT_SCALE, COUNT_SCALE, 1.0F);
-        guiGraphics.drawString(this.font, formatCount(stock), (int) (x / COUNT_SCALE), (int) (y / COUNT_SCALE), 0xFFFFFF, true);
-        guiGraphics.pose().popPose();
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.pose().scale(COUNT_SCALE, COUNT_SCALE);
+        guiGraphics.text(this.font, formatCount(stock), (int) (x / COUNT_SCALE), (int) (y / COUNT_SCALE), 0xFFFFFFFF, true);
+        guiGraphics.pose().popMatrix();
     }
 
     private List<Component> buildEnergyTooltip() {
@@ -682,7 +681,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             int state = InstantInscriberScreen.this.menu.getDirectionState(this.direction);
             int color = state == InstantInscriberEntity.STATE_DISABLED ? 0xFFAA0000 : 0xFF00AA00;
             guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), color);
@@ -694,9 +693,9 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
             ItemStack neighborIcon = InstantInscriberScreen.this.getNeighborIcon(this.direction);
             if (!neighborIcon.isEmpty()) {
                 // 有相邻方块：按钮 16x16 与贴图等大，直接铺满显示，不再画方向箭头
-                guiGraphics.renderItem(neighborIcon, this.getX(), this.getY());
+                guiGraphics.item(neighborIcon, this.getX(), this.getY());
             } else {
-                guiGraphics.drawCenteredString(InstantInscriberScreen.this.font, directionArrow(this.direction),
+                guiGraphics.centeredText(InstantInscriberScreen.this.font, directionArrow(this.direction),
                         this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
             }
         }

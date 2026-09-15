@@ -1,14 +1,14 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import net.minecraft.world.level.storage.loot.LootParams;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -23,8 +23,9 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,7 +119,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     }
 
     private <T extends BlockEntity> void tick(Level level, T tile) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
         if (!(tile instanceof StorageFountainEntity generator)) {
@@ -142,8 +143,9 @@ public class StorageFountainBlock extends Block implements EntityBlock {
                     continue;
                 }
                 BlockPos pos = blockPos.relative(direction);
-                // 1.21：能力查询走 level.getCapability（方块实体本身不再能查能力）
-                IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, direction.getOpposite());
+                // 能力查询走 level.getCapability（方块实体本身不再能查能力）；
+                // 26.x 的物品能力类型是 ResourceHandler<ItemResource>，不再有 IItemHandler 版本的注册点
+                ResourceHandler<ItemResource> handler = level.getCapability(Capabilities.Item.BLOCK, pos, direction.getOpposite());
                 if (handler == null) {
                     continue;
                 }
@@ -180,7 +182,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         return indexList;
     }
 
-    private void transport(StorageFountainEntity generator, List<Integer> indexList, IItemHandler handler) {
+    private void transport(StorageFountainEntity generator, List<Integer> indexList, ResourceHandler<ItemResource> handler) {
         if (indexList.size() == 1) {
             transport(generator, indexList.get(0), handler);
             return;
@@ -191,27 +193,32 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         }
     }
 
-    private void transport(StorageFountainEntity generator, int index, IItemHandler handler) {
+    private void transport(StorageFountainEntity generator, int index, ResourceHandler<ItemResource> handler) {
         ItemStack stack = generator.itemList.get(index).copy();
+        // insertStacking 要求资源非空（空资源会抛异常），这里显式跳过，保持旧版 ItemHandlerHelper 的"空栈即空操作"语义
+        if (stack.isEmpty()) {
+            return;
+        }
         Long block = generator.blockList.get(index);
         long maxOutputCount = block / carry;
-        stack.setCount(Tool.suitInt(maxOutputCount));
-        ItemStack result = ItemHandlerHelper.insertItemStacked(handler, stack, false);
-        int count = result.getCount();
+        int maxOutput = Tool.suitInt(maxOutputCount);
+        // 26.x：ItemHandlerHelper.insertItemStacked 对应 ResourceHandlerUtil.insertStacking，
+        // 但返回值语义相反 —— 这里返回的是"已插入数量"，不是剩余数量。物品带组件（ItemResource.of(ItemStack)）
+        int count = ResourceHandlerUtil.insertStacking(handler, ItemResource.of(stack), maxOutput, null);
         if (count < 0) {
             count = 0;
         }
-        if (count > Tool.suitInt(maxOutputCount)) {
-            count = Tool.suitInt(maxOutputCount);
+        if (count > maxOutput) {
+            count = maxOutput;
         }
-        generator.blockList.set(index, block - (maxOutputCount - count) * carry);
+        generator.blockList.set(index, block - count * carry);
     }
 
     /**
      * 判断物品是否可被标记复制：物品白名单 → MOD 命名空间 → 标签，命中其一即可
      */
     public static boolean isAcceptedItem(ItemStack stack) {
-        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         // 白名单优先：完整注册 ID 精确匹配，无视后两条规则
         if (acceptedItems.contains(id.toString())) {
             return true;
@@ -220,7 +227,8 @@ public class StorageFountainBlock extends Block implements EntityBlock {
         for (String mod : acceptedMods) {
             if (namespace.contains(mod)) return true;
         }
-        return stack.getTags().anyMatch(tag -> {
+        // 26.x：ItemStack#getTags（NeoForge 扩展）已删除，改从物品的 Holder 取标签（TagKey#location 仍是 Identifier）
+        return BuiltInRegistries.ITEM.wrapAsHolder(stack.getItem()).tags().anyMatch(tag -> {
             String path = tag.location().getPath();
             for (String accepted : acceptedTags) {
                 if (path.contains(accepted)) return true;
@@ -232,7 +240,7 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     @SuppressWarnings("deprecation")
     private InteractionResult doUse(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         try {
-            if (level.isClientSide) {
+            if (level.isClientSide()) {
                 return InteractionResult.SUCCESS;
             }
             StorageFountainEntity generator = (StorageFountainEntity) level.getBlockEntity(pos);
@@ -260,15 +268,17 @@ public class StorageFountainBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+    protected @Nonnull InteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         InteractionResult result = doUse(state, level, pos, player, handIn, hit);
-        if (result == InteractionResult.SUCCESS) {
-            return ItemInteractionResult.SUCCESS;
+        // 26.x：InteractionResult 是 sealed 接口，判定改用 instanceof；
+        // 旧的 ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION 对应 TRY_WITH_EMPTY_HAND（表示"再试一次空手交互"）
+        if (result instanceof InteractionResult.Success) {
+            return InteractionResult.SUCCESS;
         }
-        if (result == InteractionResult.FAIL) {
-            return ItemInteractionResult.FAIL;
+        if (result instanceof InteractionResult.Fail) {
+            return InteractionResult.FAIL;
         }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     /**

@@ -2,8 +2,10 @@ package cn.sd.jrz.alltheimbaium.setup;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -27,19 +29,30 @@ import java.util.Random;
  * 每次打开 GUI / 兑换 / 刷新都会按当时的状态重新生成一次。物品黑名单见配置。
  */
 public class SupplyRoll {
-    /** 分类键顺序（与 CreativeModeTabs 对应），索引即 GUI 槽位 */
+    /**
+     * 分类键（原版注册名），索引即 GUI 槽位。
+     * <p>
+     * 26.x：{@code CreativeModeTabs} 的分类键字段全部改成了 private（只剩 {@code getDefaultTab()}），
+     * 不能再直接引用，这里按原版注册名自行构造——{@code CreativeModeTabs.createKey} 用的就是同一个表达式。
+     */
     public static final ResourceKey<CreativeModeTab>[] CATEGORIES = new ResourceKey[]{
-            CreativeModeTabs.BUILDING_BLOCKS,      // 0 建筑方块
-            CreativeModeTabs.COLORED_BLOCKS,       // 1 染色方块
-            CreativeModeTabs.NATURAL_BLOCKS,       // 2 自然方块
-            CreativeModeTabs.FUNCTIONAL_BLOCKS,    // 3 功能方块
-            CreativeModeTabs.REDSTONE_BLOCKS,      // 4 红石方块
-            CreativeModeTabs.TOOLS_AND_UTILITIES,  // 5 工具与实用物品
-            CreativeModeTabs.COMBAT,               // 6 战斗用品
-            CreativeModeTabs.FOOD_AND_DRINKS,      // 7 食物与饮品
-            CreativeModeTabs.INGREDIENTS,          // 8 原材料
-            CreativeModeTabs.SPAWN_EGGS            // 9 刷怪蛋
+            tabKey("building_blocks"),      // 0 建筑方块
+            tabKey("colored_blocks"),       // 1 染色方块
+            tabKey("natural_blocks"),       // 2 自然方块
+            tabKey("functional_blocks"),    // 3 功能方块
+            tabKey("redstone_blocks"),      // 4 红石方块
+            tabKey("tools_and_utilities"),  // 5 工具与实用物品
+            tabKey("combat"),               // 6 战斗用品
+            tabKey("food_and_drinks"),      // 7 食物与饮品
+            tabKey("ingredients"),          // 8 原材料
+            tabKey("spawn_eggs")            // 9 刷怪蛋
     };
+
+    /** 创造物品栏分类键（与原版 {@code CreativeModeTabs.createKey} 等价） */
+    private static ResourceKey<CreativeModeTab> tabKey(@Nonnull String id) {
+        return ResourceKey.create(Registries.CREATIVE_MODE_TAB, Identifier.withDefaultNamespace(id));
+    }
+
     /** 各分类 tooltip 用语言键后缀（与 CATEGORIES 同序） */
     public static final String[] CATEGORY_TOKENS = {
             "building", "colored", "natural", "functional", "redstone",
@@ -98,14 +111,18 @@ public class SupplyRoll {
      */
     private static List<ItemStack> collectCandidates(ServerLevel level, Player player, ResourceKey<CreativeModeTab> key) {
         List<ItemStack> list = new ArrayList<>();
-        CreativeModeTab tab = level.registryAccess().registryOrThrow(Registries.CREATIVE_MODE_TAB).get(key.location());
+        // 26.x：registryOrThrow -> lookupOrThrow；ResourceKey#location -> #identifier；
+        // Registry#get(Identifier) 改成了 Optional<Holder>，取实体要走 getValue(可空)
+        CreativeModeTab tab = level.registryAccess().lookupOrThrow(Registries.CREATIVE_MODE_TAB).getValue(key.identifier());
         if (tab == null) {
             return list;
         }
         Collection<ItemStack> items = tab.getDisplayItems();
         if (items.isEmpty()) {
             // 创造物品栏内容尚未构建：强制构建一次
-            CreativeModeTabs.tryRebuildTabContents(level.enabledFeatures(), player.hasPermissions(2), level.registryAccess());
+            // 26.x：Player#hasPermissions(int) 已删除，权限改走 PermissionSet（等级 2 == GAMEMASTERS）
+            CreativeModeTabs.tryRebuildTabContents(level.enabledFeatures(),
+                    player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER), level.registryAccess());
             items = tab.getDisplayItems();
         }
         if (items == null) {

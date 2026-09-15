@@ -9,9 +9,7 @@
   "category": "blocks",
   "cookingtime": 200,
   "experience": 0.1,
-  "ingredient": {
-    "item": "allthecompressed:sand_9x"
-  },
+  "ingredient": "allthecompressed:sand_9x",
   "result": {
     "id": "ae2:silicon"
   }

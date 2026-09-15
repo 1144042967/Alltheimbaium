@@ -8,12 +8,8 @@
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
-    {
-      "item": "justdirethings:gooblock_tier4"
-    },
-    {
-      "item": "minecraft:netherite_block"
-    }
+    "justdirethings:gooblock_tier4",
+    "minecraft:netherite_block"
   ],
   "result": {
     "count": 9,

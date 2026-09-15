@@ -1,20 +1,14 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
-import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
-import net.minecraft.world.level.storage.loot.LootParams;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -22,10 +16,20 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.component.TypedEntityData;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -55,7 +59,6 @@ public class Tool {
     /**
      * 取当前可用于物品（反）序列化的注册表访问器。
      * <p>
-     * 1.21 起 {@code ItemStack#save}/{@code parseOptional} 需要 {@link HolderLookup.Provider}：
      * 带附魔、药水等"按注册名引用注册表条目"的组件必须靠它才能正确编解码。
      * 优先取当前服务端的 {@code registryAccess()}；服务端尚未启动（如仅客户端主菜单、
      * 单元测试）时拿不到，回退到 {@link RegistryAccess#EMPTY}——此时只会丢失这类
@@ -67,51 +70,65 @@ public class Tool {
         return server != null ? server.registryAccess() : RegistryAccess.EMPTY;
     }
 
-    public static ListTag toJsonArray(List<ItemStack> itemList, List<Long> blockList) {
-        ListTag list = new ListTag();
-        HolderLookup.Provider registries = registries();
-        for (int i = 0; i < itemList.size(); i++) {
-            ItemStack item = itemList.get(i);
-            Long count = blockList.get(i);
-            if (item == null || count == null) {
-                continue;
-            }
-            // 1.21：save 需要注册表访问器，且一律以返回值为准（不要依赖传入 tag 被原地填充）
-            CompoundTag tag = (CompoundTag) item.save(registries, new CompoundTag());
-            tag.putLong("Long_Count", count);
-            list.add(tag);
-        }
-        return list;
+    // ==================== 机器产物行的持久化（26.x 的 ValueOutput/ValueInput） ====================
+    // 1.21 起方块实体不再写 CompoundTag，改由 saveAdditional(ValueOutput)/loadAdditional(ValueInput)
+    // 读写；产物行因此也不再拼 ListTag，而是定义成带 Codec 的记录类型，交给 ValueOutput 列表托管，
+    // 这样物品组件里的注册表引用（附魔、药水…）会自动按当前注册表访问器编解码。
+
+    /** 产物行：物品 + 大数存量（自动耕地 / 存储方块制造机共用） */
+    public record StockRow(ItemStack item, long count) {
+        public static final Codec<StockRow> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                ItemStack.CODEC.fieldOf("item").forGetter(StockRow::item),
+                Codec.LONG.fieldOf("count").forGetter(StockRow::count)
+        ).apply(instance, StockRow::new));
     }
 
-    public static List<ItemStack> toItemList(ListTag array) {
-        List<ItemStack> itemList = new ArrayList<>();
-        HolderLookup.Provider registries = registries();
-        for (Tag value : array) {
-            CompoundTag tag = (CompoundTag) value;
-            ItemStack stack = ItemStack.parseOptional(registries, tag);
-            if (stack.isEmpty()) {
-                continue;
-            }
-            stack = stack.copy();
-            stack.setCount(1);
-            itemList.add(stack);
-        }
-        return itemList;
+    /** 资源农场产物行：物品 + 大数存量 + 权重 */
+    public record WeightedRow(ItemStack item, long count, int weight) {
+        public static final Codec<WeightedRow> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                ItemStack.CODEC.fieldOf("item").forGetter(WeightedRow::item),
+                Codec.LONG.fieldOf("count").forGetter(WeightedRow::count),
+                Codec.INT.fieldOf("weight").forGetter(WeightedRow::weight)
+        ).apply(instance, WeightedRow::new));
     }
 
-    public static List<Long> toBlockList(ListTag array) {
-        List<Long> blockList = new ArrayList<>();
-        HolderLookup.Provider registries = registries();
-        for (Tag value : array) {
-            CompoundTag tag = (CompoundTag) value;
-            ItemStack stack = ItemStack.parseOptional(registries, tag);
-            if (stack.isEmpty()) {
-                continue;
+    /** 生物农场产物行：物品 + 大数存量 + 权重 + 是否工具行（剪刀/桶/碗/玻璃瓶） */
+    public record WeightedToolRow(ItemStack item, long count, int weight, boolean tool) {
+        public static final Codec<WeightedToolRow> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                ItemStack.CODEC.fieldOf("item").forGetter(WeightedToolRow::item),
+                Codec.LONG.fieldOf("count").forGetter(WeightedToolRow::count),
+                Codec.INT.fieldOf("weight").forGetter(WeightedToolRow::weight),
+                Codec.BOOL.fieldOf("tool").forGetter(WeightedToolRow::tool)
+        ).apply(instance, WeightedToolRow::new));
+    }
+
+    /** 写一组产物行；空物品会被跳过，键下无有效行时整个键被丢弃 */
+    public static <T> void writeRows(@Nonnull ValueOutput output, @Nonnull String key, @Nonnull List<T> rows, @Nonnull Codec<T> codec) {
+        ValueOutput.TypedOutputList<T> list = output.list(key, codec);
+        for (T row : rows) {
+            if (row != null) {
+                list.add(row);
             }
-            blockList.add(tag.getLong("Long_Count"));
         }
-        return blockList;
+        if (list.isEmpty()) {
+            output.discard(key);
+        }
+    }
+
+    /** 读一组产物行；键不存在时返回空表 */
+    @Nonnull
+    public static <T> List<T> readRows(@Nonnull ValueInput input, @Nonnull String key, @Nonnull Codec<T> codec) {
+        List<T> rows = new ArrayList<>();
+        for (T row : input.listOrEmpty(key, codec)) {
+            rows.add(row);
+        }
+        return rows;
+    }
+
+    /** 把可能为 null 的物品规整成"只含 1 个"的栈，供存进行记录时使用 */
+    @Nonnull
+    public static ItemStack oneOf(@Nullable ItemStack stack) {
+        return stack == null ? ItemStack.EMPTY : stack.copyWithCount(1);
     }
 
     @SuppressWarnings("deprecation")
@@ -214,12 +231,14 @@ public class Tool {
     // ==================== ItemStack 数据组件（1.21 的 NBT 替代） ====================
     // 1.20.1 的 stack.getTag()/getOrCreateTag()/getTagElement("BlockEntityTag") 在 1.21 全部删除：
     // 自定义数据改走 CUSTOM_DATA 组件、方块实体数据走 BLOCK_ENTITY_DATA 组件，且都不再返回"可写回"的活对象。
+    // 26.x：BLOCK_ENTITY_DATA 的类型由 CustomData 换成 TypedEntityData（自带方块实体类型），
+    //       写回时也必须走 TagValueOutput，不能再塞裸 CompoundTag。
 
     /** 读取物品上的方块实体数据（对应旧的 {@code getTagElement("BlockEntityTag")}），没有返回 null */
     @Nullable
     public static CompoundTag getBlockEntityTag(@Nonnull ItemStack stack) {
-        CustomData data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
-        return data == null ? null : data.copyTag();
+        TypedEntityData<BlockEntityType<?>> data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
+        return data == null ? null : data.copyTagWithoutId();
     }
 
     /** 读取物品的自定义数据（对应旧的 {@code getTag()}），没有返回 null */
@@ -247,23 +266,25 @@ public class Tool {
      */
     @Nonnull
     public static CompoundTag getBlockEntityTagOrEmpty(@Nonnull ItemStack stack) {
-        CustomData data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
-        return data == null ? new CompoundTag() : data.copyTag();
+        TypedEntityData<BlockEntityType<?>> data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
+        return data == null ? new CompoundTag() : data.copyTagWithoutId();
     }
 
     /**
      * 写回物品上的方块实体数据（放置时会被 {@code BlockItem#updateCustomBlockEntityTag} 合并进方块实体）。
      * <p>
-     * <b>必须走 {@link BlockItem#setBlockEntityData}</b>：1.21 里 {@code BLOCK_ENTITY_DATA} 组件用的编解码器是
-     * {@code CustomData.CODEC_WITH_ID}，**标签里没有 {@code id} 键时连 {@code ItemStack#save} 都会抛异常**
-     * （"Missing id for entity in: …"），玩家背包一存档就崩；原版放置时也靠这个 {@code id} 才能把数据读回方块实体。
+     * 26.x 的 {@link BlockItem#setBlockEntityData} 收的是 {@link TagValueOutput}：这里新建一个空的
+     * TagValueOutput，把传入标签的内容整体灌进它的底层 tag（{@code buildResult()} 返回的就是那个活对象），
+     * 再由原版逻辑补 {@code id} 并写入组件。
      */
     public static void setBlockEntityTag(@Nonnull ItemStack stack, @Nonnull BlockEntityType<?> type, @Nonnull CompoundTag tag) {
-        BlockItem.setBlockEntityData(stack, type, tag);
+        TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, registries());
+        output.buildResult().merge(tag.copy());
+        BlockItem.setBlockEntityData(stack, type, output);
     }
 
     /**
-     * 1.21：把方块实体数据写进掉落物的 block_entity_data 组件。
+     * 把方块实体数据写进掉落物的 block_entity_data 组件。
      * <p>
      * 1.20.1 的战利品表用 {@code minecraft:copy_nbt} 把 BE 数据搬进 {@code BlockEntityTag}，
      * 该函数在 1.21 已被删除（BE 数据改走组件），因此在方块类的 {@code getDrops} 里直接写。
@@ -277,16 +298,20 @@ public class Tool {
         }
         try {
             HolderLookup.Provider registries = be.getLevel() == null ? RegistryAccess.EMPTY : be.getLevel().registryAccess();
-            CompoundTag tag = be.saveWithoutMetadata(registries);
-            if (tag.isEmpty()) {
+            // 26.x：saveWithoutMetadata 直接写进 ValueOutput，由它负责补 id 与组件封装
+            TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, registries);
+            be.saveWithoutMetadata(output);
+            if (output.isEmpty()) {
                 return drops;
             }
             ItemStack self = new ItemStack(be.getBlockState().getBlock().asItem());
             for (ItemStack stack : drops) {
                 if (ItemStack.isSameItem(stack, self)) {
-                    // saveWithoutMetadata 不含 id，而 BLOCK_ENTITY_DATA 组件要求带 id：由原版工具补上，
+                    // BE 数据里没有 id，而 BLOCK_ENTITY_DATA 组件要求带 id：由原版工具补上，
                     // 否则掉落物一存档就崩，放回方块时也读不回数据
-                    BlockItem.setBlockEntityData(stack, be.getType(), tag.copy());
+                    TagValueOutput stackOutput = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, registries);
+                    stackOutput.buildResult().merge(output.buildResult().copy());
+                    BlockItem.setBlockEntityData(stack, be.getType(), stackOutput);
                 }
             }
         } catch (Throwable e) {

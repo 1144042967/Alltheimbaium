@@ -1,8 +1,6 @@
 {
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "allthemodium:vibranium_hoe"
-  },
+  "ingredient": "allthemodium:vibranium_hoe",
   "results": [
     {
       "id": "allthemodium:vibranium_ingot",

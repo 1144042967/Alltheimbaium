@@ -1,8 +1,6 @@
 {
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "allthemodium:unobtainium_sword"
-  },
+  "ingredient": "allthemodium:unobtainium_sword",
   "results": [
     {
       "id": "allthemodium:unobtainium_ingot",

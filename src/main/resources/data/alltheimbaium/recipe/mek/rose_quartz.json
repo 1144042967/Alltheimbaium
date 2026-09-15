@@ -1,8 +1,6 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "item_input": {
-    "tag": "c:storage_blocks/quartz"
-  },
+  "item_input": "#c:storage_blocks/quartz",
   "chemical_input": {
     "amount": 320,
     "tag": "mekanism:redstone"

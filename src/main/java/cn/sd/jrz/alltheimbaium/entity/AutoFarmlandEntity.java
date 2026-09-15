@@ -1,19 +1,17 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
+import static cn.sd.jrz.alltheimbaium.setup.Registration.AUTO_FARMLAND_ENTITY;
+import static cn.sd.jrz.alltheimbaium.setup.Registration.AUTO_FARMLAND_ITEM;
 import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.connection.AutoFarmlandConnection;
 import cn.sd.jrz.alltheimbaium.gui.AutoFarmlandMenu;
 import cn.sd.jrz.alltheimbaium.item.Tip;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -29,8 +27,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,12 +78,15 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider {
 
     /**
      * 对外物品能力：按面懒建并缓存。NeoForge 不再实现 ICapabilityProvider，
-     * 由 {@code Registration.registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取（下标 6 = 无方向查询）。
+     * 由 {@code registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取（下标 6 = 无方向查询）。
+     * <p>
+     * 26.x：{@link Capabilities.Item#BLOCK} 要求的是 {@code ResourceHandler<ItemResource>}，
+     * 返回类型因此改成新传输 API（实现类 {@link AutoFarmlandConnection}）。
      */
     private final AutoFarmlandConnection[] itemHandlers = new AutoFarmlandConnection[7];
 
     @Nullable
-    public AutoFarmlandConnection getItemHandler(@Nullable Direction side) {
+    public ResourceHandler<ItemResource> getItemHandler(@Nullable Direction side) {
         int idx = side == null ? 6 : side.ordinal();
         if (itemHandlers[idx] == null) {
             itemHandlers[idx] = new AutoFarmlandConnection(this, side);
@@ -90,7 +95,7 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider {
     }
 
     public AutoFarmlandEntity(BlockPos pos, BlockState state) {
-        super(Registration.AUTO_FARMLAND_ENTITY.get(), pos, state);
+        super(AUTO_FARMLAND_ENTITY.get(), pos, state);
         this.level = Math.max(1, MobFarmBlock.getInitialLevel());
     }
 
@@ -224,7 +229,7 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider {
 
     public void tickServer() {
         Level world = getLevel();
-        if (world == null || world.isClientSide) {
+        if (world == null || world.isClientSide()) {
             return;
         }
         try {
@@ -289,7 +294,7 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider {
 
     private void outputToNeighbors() {
         Level level = getLevel();
-        if (level == null || level.isClientSide) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         Direction[] directions = Direction.values();
@@ -303,7 +308,7 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider {
         if (neighbor == null) {
             return;
         }
-        var handler = level.getCapability(Capabilities.ItemHandler.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
+        var handler = level.getCapability(Capabilities.Item.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
         if (handler == null) {
             return;
         }
@@ -325,17 +330,18 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider {
         }
     }
 
-    private void pushRow(net.neoforged.neoforge.items.IItemHandler handler, int index) {
+    private void pushRow(@Nonnull ResourceHandler<ItemResource> handler, int index) {
         Row row = rows.get(index);
         int maxStack = new ItemStack(row.item).getMaxStackSize();
         if (maxStack <= 0) {
             maxStack = 1;
         }
+        ItemResource resource = ItemResource.of(row.item);
         long remaining = row.stock;
         while (remaining > 0) {
             int amount = (int) Math.min(remaining, maxStack);
-            ItemStack leftover = ItemHandlerHelper.insertItemStacked(handler, new ItemStack(row.item, amount), false);
-            int inserted = amount - leftover.getCount();
+            // 26.x：insertStacking 内部会开一个根事务并在结束时提交，等价于旧的 ItemHandlerHelper.insertItemStacked
+            int inserted = ResourceHandlerUtil.insertStacking(handler, resource, amount, null);
             if (inserted <= 0) {
                 break;
             }
@@ -351,7 +357,7 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider {
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.auto_farmland").withStyle(Tip.rarityColor(Registration.AUTO_FARMLAND_ITEM.get()));
+        return Component.translatable("block.alltheimbaium.auto_farmland").withStyle(Tip.rarityColor(AUTO_FARMLAND_ITEM.get()));
     }
 
     @Nullable
@@ -369,68 +375,59 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider {
     private static final String KEY_OUTPUT = "outputEnabled";
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.saveAdditional(nbt, registries);
+    protected void saveAdditional(@Nonnull ValueOutput output) {
+        super.saveAdditional(output);
         try {
-            nbt.putLong(KEY_LEVEL, level);
-            nbt.putLong(KEY_TICK, tickCount);
-            nbt.put(KEY_ROWS, saveRows(registries));
-            nbt.putIntArray(KEY_DIR, directionState);
-            nbt.putBoolean(KEY_OUTPUT, outputEnabled);
+            output.putLong(KEY_LEVEL, level);
+            output.putLong(KEY_TICK, tickCount);
+            // 26.x：产物行改由 ValueOutput 列表托管，物品组件（附魔/药水等注册表引用）自动按当前注册表访问器编解码
+            Tool.writeRows(output, KEY_ROWS, toStockRows(), Tool.StockRow.CODEC);
+            output.putIntArray(KEY_DIR, directionState);
+            output.putBoolean(KEY_OUTPUT, outputEnabled);
         } catch (Throwable e) {
             log.error("AutoFarmlandEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.loadAdditional(nbt, registries);
+    protected void loadAdditional(@Nonnull ValueInput input) {
+        super.loadAdditional(input);
         try {
-            if (nbt.contains(KEY_LEVEL, Tag.TAG_LONG)) {
-                level = Tool.suit(nbt.getLong(KEY_LEVEL));
-            }
-            if (nbt.contains(KEY_TICK, Tag.TAG_LONG)) {
-                tickCount = Tool.suit(nbt.getLong(KEY_TICK));
-            }
-            if (nbt.contains(KEY_ROWS, Tag.TAG_LIST)) {
-                loadRows((ListTag) nbt.get(KEY_ROWS), registries);
-            }
-            if (nbt.contains(KEY_DIR)) {
-                int[] arr = nbt.getIntArray(KEY_DIR);
+            level = Tool.suit(input.getLongOr(KEY_LEVEL, level));
+            tickCount = Tool.suit(input.getLongOr(KEY_TICK, tickCount));
+            loadRows(Tool.readRows(input, KEY_ROWS, Tool.StockRow.CODEC));
+            int[] arr = input.getIntArray(KEY_DIR).orElse(null);
+            if (arr != null) {
                 for (int i = 0; i < Math.min(6, arr.length); i++) {
                     directionState[i] = Math.max(0, Math.min(getStateCount() - 1, arr[i]));
                 }
             }
-            if (nbt.contains(KEY_OUTPUT, Tag.TAG_BYTE)) {
-                outputEnabled = nbt.getBoolean(KEY_OUTPUT);
-            }
+            outputEnabled = input.getBooleanOr(KEY_OUTPUT, outputEnabled);
         } catch (Throwable e) {
-            log.error("AutoFarmlandEntity.load error", e);
+            log.error("AutoFarmlandEntity.loadAdditional error", e);
         }
     }
 
-    private ListTag saveRows(@Nonnull HolderLookup.Provider registries) {
-        ListTag list = new ListTag();
+    /** 内部可变行 → 持久化记录 */
+    @Nonnull
+    private List<Tool.StockRow> toStockRows() {
+        List<Tool.StockRow> list = new ArrayList<>(rows.size());
         for (Row row : rows) {
-            // 1.21：save 需要注册表访问器，且一律以返回值为准
-            CompoundTag c = (CompoundTag) new ItemStack(row.item, 1).save(registries, new CompoundTag());
-            c.putLong("Stock", row.stock);
-            list.add(c);
+            list.add(new Tool.StockRow(Tool.oneOf(new ItemStack(row.item)), row.stock));
         }
         return list;
     }
 
-    private void loadRows(ListTag list, @Nonnull HolderLookup.Provider registries) {
+    private void loadRows(@Nonnull List<Tool.StockRow> list) {
         rows.clear();
-        for (int i = 0; i < list.size(); i++) {
+        for (Tool.StockRow record : list) {
             try {
-                CompoundTag c = list.getCompound(i);
-                ItemStack stack = ItemStack.parseOptional(registries, c);
-                if (stack.isEmpty()) {
+                ItemStack stack = record.item();
+                if (stack == null || stack.isEmpty()) {
                     continue;
                 }
                 Row row = new Row(stack.getItem());
-                row.stock = c.contains("Stock", Tag.TAG_LONG) ? Tool.suit(c.getLong("Stock")) : 0;
+                row.stock = Tool.suit(record.count());
                 rows.add(row);
             } catch (Throwable e) {
                 log.warn("AutoFarmlandEntity.loadRows entry error", e);
@@ -440,6 +437,7 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider {
     }
 
     // ==================== 客户端同步 ====================
+    // 26.x：handleUpdateTag / onDataPacket 的覆写已删除，改由原版 loadWithComponents(ValueInput) 默认接管。
 
     @Override
     @Nonnull
@@ -448,19 +446,8 @@ public class AutoFarmlandEntity extends BlockEntity implements MenuProvider {
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
-        this.loadAdditional(tag, registries);
-    }
-
-    @Override
     @Nonnull
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
-        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
-        this.loadAdditional(pkt.getTag(), registries);
     }
 }

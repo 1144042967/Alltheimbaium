@@ -3,9 +3,7 @@
   "group": "mystical_agriculture_farmland",
   "category": "misc",
   "ingredients": [
-    {
-      "item": "mysticalagriculture:inferium_farmland"
-    }
+    "mysticalagriculture:inferium_farmland"
   ],
   "result": {
     "count": 1,

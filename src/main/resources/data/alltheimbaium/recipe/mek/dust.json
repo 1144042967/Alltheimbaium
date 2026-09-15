@@ -1,8 +1,6 @@
 {
   "type": "mekanism:crushing",
-  "input": {
-    "item": "minecraft:sand"
-  },
+  "input": "minecraft:sand",
   "output": {
     "id": "exdeorum:dust"
   },

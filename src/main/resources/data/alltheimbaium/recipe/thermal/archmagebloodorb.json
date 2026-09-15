@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "item": "bloodmagic:dungeon_metal"
-    },
+    "bloodmagic:dungeon_metal",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 80000

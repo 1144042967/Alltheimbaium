@@ -1,9 +1,7 @@
 {
   "type": "mekanism:mek_data",
   "key": {
-    "P": {
-      "item": "mekanism:ultimate_chemical_tank"
-    }
+    "P": "mekanism:ultimate_chemical_tank"
   },
   "pattern": [
     "PPP",

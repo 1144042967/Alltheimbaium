@@ -1,15 +1,9 @@
 {
   "type": "minecraft:crafting_shaped",
   "key": {
-    "A": {
-      "item": "bloodmagic:ingot_hellforged"
-    },
-    "#": {
-      "tag": "c:ingots/iron"
-    },
-    "B": {
-      "item": "bloodmagic:infusedslate"
-    }
+    "A": "bloodmagic:ingot_hellforged",
+    "#": "#c:ingots/iron",
+    "B": "bloodmagic:infusedslate"
   },
   "pattern": [
     "#A",

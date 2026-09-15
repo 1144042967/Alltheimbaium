@@ -145,6 +145,8 @@
   "item.alltheimbaium.supply_crate.usage.2": "Spend §e1 point§7 to refresh and immediately reroll the whole list",
   "item.alltheimbaium.supply_crate.usage.3": "Supply points come from: §e+1 per 30 min§7 of playtime, §e+5§7 per achievement",
   "item.alltheimbaium.supply_crate.warn.1": "The list rerolls on every in-game hour boundary, even while the GUI stays open",
+  "item.alltheimbaium.tooltip.per_second": "/s",
+  "item.alltheimbaium.tooltip.separator": ", ",
   "itemGroup.alltheimbaium": "§6Alltheimbaium",
   "jei.alltheimbaium.inscriber.assembly": "Instant Inscriber · Assemble",
   "jei.alltheimbaium.inscriber.press": "Instant Inscriber · Press",

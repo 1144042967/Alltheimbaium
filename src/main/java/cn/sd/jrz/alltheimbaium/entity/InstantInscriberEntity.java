@@ -1,24 +1,24 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
+import static cn.sd.jrz.alltheimbaium.setup.Registration.INSTANT_INSCRIBER_ENTITY;
+import static cn.sd.jrz.alltheimbaium.setup.Registration.INSTANT_INSCRIBER_ITEM;
 import cn.sd.jrz.alltheimbaium.connection.InstantInscriberConnection;
 import cn.sd.jrz.alltheimbaium.gui.InstantInscriberMenu;
 import cn.sd.jrz.alltheimbaium.item.Tip;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
+import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -26,18 +26,24 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.PlacementInfo;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.display.RecipeDisplay;
+import net.minecraft.world.item.crafting.display.SlotDisplayContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.energy.EnergyStorage;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+import net.neoforged.neoforge.transfer.energy.SimpleEnergyHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +52,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -153,23 +158,24 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
 
     /**
      * 对外 IItemHandler 能力（行为方向无关：插入进输入区、抽取自输出区）。
-     * NeoForge 不再实现 ICapabilityProvider，由 {@code Registration.registerCapabilities} 拉取。
+     * NeoForge 不再实现 ICapabilityProvider，由 {@code registerCapabilities} 拉取。
      */
     private final InstantInscriberConnection itemHandler = new InstantInscriberConnection(this);
 
+    /** 26.x：{@link Capabilities.Item#BLOCK} 要求的是 {@code ResourceHandler<ItemResource>} */
     @Nonnull
-    public InstantInscriberConnection getItemHandler(@Nullable Direction side) {
+    public ResourceHandler<ItemResource> getItemHandler(@Nullable Direction side) {
         return itemHandler;
     }
 
-    /** 对外能量能力（任意方向均返回同一存储） */
+    /** 对外能量能力（任意方向均返回同一存储）；26.x 的能力类型是 {@link EnergyHandler} */
     @Nonnull
-    public EnergyStorage getEnergyStorage(@Nullable Direction side) {
+    public EnergyHandler getEnergyStorage(@Nullable Direction side) {
         return energy;
     }
 
     public InstantInscriberEntity(BlockPos pos, BlockState state) {
-        super(Registration.INSTANT_INSCRIBER_ENTITY.get(), pos, state);
+        super(INSTANT_INSCRIBER_ENTITY.get(), pos, state);
         // 六面输出默认全关：刚放下时不该把产物主动推给相邻方块，要玩家在界面里逐面打开
         Arrays.fill(directionState, STATE_DISABLED);
     }
@@ -345,12 +351,27 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
 
     /** 缓存失效重建：RecipeManager 引用变化即重建（其余 tick / 切模式不再重扫配方表） */
     private void ensureRecipeCache(Level level) {
-        RecipeManager rm = level.getRecipeManager();
+        RecipeManager rm = recipeManager(level);
         if (rm != recipeCacheManager) {
             recipeCacheManager = rm;
             inscribeCache = readInscribe(level);
             assemblyCache = readAssembly(level);
         }
+    }
+
+    /**
+     * 取当前可用的配方管理器；取不到（客户端 / 未就绪）返回 null。
+     * <p>
+     * 26.x：{@code Level#getRecipeManager()} 已删除，改走 {@code Level#recipeAccess()}；且 26.x 起
+     * <b>客户端不再同步完整配方表</b>（{@code ClientLevel.recipeAccess()} 只有属性集与切石机配方），
+     * 因此客户端的帮助卡拿不到任何配方，会走空态文案。
+     */
+    @Nullable
+    private static RecipeManager recipeManager(@Nonnull Level level) {
+        if (level.isClientSide()) {
+            return null;
+        }
+        return level.recipeAccess() instanceof RecipeManager manager ? manager : null;
     }
 
     /**
@@ -521,19 +542,19 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
     private static RecipeType<?> findInscriberType(Level level) {
         for (String id : new String[]{"ae2:inscriber", "appliedenergistics2:inscriber"}) {
             try {
-                ResourceLocation key = ResourceLocation.tryParse(id);
+                Identifier key = Identifier.tryParse(id);
                 if (key == null) {
                     continue;
                 }
-                // 直接查内置注册表：RECIPE_TYPE 不是"带默认值"的注册表，未注册时 get 返回 null
-                RecipeType<?> type = BuiltInRegistries.RECIPE_TYPE.get(key);
+                // 直接查内置注册表：RECIPE_TYPE 不是"带默认值"的注册表，未注册时 getValue 返回 null
+                RecipeType<?> type = BuiltInRegistries.RECIPE_TYPE.getValue(key);
                 if (type != null) {
                     return type;
                 }
                 // 兜底：部分环境下 RECIPE_TYPE 只出现在 level 的 registryAccess 里
-                var registry = level.registryAccess().registry(Registries.RECIPE_TYPE).orElse(null);
+                var registry = level.registryAccess().lookupOrThrow(Registries.RECIPE_TYPE);
                 if (registry != null) {
-                    type = registry.get(key);
+                    type = registry.getValue(key);
                     if (type != null) {
                         return type;
                     }
@@ -552,14 +573,6 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
      * 元素本身不是 {@code Recipe}——直接 {@code instanceof Recipe} 判类型会把整表跳过，
      * 表现为"装了 AE2 却读不到任何配方"。
      */
-    @Nullable
-    private static Recipe<?> recipeOf(@Nullable Object obj) {
-        if (obj instanceof RecipeHolder<?> holder) {
-            return holder.value();
-        }
-        return obj instanceof Recipe<?> recipe ? recipe : null;
-    }
-
     /** 反射读取 Inscriber 配方 processType 名（INSCRIBE / PRESS），读不到返回 null */
     @Nullable
     private static String processName(Recipe<?> recipe) {
@@ -574,38 +587,81 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
         return null;
     }
 
+    /**
+     * 把配方的材料还原到"上 / 中 / 下"三个固定槽位。
+     * <p>
+     * 26.x：{@code Recipe#getIngredients()} 已删除，改读 {@link PlacementInfo}——
+     * 它给的是"紧凑后的材料表 + 槽位到材料下标的映射"，按映射还原即可拿回原始槽位顺序。
+     */
+    @Nonnull
+    private static Ingredient[] positionalIngredients(@Nonnull Recipe<?> recipe) {
+        Ingredient[] slots = new Ingredient[3];
+        try {
+            PlacementInfo info = recipe.placementInfo();
+            List<Ingredient> ingredients = info.ingredients();
+            IntList mapping = info.slotsToIngredientIndex();
+            for (int slot = 0; slot < mapping.size() && slot < slots.length; slot++) {
+                int index = mapping.getInt(slot);
+                if (index >= 0 && index < ingredients.size()) {
+                    slots[slot] = ingredients.get(index);
+                }
+            }
+        } catch (Throwable e) {
+            log.error("InstantInscriberEntity.positionalIngredients error", e);
+        }
+        return slots;
+    }
+
+    /**
+     * 取配方的首个产物。
+     * <p>
+     * 26.x：{@code Recipe#getResultItem(...)} 已删除，改从 {@code Recipe#display()} 里取
+     * {@code RecipeDisplay#result()} 并解析成物品栈。
+     */
+    @Nonnull
+    private static ItemStack firstResult(@Nonnull Recipe<?> recipe, @Nonnull Level level) {
+        try {
+            for (RecipeDisplay display : recipe.display()) {
+                ItemStack stack = display.result().resolveForFirstStack(SlotDisplayContext.fromLevel(level));
+                if (!stack.isEmpty()) {
+                    return stack.copy();
+                }
+            }
+        } catch (Throwable e) {
+            log.error("InstantInscriberEntity.firstResult error", e);
+        }
+        return ItemStack.EMPTY;
+    }
+
     /** 读取全部 inscribe(压板) 配方：middle=消耗原料、输出=结果 */
-    @SuppressWarnings({"rawtypes", "unchecked"})
     private static List<InscribeEntry> readInscribe(Level level) {
         List<InscribeEntry> result = new ArrayList<>();
         RecipeType<?> type = findInscriberType(level);
-        if (type == null) {
+        RecipeManager manager = recipeManager(level);
+        if (type == null || manager == null) {
             return result;
         }
         try {
-            Collection<?> all = level.getRecipeManager().getAllRecipesFor((RecipeType) type);
-            for (Object obj : all) {
-                Recipe<?> recipe = recipeOf(obj);
-                if (recipe == null) {
-                    continue;
+            for (RecipeHolder<?> holder : manager.getRecipes()) {
+                try {
+                    Recipe<?> recipe = holder.value();
+                    if (recipe.getType() != type || !"INSCRIBE".equals(processName(recipe))) {
+                        continue;
+                    }
+                    ItemStack output = firstResult(recipe, level);
+                    if (output.isEmpty()) {
+                        continue;
+                    }
+                    Ingredient[] slots = positionalIngredients(recipe);
+                    // AE2 的材料布局是 [top, middle, bottom]
+                    Ingredient middle = slots[1];
+                    if (middle == null || middle.isEmpty()) {
+                        continue;
+                    }
+                    result.add(new InscribeEntry(middle, output));
+                } catch (Throwable e) {
+                    log.warn("InstantInscriberEntity.readInscribe entry error", e);
                 }
-                if (!"INSCRIBE".equals(processName(recipe))) {
-                    continue;
-                }
-                ItemStack output = recipe.getResultItem(level.registryAccess()).copy();
-                if (output.isEmpty()) {
-                    continue;
-                }
-                List<Ingredient> ings = recipe.getIngredients();
-                if (ings == null || ings.size() < 3) {
-                    continue;
-                }
-                // AE2 getIngredients() 返回 [top, middle, bottom]
-                Ingredient middle = ings.get(1);
-                if (middle == null || middle.isEmpty()) {
-                    continue;
-                }
-                result.add(new InscribeEntry(middle, output));
             }
         } catch (Throwable e) {
             log.error("InstantInscriberEntity.readInscribe error", e);
@@ -614,33 +670,32 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
     }
 
     /** 读取全部 press(组装) 配方：消耗 top/middle/bottom 全部非空材料 */
-    @SuppressWarnings({"rawtypes", "unchecked"})
     private static List<AssemblyEntry> readAssembly(Level level) {
         List<AssemblyEntry> result = new ArrayList<>();
         RecipeType<?> type = findInscriberType(level);
-        if (type == null) {
+        RecipeManager manager = recipeManager(level);
+        if (type == null || manager == null) {
             return result;
         }
         try {
-            Collection<?> all = level.getRecipeManager().getAllRecipesFor((RecipeType) type);
-            for (Object obj : all) {
-                Recipe<?> recipe = recipeOf(obj);
-                if (recipe == null) {
-                    continue;
+            for (RecipeHolder<?> holder : manager.getRecipes()) {
+                try {
+                    Recipe<?> recipe = holder.value();
+                    if (recipe.getType() != type || !"PRESS".equals(processName(recipe))) {
+                        continue;
+                    }
+                    ItemStack output = firstResult(recipe, level);
+                    if (output.isEmpty()) {
+                        continue;
+                    }
+                    Ingredient[] mats = positionalIngredients(recipe);
+                    if (mats[0] == null && mats[1] == null && mats[2] == null) {
+                        continue;
+                    }
+                    result.add(new AssemblyEntry(mats, output));
+                } catch (Throwable e) {
+                    log.warn("InstantInscriberEntity.readAssembly entry error", e);
                 }
-                if (!"PRESS".equals(processName(recipe))) {
-                    continue;
-                }
-                ItemStack output = recipe.getResultItem(level.registryAccess()).copy();
-                if (output.isEmpty()) {
-                    continue;
-                }
-                List<Ingredient> ings = recipe.getIngredients();
-                if (ings == null || ings.size() < 3) {
-                    continue;
-                }
-                Ingredient[] mats = {ings.get(0), ings.get(1), ings.get(2)};
-                result.add(new AssemblyEntry(mats, output));
             }
         } catch (Throwable e) {
             log.error("InstantInscriberEntity.readAssembly error", e);
@@ -677,7 +732,8 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
      *     <li><b>去重</b>：计算后 (输入, 产物) 完全一致的组合只保留一份；</li>
      *     <li><b>按输入聚合</b>：输入的注册名相同的产物并进同一条，界面上就是一行。</li>
      * </ol>
-     * **客户端同样可用**——{@code RecipeManager} 两端都有同步后的配方；未装 AE2 时返回空列表。
+     * <b>26.x 注意</b>：客户端不再同步完整配方表（{@code ClientLevel.recipeAccess()} 只有属性集与切石机配方），
+     * 因此这个方法在客户端会返回空列表，界面走空态文案；未装 AE2 时同样为空。
      */
     @Nonnull
     public static List<PressSummary> inscribeSummaries(@Nonnull Level level) {
@@ -711,7 +767,7 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
     /** 物品的注册名，用于去重与排序 */
     @Nonnull
     private static String itemKey(@Nonnull ItemStack stack) {
-        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         return id == null ? "" : id.toString();
     }
 
@@ -741,14 +797,17 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
         return result;
     }
 
-    /** 取 Ingredient 的第一个候选物品（AE2 压印配方的材料实际都是单一物品） */
+    /**
+     * 取 Ingredient 的第一个候选物品（AE2 压印配方的材料实际都是单一物品）。
+     * 26.x：{@code Ingredient#getItems()} 已删除，改从 {@code items()} 流里取首个候选。
+     */
     @Nonnull
     private static List<ItemStack> firstOf(@Nullable Ingredient ingredient) {
         if (ingredient == null || ingredient.isEmpty()) {
             return List.of();
         }
-        ItemStack[] items = ingredient.getItems();
-        return items.length == 0 ? List.of() : List.of(items[0]);
+        Holder<Item> item = ingredient.items().findFirst().orElse(null);
+        return item == null ? List.of() : List.of(new ItemStack(item.value()));
     }
 
     /**
@@ -757,7 +816,7 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
      */
     private static void sortByOutput(@Nonnull List<RecipeSummary> summaries) {
         summaries.sort(Comparator.comparing(s -> {
-            ResourceLocation id = BuiltInRegistries.ITEM.getKey(s.output().getItem());
+            Identifier id = BuiltInRegistries.ITEM.getKey(s.output().getItem());
             return id == null ? "" : id.toString();
         }));
     }
@@ -773,7 +832,7 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
      */
     public void serverTick() {
         Level level = getLevel();
-        if (level == null || level.isClientSide) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         try {
@@ -809,7 +868,7 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
             if (neighbor == null) {
                 continue;
             }
-            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
+            ResourceHandler<ItemResource> handler = level.getCapability(Capabilities.Item.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
             if (handler == null) {
                 continue;
             }
@@ -817,14 +876,15 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
                 if (row.stock <= 0) {
                     continue;
                 }
+                ItemResource resource = ItemResource.of(row.item);
                 long remaining = row.stock;
                 while (remaining > 0) {
                     int amount = (int) Math.min(remaining, PUSH_BATCH);
                     if (amount <= 0) {
                         break;
                     }
-                    ItemStack leftover = ItemHandlerHelper.insertItemStacked(handler, new ItemStack(row.item, amount), false);
-                    int inserted = amount - leftover.getCount();
+                    // 26.x：insertStacking 内部会开一个根事务并在结束时提交，等价于旧的 ItemHandlerHelper.insertItemStacked
+                    int inserted = ResourceHandlerUtil.insertStacking(handler, resource, amount, null);
                     if (inserted <= 0) {
                         break; // 该面已满：顺延下一面
                     }
@@ -861,7 +921,13 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
         return energy.getMaxEnergyStored();
     }
 
-    private static class SmeltEnergy extends EnergyStorage {
+    /**
+     * 可被机器直控的 FE 能量存储（上限 2 亿、只接收不放出）。
+     * <p>
+     * 26.x：能力类型是 {@link EnergyHandler}，基类因此从 {@code EnergyStorage} 换成
+     * {@code SimpleEnergyHandler}（外部注入走它自带的事务日志），{@code onEnergyChanged} 里补脏标记。
+     */
+    private static class SmeltEnergy extends SimpleEnergyHandler {
         private final InstantInscriberEntity owner;
 
         SmeltEnergy(InstantInscriberEntity owner) {
@@ -869,19 +935,26 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
             this.owner = owner;
         }
 
+        /** 注入能量后脏标记持久化（事务提交时回调）；合成由每 tick 统一执行 */
         @Override
-        public int receiveEnergy(int maxReceive, boolean simulate) {
-            int received = super.receiveEnergy(maxReceive, simulate);
-            if (!simulate && received > 0) {
-                owner.setChanged(); // 能量须脏标记持久化；合成由每 tick 统一执行
-            }
-            return received;
+        protected void onEnergyChanged(int previousAmount) {
+            owner.setChanged();
         }
 
+        public int getEnergyStored() {
+            return this.energy;
+        }
+
+        public int getMaxEnergyStored() {
+            return this.capacity;
+        }
+
+        /** 直接写入存量（加载/恢复用），自动裁剪到 [0, 上限] */
         public void setEnergyStored(int amount) {
             this.energy = Math.max(0, Math.min(MAX_ENERGY, amount));
         }
 
+        /** 直接扣减存量（合成用），不走 extract 的 maxExtract 限制与事务 */
         public int spendEnergy(int amount) {
             int deducted = Math.min(this.energy, Math.max(0, amount));
             this.energy -= deducted;
@@ -894,7 +967,7 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.instant_inscriber").withStyle(Tip.rarityColor(Registration.INSTANT_INSCRIBER_ITEM.get()));
+        return Component.translatable("block.alltheimbaium.instant_inscriber").withStyle(Tip.rarityColor(INSTANT_INSCRIBER_ITEM.get()));
     }
 
     @Nullable
@@ -913,69 +986,60 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
     private static final String KEY_MODE = "mode";
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.saveAdditional(nbt, registries);
+    protected void saveAdditional(@Nonnull ValueOutput output) {
+        super.saveAdditional(output);
         try {
-            nbt.put(KEY_INPUT, saveRows(inputRows, registries));
-            nbt.put(KEY_OUTPUT, saveRows(outputRows, registries));
-            nbt.putInt(KEY_ENERGY, energy.getEnergyStored());
-            nbt.putIntArray(KEY_DIR, directionState);
-            nbt.putInt(KEY_MODE, mode);
+            // 26.x：产物行改由 ValueOutput 列表托管，物品组件自动按当前注册表访问器编解码
+            Tool.writeRows(output, KEY_INPUT, toStockRows(inputRows), Tool.StockRow.CODEC);
+            Tool.writeRows(output, KEY_OUTPUT, toStockRows(outputRows), Tool.StockRow.CODEC);
+            output.putInt(KEY_ENERGY, energy.getEnergyStored());
+            output.putIntArray(KEY_DIR, directionState);
+            output.putInt(KEY_MODE, mode);
         } catch (Throwable e) {
             log.error("InstantInscriberEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.loadAdditional(nbt, registries);
+    protected void loadAdditional(@Nonnull ValueInput input) {
+        super.loadAdditional(input);
         try {
             // 反序列化只恢复状态；合成由每 tick 统一执行
-            if (nbt.contains(KEY_INPUT, Tag.TAG_LIST)) {
-                loadRows(inputRows, (ListTag) nbt.get(KEY_INPUT), registries);
-            }
-            if (nbt.contains(KEY_OUTPUT, Tag.TAG_LIST)) {
-                loadRows(outputRows, (ListTag) nbt.get(KEY_OUTPUT), registries);
-            }
-            if (nbt.contains(KEY_ENERGY, Tag.TAG_INT)) {
-                energy.setEnergyStored(nbt.getInt(KEY_ENERGY));
-            }
-            if (nbt.contains(KEY_DIR)) {
-                int[] arr = nbt.getIntArray(KEY_DIR);
+            loadRows(inputRows, Tool.readRows(input, KEY_INPUT, Tool.StockRow.CODEC));
+            loadRows(outputRows, Tool.readRows(input, KEY_OUTPUT, Tool.StockRow.CODEC));
+            energy.setEnergyStored(input.getIntOr(KEY_ENERGY, energy.getEnergyStored()));
+            int[] arr = input.getIntArray(KEY_DIR).orElse(null);
+            if (arr != null) {
                 for (int i = 0; i < Math.min(6, arr.length); i++) {
                     directionState[i] = Math.max(0, Math.min(STATE_COUNT - 1, arr[i]));
                 }
             }
-            if (nbt.contains(KEY_MODE, Tag.TAG_INT)) {
-                mode = Math.max(0, Math.min(MODE_COUNT - 1, nbt.getInt(KEY_MODE)));
-            }
+            mode = Math.max(0, Math.min(MODE_COUNT - 1, input.getIntOr(KEY_MODE, mode)));
         } catch (Throwable e) {
-            log.error("InstantInscriberEntity.load error", e);
+            log.error("InstantInscriberEntity.loadAdditional error", e);
         }
     }
 
-    private static ListTag saveRows(List<Row> rows, @Nonnull HolderLookup.Provider registries) {
-        ListTag list = new ListTag();
+    /** 内部可变行 → 持久化记录 */
+    @Nonnull
+    private static List<Tool.StockRow> toStockRows(@Nonnull List<Row> rows) {
+        List<Tool.StockRow> list = new ArrayList<>(rows.size());
         for (Row row : rows) {
-            // 1.21：save 需要注册表访问器，且一律以返回值为准
-            CompoundTag c = (CompoundTag) new ItemStack(row.item, 1).save(registries, new CompoundTag());
-            c.putLong("Stock", row.stock);
-            list.add(c);
+            list.add(new Tool.StockRow(Tool.oneOf(new ItemStack(row.item)), row.stock));
         }
         return list;
     }
 
-    private static void loadRows(List<Row> target, ListTag list, @Nonnull HolderLookup.Provider registries) {
+    private static void loadRows(@Nonnull List<Row> target, @Nonnull List<Tool.StockRow> list) {
         target.clear();
-        for (int i = 0; i < list.size(); i++) {
+        for (Tool.StockRow record : list) {
             try {
-                CompoundTag c = list.getCompound(i);
-                ItemStack stack = ItemStack.parseOptional(registries, c);
-                if (stack.isEmpty()) {
+                ItemStack stack = record.item();
+                if (stack == null || stack.isEmpty()) {
                     continue;
                 }
                 Row row = new Row(stack.getItem());
-                row.stock = c.contains("Stock", Tag.TAG_LONG) ? Tool.suit(c.getLong("Stock")) : 0;
+                row.stock = Tool.suit(record.count());
                 target.add(row);
             } catch (Throwable e) {
                 log.warn("InstantInscriberEntity.loadRows entry error", e);
@@ -985,6 +1049,7 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
     }
 
     // ==================== 客户端同步 ====================
+    // 26.x：handleUpdateTag / onDataPacket 的覆写已删除，改由原版 loadWithComponents(ValueInput) 默认接管。
 
     @Override
     @Nonnull
@@ -993,19 +1058,8 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
-        this.loadAdditional(tag, registries);
-    }
-
-    @Override
     @Nonnull
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
-        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
-        this.loadAdditional(pkt.getTag(), registries);
     }
 }

@@ -10,21 +10,15 @@
   "input_items": [
     {
       "amount": 8,
-      "ingredient": {
-        "item": "minecraft:copper_block"
-      }
+      "ingredient": "minecraft:copper_block"
     },
     {
       "amount": 64,
-      "ingredient": {
-        "item": "advanced_ae:shattered_singularity"
-      }
+      "ingredient": "advanced_ae:shattered_singularity"
     },
     {
       "amount": 64,
-      "ingredient": {
-        "item": "ae2:singularity"
-      }
+      "ingredient": "ae2:singularity"
     }
   ],
   "output": {

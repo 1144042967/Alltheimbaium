@@ -5,26 +5,35 @@ import cn.sd.jrz.alltheimbaium.entity.StorageFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * 存储方块制造机对外 IItemHandler（只读，仅供抽取）。
+ * 存储方块制造机对外物品能力（只读，仅供抽取）。
  * <p>
  * 关联访问方向后，被动抽取（管道/漏斗等从该面抽取）与主动输出遵循同一套方向配置：
  * 指定槽 N 的面只能抽出该槽物品；随机面可抽出全部有存量物品；禁用面不提供任何物品。
  * side 为 null 表示不限定方向（按随机全量处理，兼容部分无方向查询的调用方）。
+ * <p>
+ * 26.x：改为新传输 API 的 {@link ResourceHandler}&lt;{@link ItemResource}&gt;。存量以内部计数
+ * （{@code carry} 为一个整件的单位）保存，对外一律换算成整件数。
  */
-public class StorageFountainConnection implements IItemHandler {
+public class StorageFountainConnection implements ResourceHandler<ItemResource> {
     private static final Logger log = LoggerFactory.getLogger(StorageFountainConnection.class);
     private final StorageFountainEntity owner;
     /** 访问本能力时所在的方向，null 表示不限定方向 */
     @Nullable
     private final Direction side;
+    private final BlockJournal journal = new BlockJournal();
 
     public StorageFountainConnection(StorageFountainEntity owner, @Nullable Direction side) {
         this.owner = owner;
@@ -60,7 +69,7 @@ public class StorageFountainConnection implements IItemHandler {
     }
 
     @Override
-    public int getSlots() {
+    public int size() {
         try {
             int state = resolveState();
             if (state == StorageFountainEntity.STATE_RANDOM) {
@@ -73,71 +82,119 @@ public class StorageFountainConnection implements IItemHandler {
             // 禁用
             return 0;
         } catch (Throwable e) {
-            log.error("StorageFountainConnection.getSlots error", e);
+            log.error("StorageFountainConnection.size error", e);
         }
         return 0;
     }
 
     @Override
-    public @Nonnull ItemStack getStackInSlot(int slot) {
+    @Nonnull
+    public ItemResource getResource(int index) {
         try {
-            int index = slotToIndex(slot);
-            if (index < 0) {
-                return ItemStack.EMPTY;
+            int slot = slotToIndex(index);
+            if (slot < 0) {
+                return ItemResource.EMPTY;
             }
-            ItemStack stack = owner.itemList.get(index);
-            Long count = owner.blockList.get(index);
-            if (count <= 0) {
-                return ItemStack.EMPTY;
+            ItemStack stack = owner.itemList.get(slot);
+            if (stack.isEmpty()) {
+                return ItemResource.EMPTY;
             }
-            stack = stack.copy();
-            stack.setCount(Tool.suitInt(count / StorageFountainBlock.getCarry()));
-            return stack;
+            return ItemResource.of(stack);
         } catch (Throwable e) {
-            log.error("StorageFountainConnection.getStackInSlot error", e);
+            log.error("StorageFountainConnection.getResource error", e);
         }
-        return ItemStack.EMPTY;
+        return ItemResource.EMPTY;
     }
 
     @Override
-    public @Nonnull ItemStack insertItem(int slot, @Nonnull ItemStack stack, boolean simulate) {
-        return stack;
-    }
-
-    @Override
-    public @Nonnull ItemStack extractItem(int slot, int amount, boolean simulate) {
+    public long getAmountAsLong(int index) {
         try {
-            int index = slotToIndex(slot);
-            if (index < 0) {
-                return ItemStack.EMPTY;
+            int slot = slotToIndex(index);
+            if (slot < 0) {
+                return 0;
             }
-            ItemStack stack = owner.itemList.get(index);
-            Long block = owner.blockList.get(index);
-            int maxAmount = Tool.suitInt(block / StorageFountainBlock.getCarry());
-            if (maxAmount <= 0) {
-                return ItemStack.EMPTY;
-            }
-            int ret = Math.min(maxAmount, amount);
-            if (!simulate) {
-                owner.blockList.set(index, block - ret * StorageFountainBlock.getCarry());
-                owner.setChanged();
-            }
-            stack = stack.copy();
-            stack.setCount(ret);
-            return stack;
+            long count = owner.blockList.get(slot);
+            // 内部计数换算成整件数
+            return Math.max(0, count / StorageFountainBlock.getCarry());
         } catch (Throwable e) {
-            log.error("StorageFountainConnection.extractItem error", e);
+            log.error("StorageFountainConnection.getAmountAsLong error", e);
         }
-        return ItemStack.EMPTY;
+        return 0;
     }
 
     @Override
-    public int getSlotLimit(int slot) {
-        return Integer.MAX_VALUE;
+    public long getCapacityAsLong(int index, @Nonnull ItemResource resource) {
+        // 大数存储：不按物品的堆叠上限截断，否则管道只能看到 64
+        return Long.MAX_VALUE;
     }
 
     @Override
-    public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
+    public boolean isValid(int index, @Nonnull ItemResource resource) {
         return false;
+    }
+
+    @Override
+    public int insert(int index, @Nonnull ItemResource resource, int amount, @Nonnull TransactionContext transaction) {
+        // 只读：不接受任何插入
+        return 0;
+    }
+
+    @Override
+    public int extract(int index, @Nonnull ItemResource resource, int amount, @Nonnull TransactionContext transaction) {
+        try {
+            int slot = slotToIndex(index);
+            if (slot < 0 || amount <= 0) {
+                return 0;
+            }
+            ItemStack stack = owner.itemList.get(slot);
+            if (stack.isEmpty() || !resource.matches(stack)) {
+                return 0;
+            }
+            int maxAmount = Tool.suitInt(owner.blockList.get(slot) / StorageFountainBlock.getCarry());
+            if (maxAmount <= 0) {
+                return 0;
+            }
+            int got = Math.min(maxAmount, amount);
+            if (got <= 0) {
+                return 0;
+            }
+            journal.updateSnapshots(transaction);
+            owner.extractItems(slot, got);
+            return got;
+        } catch (Throwable e) {
+            log.error("StorageFountainConnection.extract error", e);
+        }
+        return 0;
+    }
+
+    /** 事务快照：各槽位的内部计数（提取会扣减单位数，回滚必须整表还原） */
+    private static final class BlocksState {
+        /** 被快照的列表引用（实体在读档时会整个换掉 blockList，回滚要写回原来那一个） */
+        final List<Long> list;
+        final List<Long> values;
+
+        BlocksState(List<Long> list, List<Long> values) {
+            this.list = list;
+            this.values = values;
+        }
+    }
+
+    private final class BlockJournal extends SnapshotJournal<BlocksState> {
+        @Override
+        protected BlocksState createSnapshot() {
+            List<Long> current = owner.blockList;
+            return new BlocksState(current, new ArrayList<>(current));
+        }
+
+        @Override
+        protected void revertToSnapshot(BlocksState snapshot) {
+            snapshot.list.clear();
+            snapshot.list.addAll(snapshot.values);
+        }
+
+        @Override
+        protected void onRootCommit(BlocksState originalState) {
+            owner.setChanged();
+        }
     }
 }

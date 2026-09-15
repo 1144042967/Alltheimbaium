@@ -2,21 +2,19 @@ package cn.sd.jrz.alltheimbaium.gui;
 
 import cn.sd.jrz.alltheimbaium.block.PlatformBlock;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 生成平台配置 GUI（纯代码绘制，无物品栏，宽度仅容纳 3×3 九宫格）。
@@ -30,10 +28,9 @@ import java.util.Optional;
  * 在格子内对应比例处绘制一小块白色标记，并在 tooltip 中描述。
  * 格内标注文字：中文环境用不超过两个汉字的方向词（西北/北/中…），其它语言用 NW/N/E 等缩写，白色无阴影绘制。
  */
-@OnlyIn(Dist.CLIENT)
 public class PlatformScreen extends AbstractContainerScreen<PlatformMenu> {
     /** GUI 背景贴图（占位图，可直接用 PS 修改替换） */
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/platform_gui.png");
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath("alltheimbaium", "textures/gui/platform_gui.png");
     // 面板宽度（略宽，保证英文标题 ATI Generation Platform 可完整显示）
     private static final int IMAGE_WIDTH = 152;
     private static final int IMAGE_HEIGHT = 142;
@@ -62,9 +59,8 @@ public class PlatformScreen extends AbstractContainerScreen<PlatformMenu> {
     private SwitchButton disguiseButton;
 
     public PlatformScreen(PlatformMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        this.imageWidth = IMAGE_WIDTH;
-        this.imageHeight = IMAGE_HEIGHT;
+        // 26.x：imageWidth/imageHeight 是 final 字段，尺寸经由超类构造器传入
+        super(menu, playerInventory, title, IMAGE_WIDTH, IMAGE_HEIGHT);
     }
 
     @Override
@@ -93,20 +89,22 @@ public class PlatformScreen extends AbstractContainerScreen<PlatformMenu> {
     }
 
     @Override
-    protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 26.x：背景贴图改在 extractBackground 里绘制（renderBg 已删除），先让父类画好暗化/模糊底
+        super.extractBackground(guiGraphics, mouseX, mouseY, partialTick);
         // 背景用贴图绘制（尺寸 = imageWidth × imageHeight），按钮等控件绘制在贴图之上
-        guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         // 标题：深色面板上用白色文字
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFFFFFFF, true);
+        guiGraphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFFFFFFF, true);
     }
 
     @Override
-    public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         // 刷新开关与格子状态
         this.disguiseButton.setState(this.menu.isDisguiseActive());
         for (int i = 0; i < 9; i++) {
@@ -114,17 +112,17 @@ public class PlatformScreen extends AbstractContainerScreen<PlatformMenu> {
         }
         // 伪装开关 tooltip
         if (this.disguiseButton.isHovered()) {
-            guiGraphics.renderTooltip(this.font, List.of(
+            guiGraphics.setComponentTooltipForNextFrame(this.font, List.of(
                     Component.translatable("screen.alltheimbaium.platform.disguise_tooltip")
-            ), Optional.empty(), mouseX, mouseY);
+            ), mouseX, mouseY);
         }
         // 九宫格 tooltip（方位 + 具体坐标 + 状态 + 点击动作；中心格另含标记说明）
         for (CellButton cellButton : this.cellButtons) {
             if (cellButton.isHovered()) {
-                guiGraphics.renderTooltip(this.font, cellButton.buildTooltip(), Optional.empty(), mouseX, mouseY);
+                guiGraphics.setComponentTooltipForNextFrame(this.font, cellButton.buildTooltip(), mouseX, mouseY);
             }
         }
-        super.renderTooltip(guiGraphics, mouseX, mouseY);
+        super.extractTooltip(guiGraphics, mouseX, mouseY);
     }
 
     /**
@@ -172,7 +170,7 @@ public class PlatformScreen extends AbstractContainerScreen<PlatformMenu> {
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             int color = this.state ? 0xFF00AA00 : 0xFFAA0000;
             guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), color);
             int border = this.isHovered() ? 0xFFFFFF00 : 0xFF000000;
@@ -180,12 +178,12 @@ public class PlatformScreen extends AbstractContainerScreen<PlatformMenu> {
             String stateText = Component.translatable(this.state
                     ? "screen.alltheimbaium.platform.enabled"
                     : "screen.alltheimbaium.platform.disabled").getString();
-            guiGraphics.drawCenteredString(PlatformScreen.this.font,
+            guiGraphics.centeredText(PlatformScreen.this.font,
                     this.label.getString() + ": " + stateText,
                     this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
         }
 
-        private void fillBorder(GuiGraphics guiGraphics, int border) {
+        private void fillBorder(GuiGraphicsExtractor guiGraphics, int border) {
             guiGraphics.fill(this.getX() - 1, this.getY() - 1, this.getX() + this.getWidth() + 1, this.getY(), border);
             guiGraphics.fill(this.getX() - 1, this.getY() + this.getHeight(), this.getX() + this.getWidth() + 1, this.getY() + this.getHeight() + 1, border);
             guiGraphics.fill(this.getX() - 1, this.getY(), this.getX(), this.getY() + this.getHeight(), border);
@@ -212,7 +210,7 @@ public class PlatformScreen extends AbstractContainerScreen<PlatformMenu> {
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(),
                     this.generated ? 0xFF00AA00 : 0xFFAA0000);
             // 中心格用白色边框标识本区块，其余用黑色；hover 时边框变黄
@@ -232,7 +230,7 @@ public class PlatformScreen extends AbstractContainerScreen<PlatformMenu> {
             String text = cellLabel(this.index);
             int textX = this.getX() + (this.getWidth() - PlatformScreen.this.font.width(text)) / 2;
             int textY = this.getY() + (this.getHeight() - PlatformScreen.this.font.lineHeight) / 2;
-            guiGraphics.drawString(PlatformScreen.this.font, text, textX, textY, 0xFFFFFFFF, false);
+            guiGraphics.text(PlatformScreen.this.font, text, textX, textY, 0xFFFFFFFF, false);
             // 中心格：绘制"本平台在区块内位置"的标记小块（盖在文字上，白色带黑边）
             if (this.index == 4) {
                 drawCenterMarker(guiGraphics);
@@ -242,7 +240,7 @@ public class PlatformScreen extends AbstractContainerScreen<PlatformMenu> {
         /**
          * 中心格标记：按打开 GUI 的平台方块在 16×16 区块内的相对坐标，映射到格子内对应比例位置绘制白色小块。
          */
-        private void drawCenterMarker(GuiGraphics guiGraphics) {
+        private void drawCenterMarker(GuiGraphicsExtractor guiGraphics) {
             BlockPos anchor = PlatformScreen.this.menu.anchorPos;
             int localX = anchor.getX() & 15;
             int localZ = anchor.getZ() & 15;

@@ -4,13 +4,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraft.world.item.component.TooltipDisplay;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * 打包材料（合成中间物）。
@@ -20,14 +17,21 @@ import java.util.List;
  */
 public class PackageMaterialItem extends Item {
 
-    public PackageMaterialItem() {
-        super(new Item.Properties());
+    /**
+     * 26.x：注册 id 由 Registration 的 itemProps(key) 灌进属性里，构造器只负责品级等自身属性
+     */
+    public PackageMaterialItem(Item.Properties properties) {
+        super(properties);
     }
 
+    /**
+     * 26.x：tooltip 出口由 List&lt;Component&gt; 换成 Consumer&lt;Component&gt;，@OnlyIn 已删除
+     */
     @Override
-    @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, context, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context,
+                                @Nonnull TooltipDisplay display, @Nonnull Consumer<Component> tooltip,
+                                @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, display, tooltip, flagIn);
         Tip.of(tooltip)
                 .head(stack, "tip.alltheimbaium.type.material")
                 .summary("item.alltheimbaium.package_material.summary");

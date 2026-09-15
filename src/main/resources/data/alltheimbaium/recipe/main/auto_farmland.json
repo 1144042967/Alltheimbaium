@@ -7,15 +7,9 @@
     "FFF"
   ],
   "key": {
-    "X": {
-      "item": "alltheimbaium:package_material"
-    },
-    "F": {
-      "item": "alltheimbaium:farmland"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "X": "alltheimbaium:package_material",
+    "F": "alltheimbaium:farmland",
+    "R": "minecraft:redstone"
   },
   "result": {
     "id": "alltheimbaium:auto_farmland"

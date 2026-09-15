@@ -2,14 +2,16 @@ package cn.sd.jrz.alltheimbaium.item;
 
 import cn.sd.jrz.alltheimbaium.setup.Config;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
+import com.mojang.serialization.DynamicOps;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
@@ -18,14 +20,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * 永恒图腾。
@@ -59,26 +60,36 @@ public class EternalTotemItem extends Item {
         enabled = Config.ETERNAL_TOTEM_DEFAULT_ENABLED.get();
     }
 
-    public EternalTotemItem() {
-        super(new Item.Properties()
+    /**
+     * 26.x：注册 id 由 Registration 的 itemProps(key) 灌进属性里，构造器只负责堆叠上限/品级等自身属性
+     */
+    public EternalTotemItem(Item.Properties properties) {
+        super(properties
                 .stacksTo(1)
                 .rarity(Rarity.EPIC)
                 .fireResistant());
     }
 
+    /**
+     * 26.x：{@code InteractionResultHolder} 已删除，改用 {@link InteractionResult}
+     */
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         // 已移除右键开关功能，仅保留右键动画
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             player.swing(hand);
         }
-        return InteractionResultHolder.success(player.getItemInHand(hand));
+        return InteractionResult.SUCCESS.heldItemTransformedTo(player.getItemInHand(hand));
     }
 
+    /**
+     * 26.x：tooltip 出口由 List&lt;Component&gt; 换成 Consumer&lt;Component&gt;，@OnlyIn 已删除
+     */
     @Override
-    @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
-        super.appendHoverText(stack, context, tooltip, flagIn);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context,
+                                @Nonnull TooltipDisplay display, @Nonnull Consumer<Component> tooltip,
+                                @Nonnull TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, display, tooltip, flagIn);
         Tip.of(tooltip)
                 .head(stack, "tip.alltheimbaium.type.survival")
                 .summary("item.alltheimbaium.eternal_totem.summary")
@@ -97,21 +108,52 @@ public class EternalTotemItem extends Item {
     // ==================== 药水 / 食物槽位数据 ====================
     // 1.20.1 的 getTag()/getOrCreateTag() 已删除，改走 CUSTOM_DATA 数据组件（见 Tool）。
     // 组件里的 tag 是副本，改完必须 Tool.setCustomTag 写回。
+    // 26.x：ItemStack.save / ItemStack.parseOptional 也已删除，物品栈一律走 ItemStack.CODEC +
+    //       带注册表的序列化上下文（附魔、药水这类组件按注册名书写，与注册表实例无关）。
+
+    /**
+     * 物品栈 → NBT；编码失败只丢这一格
+     */
+    @Nonnull
+    private static CompoundTag encodeStack(@Nonnull ItemStack stack, @Nonnull DynamicOps<Tag> ops) {
+        if (stack.isEmpty()) {
+            return new CompoundTag();
+        }
+        try {
+            return (CompoundTag) ItemStack.OPTIONAL_CODEC.encodeStart(ops, stack).result()
+                    .orElseGet(CompoundTag::new);
+        } catch (Throwable e) {
+            return new CompoundTag();
+        }
+    }
+
+    /**
+     * NBT → 物品栈；解不出来只当空格处理
+     */
+    @Nonnull
+    private static ItemStack decodeStack(@Nonnull CompoundTag tag, @Nonnull DynamicOps<Tag> ops) {
+        try {
+            return ItemStack.OPTIONAL_CODEC.parse(ops, tag).result().orElse(ItemStack.EMPTY);
+        } catch (Throwable e) {
+            return ItemStack.EMPTY;
+        }
+    }
 
     /**
      * 从图腾的自定义数据加载 27 格药水 / 食物槽位
      *
-     * @param registries 解析物品栈需要的注册表（1.21 的物品序列化带数据组件，取世界注册表）
+     * @param registries 解析物品栈需要的注册表（物品序列化带数据组件，取世界注册表）
      */
     public static void loadPotionItems(ItemStack totem, SimpleContainer inv, @Nonnull HolderLookup.Provider registries) {
         CompoundTag tag = Tool.getCustomTag(totem);
         if (tag == null || !tag.contains(TAG_POTION_ITEMS)) return;
-        ListTag list = tag.getList(TAG_POTION_ITEMS, Tag.TAG_COMPOUND);
+        DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
+        ListTag list = tag.getListOrEmpty(TAG_POTION_ITEMS);
         for (Tag t : list) {
             if (!(t instanceof CompoundTag ct)) continue;
-            int slot = ct.getByte("Slot");
+            int slot = ct.getByteOr("Slot", (byte) -1);
             if (slot >= 0 && slot < STORAGE_INVENTORY_SIZE) {
-                inv.setItem(slot, ItemStack.parseOptional(registries, ct));
+                inv.setItem(slot, decodeStack(ct, ops));
             }
         }
     }
@@ -124,14 +166,14 @@ public class EternalTotemItem extends Item {
     public static void savePotionItems(ItemStack totem, SimpleContainer inv, @Nonnull HolderLookup.Provider registries) {
         if (totem == null || totem.isEmpty()) return;
         CompoundTag tag = Tool.getCustomTagOrEmpty(totem);
+        DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
         ListTag list = new ListTag();
         for (int i = 0; i < STORAGE_INVENTORY_SIZE; i++) {
             ItemStack s = inv.getItem(i);
             if (!s.isEmpty()) {
                 CompoundTag ct = new CompoundTag();
                 ct.putByte("Slot", (byte) i);
-                // 1.21 的物品 NBT 必须由带注册表的 save 产生（药水效果等组件要查数据包注册表）
-                ct.merge((CompoundTag) s.save(registries));
+                ct.merge(encodeStack(s, ops));
                 list.add(ct);
             }
         }
@@ -146,10 +188,11 @@ public class EternalTotemItem extends Item {
         List<ItemStack> list = new ArrayList<>();
         CompoundTag tag = Tool.getCustomTag(totem);
         if (tag == null || !tag.contains(TAG_POTION_ITEMS)) return list;
-        ListTag nbt = tag.getList(TAG_POTION_ITEMS, Tag.TAG_COMPOUND);
+        DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
+        ListTag nbt = tag.getListOrEmpty(TAG_POTION_ITEMS);
         for (Tag t : nbt) {
             if (!(t instanceof CompoundTag ct)) continue;
-            ItemStack s = ItemStack.parseOptional(registries, ct);
+            ItemStack s = decodeStack(ct, ops);
             if (!s.isEmpty()) {
                 list.add(s);
             }

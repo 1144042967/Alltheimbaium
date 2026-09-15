@@ -5,7 +5,7 @@ import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Inventory;
@@ -84,7 +84,7 @@ public class MobFarmMenu extends AbstractContainerMenu {
     }
 
     /** 客户端构造：从开屏 extraData 读取方块坐标、标记对与产物行（顺序与 MobFarmBlock.use 写入一致） */
-    public MobFarmMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
+    public MobFarmMenu(int id, Inventory playerInventory, RegistryFriendlyByteBuf data) {
         this(id, playerInventory, data.readBlockPos(), readMarkerPairs(data), readProductRows(data));
     }
 
@@ -139,7 +139,7 @@ public class MobFarmMenu extends AbstractContainerMenu {
     // ==================== 展示 getter（服务端读实体 / 客户端读镜像） ====================
 
     private boolean serverSide() {
-        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide;
+        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide();
     }
 
     public long getLevel() {
@@ -269,7 +269,7 @@ public class MobFarmMenu extends AbstractContainerMenu {
     }
 
     /** 读取开屏 extraData 中的标记对；读损坏回退空数组 */
-    private static int[] readMarkerPairs(FriendlyByteBuf data) {
+    private static int[] readMarkerPairs(RegistryFriendlyByteBuf data) {
         try {
             int count = Math.max(0, Math.min(data.readVarInt(), HELP_MAX_MARKER_INTS));
             int[] arr = new int[count];
@@ -283,7 +283,7 @@ public class MobFarmMenu extends AbstractContainerMenu {
     }
 
     /** 读取开屏 extraData 中的产物行（先行数，每行 typeId + 物品数 + 物品id…）；读损坏回退空数组 */
-    private static int[][] readProductRows(FriendlyByteBuf data) {
+    private static int[][] readProductRows(RegistryFriendlyByteBuf data) {
         try {
             int rows = Math.max(0, Math.min(data.readVarInt(), HELP_MAX_ROWS));
             int[][] out = new int[rows][];
@@ -307,7 +307,7 @@ public class MobFarmMenu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(@Nonnull Player player, int id) {
-        if (entity == null || player.level().isClientSide) {
+        if (entity == null || player.level().isClientSide()) {
             return false;
         }
         if (id >= BUTTON_DIR_BASE && id < BUTTON_DIR_BASE + 6) {

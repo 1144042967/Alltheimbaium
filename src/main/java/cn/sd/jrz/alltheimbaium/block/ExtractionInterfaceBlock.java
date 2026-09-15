@@ -47,7 +47,7 @@ public class ExtractionInterfaceBlock extends Block implements EntityBlock {
     }
 
     private <T extends BlockEntity> void tick(@Nonnull Level level, @Nonnull T tile) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
         if (!(tile instanceof ExtractionInterfaceEntity entity)) {

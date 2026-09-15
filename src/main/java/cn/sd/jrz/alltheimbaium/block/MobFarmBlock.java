@@ -3,7 +3,7 @@ package cn.sd.jrz.alltheimbaium.block;
 import java.util.List;
 import net.minecraft.world.level.storage.loot.LootParams;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import cn.sd.jrz.alltheimbaium.entity.MobFarmEntity;
 import cn.sd.jrz.alltheimbaium.setup.Config;
@@ -108,7 +108,7 @@ public class MobFarmBlock extends Block implements EntityBlock {
     @Nonnull
     private InteractionResult doUse(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         try {
-            if (level.isClientSide) {
+            if (level.isClientSide()) {
                 return InteractionResult.SUCCESS;
             }
             if (!(level.getBlockEntity(pos) instanceof MobFarmEntity machine)) {
@@ -139,15 +139,17 @@ public class MobFarmBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+    protected @Nonnull InteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         InteractionResult result = doUse(state, level, pos, player, handIn, hit);
-        if (result == InteractionResult.SUCCESS) {
-            return ItemInteractionResult.SUCCESS;
+        // 26.x：InteractionResult 是 sealed 接口，判定改用 instanceof；
+        // 旧的 ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION 对应 TRY_WITH_EMPTY_HAND（表示"再试一次空手交互"）
+        if (result instanceof InteractionResult.Success) {
+            return InteractionResult.SUCCESS;
         }
-        if (result == InteractionResult.FAIL) {
-            return ItemInteractionResult.FAIL;
+        if (result instanceof InteractionResult.Fail) {
+            return InteractionResult.FAIL;
         }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     /**

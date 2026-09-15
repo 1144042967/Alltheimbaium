@@ -1,8 +1,6 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "item_input": {
-    "item": "alltheores:iron_dust"
-  },
+  "item_input": "alltheores:iron_dust",
   "chemical_input": {
     "amount": 20,
     "tag": "mekanism:carbon"

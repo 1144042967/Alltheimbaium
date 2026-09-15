@@ -1,9 +1,7 @@
 {
   "type": "minecraft:crafting_shaped",
   "key": {
-    "#": {
-      "item": "bloodmagic:ingot_hellforged"
-    }
+    "#": "bloodmagic:ingot_hellforged"
   },
   "pattern": [
     " # ",

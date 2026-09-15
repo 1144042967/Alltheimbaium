@@ -92,11 +92,11 @@ public class StorageFountainMenu extends AbstractContainerMenu {
     // ==================== 客户端/服务端都能访问的展示值 ====================
 
     public long getOutput() {
-        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide ? entity.output : clientOutput;
+        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide() ? entity.output : clientOutput;
     }
 
     public int getTickCount() {
-        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide ? (int) Math.min(Integer.MAX_VALUE, entity.tickCount) : clientTickCount;
+        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide() ? (int) Math.min(Integer.MAX_VALUE, entity.tickCount) : clientTickCount;
     }
 
     public long getGrowthIntervalSeconds() {
@@ -108,14 +108,14 @@ public class StorageFountainMenu extends AbstractContainerMenu {
     }
 
     public int getDirectionState(Direction direction) {
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             return entity.getDirectionState(direction);
         }
         return clientDirectionState[direction.ordinal()];
     }
 
     public boolean isOutputEnabled() {
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             return entity.outputEnabled;
         }
         return clientOutputEnabled;
@@ -126,7 +126,7 @@ public class StorageFountainMenu extends AbstractContainerMenu {
      */
     @Nonnull
     public ItemStack getMarkedStack(int index) {
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             return entity.getMarkedStack(index);
         }
         if (index < 0 || index >= 9 || clientItemIds[index] <= 0) {
@@ -141,7 +141,7 @@ public class StorageFountainMenu extends AbstractContainerMenu {
      * 指定槽位的存量（内部单位）
      */
     public long getMarkedCount(int index) {
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             return entity.getMarkedCount(index);
         }
         return index >= 0 && index < 9 ? clientCounts[index] : 0;
@@ -154,7 +154,7 @@ public class StorageFountainMenu extends AbstractContainerMenu {
      */
     @Override
     public boolean clickMenuButton(@Nonnull Player player, int id) {
-        if (entity == null || player.level().isClientSide) {
+        if (entity == null || player.level().isClientSide()) {
             return false;
         }
         if (id >= BUTTON_DIR_BASE && id < BUTTON_DIR_BASE + 6) {

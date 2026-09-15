@@ -2,9 +2,7 @@
   "type": "minecraft:crafting_shaped",
   "group": "ae2_quartz",
   "key": {
-    "#": {
-      "item": "ae2:quartz_block"
-    }
+    "#": "ae2:quartz_block"
   },
   "pattern": [
     "##",

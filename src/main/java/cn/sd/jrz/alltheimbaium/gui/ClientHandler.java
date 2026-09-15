@@ -2,19 +2,22 @@ package cn.sd.jrz.alltheimbaium.gui;
 
 import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
-import net.minecraft.client.renderer.RenderType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 
 /**
  * 客户端初始化：注册各菜单类型的 GUI 与方块实体渲染器。
+ * <p>
+ * 26.x 两处变化：
+ * <ul>
+ *   <li>{@code @EventBusSubscriber} 不再有 {@code bus} 属性，挂在哪条总线上由事件类型自动判断；</li>
+ *   <li>{@code ItemBlockRenderTypes} 已删除（镂空罐体由模型贴图的透明通道自动推断 cutout），
+ *       原来在 {@code FMLClientSetupEvent} 里注册渲染层的整段客户端初始化随之删除。</li>
+ * </ul>
  */
-@EventBusSubscriber(modid = "alltheimbaium", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = "alltheimbaium", value = Dist.CLIENT)
 public class ClientHandler {
     /**
      * 菜单 → 界面绑定。1.21.1 里 {@code MenuScreens.register} 已改为私有，
@@ -37,16 +40,10 @@ public class ClientHandler {
         event.register(Registration.RESOURCE_FARM_MENU.get(), ResourceFarmScreen::new);
     }
 
-    @SubscribeEvent
-    public static void onClientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(() -> {
-            // 液体机镂空玻璃罐体：注册 cutout 渲染层（模型 JSON 的 render_type 兜底）
-            ItemBlockRenderTypes.setRenderLayer(Registration.LIQUID_FOUNTAIN_BLOCK.get(), RenderType.cutout());
-            ItemBlockRenderTypes.setRenderLayer(Registration.MOB_FARM_BLOCK.get(), RenderType.cutout());
-            ItemBlockRenderTypes.setRenderLayer(Registration.RESOURCE_FARM_BLOCK.get(), RenderType.cutout());
-        });
-    }
-
+    /**
+     * 方块实体渲染器。26.x 的 {@code registerBlockEntityRenderer} 要求同时给出渲染状态泛型，
+     * 直接传方法引用即可由编译器推断。
+     */
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(Registration.LIQUID_FOUNTAIN_ENTITY.get(), LiquidFountainRenderer::new);

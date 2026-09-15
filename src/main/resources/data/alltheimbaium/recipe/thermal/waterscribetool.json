@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "tag": "c:storage_blocks/lapis"
-    },
+    "#c:storage_blocks/lapis",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 1000

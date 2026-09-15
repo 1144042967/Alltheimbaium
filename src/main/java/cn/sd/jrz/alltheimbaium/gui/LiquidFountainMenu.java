@@ -95,14 +95,14 @@ public class LiquidFountainMenu extends AbstractContainerMenu {
      * 客户端/服务端都能访问的展示值（服务端读实体，客户端读同步值）
      */
     public Fluid getFluid() {
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             return entity.getStack().isEmpty() ? Fluids.EMPTY : entity.getStack().getFluid();
         }
         return BuiltInRegistries.FLUID.byId(clientFluidId);
     }
 
     public long getAmount() {
-        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide ? entity.getFluidAmount() : clientLiquid;
+        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide() ? entity.getFluidAmount() : clientLiquid;
     }
 
     public long getMax() {
@@ -114,7 +114,7 @@ public class LiquidFountainMenu extends AbstractContainerMenu {
     }
 
     public boolean isFaceEnabled(Direction direction) {
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             return entity.isTransferEnabled(direction);
         }
         return clientTransfer[direction.ordinal()];
@@ -122,7 +122,7 @@ public class LiquidFountainMenu extends AbstractContainerMenu {
 
     /** 是否开启主动输出（总开关；客户端读同步值，服务端读实体） */
     public boolean isOutputEnabled() {
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             return entity.isOutputEnabled();
         }
         return clientOutputEnabled;
@@ -133,7 +133,7 @@ public class LiquidFountainMenu extends AbstractContainerMenu {
      */
     @Override
     public boolean clickMenuButton(@Nonnull Player player, int id) {
-        if (entity == null || player.level().isClientSide) {
+        if (entity == null || player.level().isClientSide()) {
             return false;
         }
         switch (id) {

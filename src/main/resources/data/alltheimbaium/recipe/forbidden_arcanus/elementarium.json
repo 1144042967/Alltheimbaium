@@ -9,9 +9,7 @@
   "category": "misc",
   "group": "forbidden_arcanus",
   "ingredients": [
-    {
-      "item": "forbidden_arcanus:crimson_stone"
-    }
+    "forbidden_arcanus:crimson_stone"
   ],
   "result": {
     "id": "forbidden_arcanus:elementarium"

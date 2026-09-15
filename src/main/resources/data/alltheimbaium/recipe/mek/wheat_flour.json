@@ -1,8 +1,6 @@
 {
   "type": "mekanism:enriching",
-  "input": {
-    "item": "minecraft:wheat"
-  },
+  "input": "minecraft:wheat",
   "output": {
     "id": "create:wheat_flour",
     "count": 2

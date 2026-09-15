@@ -8,9 +8,7 @@
   "type": "minecraft:crafting_shaped",
   "group": "entro",
   "key": {
-    "#": {
-      "item": "extendedae:entro_block"
-    }
+    "#": "extendedae:entro_block"
   },
   "pattern": [
     "##",

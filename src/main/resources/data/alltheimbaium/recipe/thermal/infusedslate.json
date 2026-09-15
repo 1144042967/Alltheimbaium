@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "item": "bloodmagic:reinforcedslate"
-    },
+    "bloodmagic:reinforcedslate",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 5000

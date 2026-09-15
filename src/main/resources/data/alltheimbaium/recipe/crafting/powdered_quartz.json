@@ -3,12 +3,8 @@
   "category": "misc",
   "group": "dust",
   "ingredients": [
-    {
-      "item": "ae2:certus_quartz_dust"
-    },
-    {
-      "item": "minecraft:lava_bucket"
-    }
+    "ae2:certus_quartz_dust",
+    "minecraft:lava_bucket"
   ],
   "result": {
     "id": "enderio:powdered_quartz"

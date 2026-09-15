@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "tag": "c:stones"
-    },
+    "#c:stones",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 1000

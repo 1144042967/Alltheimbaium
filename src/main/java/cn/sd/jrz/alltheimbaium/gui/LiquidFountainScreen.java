@@ -1,12 +1,13 @@
 package cn.sd.jrz.alltheimbaium.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
@@ -16,13 +17,10 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 液体无限制造机 GUI（新材质 GUI，176 宽亮色主题）。
@@ -31,10 +29,9 @@ import java.util.Optional;
  * 代码动态绘制：面板顶部进度条与百分比、面板中部信息描述（mB/B/KB 单位缩写）、
  * 面板下方六个主动输出开关按钮（auto-resource 风格：绿=开 / 红=关，随开关状态着色）。
  */
-@OnlyIn(Dist.CLIENT)
 public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountainMenu> {
-    private static final ResourceLocation TEXTURE_BASE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/liquid_fountain_gui.png");
-    private static final int TEXT_COLOR = 0xC6C6C6;
+    private static final Identifier TEXTURE_BASE = Identifier.fromNamespaceAndPath("alltheimbaium", "textures/gui/liquid_fountain_gui.png");
+    private static final int TEXT_COLOR = 0xFFC6C6C6;
 
     // 右侧面板/进度条/信息（面板 x=39~168, y=17~56）
     private static final int RIGHT_X = 39;
@@ -69,9 +66,8 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
     private static final int[] BTN_YS = {BTN_Y1, BTN_Y1, BTN_Y1, BTN_Y2, BTN_Y2, BTN_Y2};
 
     public LiquidFountainScreen(LiquidFountainMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = 192;
+        // 26.x：imageWidth/imageHeight 是 final 字段，尺寸经由超类构造器传入
+        super(menu, playerInventory, title, 176, 192);
         // 物品栏标签放在容器下方（与箱子界面一致）
         this.inventoryLabelY = this.imageHeight - 94;
     }
@@ -105,9 +101,11 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
     }
 
     @Override
-    protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 26.x：背景贴图改在 extractBackground 里绘制（renderBg 已删除），先让父类画好暗化/模糊底
+        super.extractBackground(guiGraphics, mouseX, mouseY, partialTick);
         // 主背景（槽位框、+/- 图标、信息面板、物品栏槽位均已绘制在图上）
-        guiGraphics.blit(TEXTURE_BASE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_BASE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
         // 面板顶部进度条（阈值 / 1 万桶进度），右侧留白显示百分比
         int trackLeft = this.leftPos + PROGRESS_X;
         int trackTop = this.topPos + PROGRESS_Y;
@@ -118,42 +116,42 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
             guiGraphics.fill(trackLeft, trackTop, trackLeft + fill, trackTop + 4, progressColor());
         }
         // 百分比文字：显示真实百分比，固定 3 位宽右对齐（不足前补空格），如 "  0%"
-        guiGraphics.drawString(this.font, String.format("%3d%%", realPercent()), trackLeft + PROGRESS_W + 5, trackTop, TEXT_COLOR, false);
+        guiGraphics.text(this.font, String.format("%3d%%", realPercent()), trackLeft + PROGRESS_W + 5, trackTop, TEXT_COLOR, false);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         // 标题与物品栏标签（亮色 GUI 上用白色/灰色文字）
-        // 标题与物品栏标签：GUI 亮色背景（浅灰 0xC6C6C6），需用深色文字才能可见
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, true);
-        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
+        // 标题与物品栏标签：GUI 亮色背景（浅灰 0xFFC6C6C6），需用深色文字才能可见
+        guiGraphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFF404040, true);
+        guiGraphics.text(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0xFF404040, false);
         // 面板中部信息描述两行（单位缩写：mB / B / KB）；renderLabels 使用相对 GUI 的局部坐标
         boolean infinite = this.menu.isInfinity();
         Component fluidName = fluidName();
         if (infinite) {
-            guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.liquid_fountain.infinite", fluidName), RIGHT_X + 4, INFO_Y, TEXT_COLOR, false);
-            guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.liquid_fountain.infinite_reached"), RIGHT_X + 4, INFO_Y + INFO_LINE, TEXT_COLOR, false);
+            guiGraphics.text(this.font, Component.translatable("screen.alltheimbaium.liquid_fountain.infinite", fluidName), RIGHT_X + 4, INFO_Y, TEXT_COLOR, false);
+            guiGraphics.text(this.font, Component.translatable("screen.alltheimbaium.liquid_fountain.infinite_reached"), RIGHT_X + 4, INFO_Y + INFO_LINE, TEXT_COLOR, false);
         } else {
             long max = this.menu.getMax();
             long amount = Math.min(this.menu.getAmount(), max);
-            guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.liquid_fountain.amount", formatVolume(amount), formatVolume(max), fluidName), RIGHT_X + 4, INFO_Y, TEXT_COLOR, false);
-            guiGraphics.drawString(this.font, Component.translatable("screen.alltheimbaium.liquid_fountain.need", formatVolume(Math.max(0, max - amount))), RIGHT_X + 4, INFO_Y + INFO_LINE, TEXT_COLOR, false);
+            guiGraphics.text(this.font, Component.translatable("screen.alltheimbaium.liquid_fountain.amount", formatVolume(amount), formatVolume(max), fluidName), RIGHT_X + 4, INFO_Y, TEXT_COLOR, false);
+            guiGraphics.text(this.font, Component.translatable("screen.alltheimbaium.liquid_fountain.need", formatVolume(Math.max(0, max - amount))), RIGHT_X + 4, INFO_Y + INFO_LINE, TEXT_COLOR, false);
         }
     }
 
     @Override
-    public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         // 渲染六面按钮 tooltip（输出内容 / 输出方向 / 输出目标）
         for (FaceButton faceButton : this.faceButtons) {
             if (faceButton.isHovered()) {
-                guiGraphics.renderTooltip(this.font, faceButton.buildTooltip(), Optional.empty(), mouseX, mouseY);
+                guiGraphics.setComponentTooltipForNextFrame(this.font, faceButton.buildTooltip(), mouseX, mouseY);
             }
         }
         // + 输入槽 hover 提示：槽内无物品时显示容器使用方法说明
         renderInputSlotTooltip(guiGraphics, mouseX, mouseY);
         // 渲染鼠标悬浮物品的信息提示窗
-        super.renderTooltip(guiGraphics, mouseX, mouseY);
+        super.extractTooltip(guiGraphics, mouseX, mouseY);
         // 刷新各开关状态
         for (int i = 0; i < 6; i++) {
             this.faceButtons[i].setState(this.menu.isFaceEnabled(Direction.values()[i]));
@@ -167,15 +165,15 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
     /**
      * + 输入槽 hover 提示：鼠标悬浮在输入槽（槽内无物品，避免与容器自身提示冲突）时显示使用方法说明。
      */
-    private void renderInputSlotTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderInputSlotTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         Slot inputSlot = this.menu.slots.get(0);
         if (inputSlot.hasItem() || !this.isHovering(inputSlot.x, inputSlot.y, 16, 16, mouseX, mouseY)) {
             return;
         }
-        guiGraphics.renderTooltip(this.font, List.of(
+        guiGraphics.setComponentTooltipForNextFrame(this.font, List.of(
                 Component.translatable("screen.alltheimbaium.liquid_fountain.input_tooltip.1"),
                 Component.translatable("screen.alltheimbaium.liquid_fountain.input_tooltip.2")
-        ), Optional.empty(), mouseX, mouseY);
+        ), mouseX, mouseY);
     }
 
     /**
@@ -299,7 +297,7 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             if (!this.active) {
                 renderButton(guiGraphics, 0xFF666666);
                 return;
@@ -313,14 +311,14 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
                 float scale = scaled / 16.0F;
                 int x = this.getX() + (this.getWidth() - scaled) / 2;
                 int y = this.getY() + (this.getHeight() - scaled) / 2;
-                guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(x, y, 0);
-                guiGraphics.pose().scale(scale, scale, 1.0F);
-                guiGraphics.renderItem(neighborIcon, 0, 0);
-                guiGraphics.pose().popPose();
+                guiGraphics.pose().pushMatrix();
+                guiGraphics.pose().translate(x, y);
+                guiGraphics.pose().scale(scale, scale);
+                guiGraphics.item(neighborIcon, 0, 0);
+                guiGraphics.pose().popMatrix();
             } else {
                 // 无贴图：方向名居中
-                guiGraphics.drawCenteredString(LiquidFountainScreen.this.font, dirName, this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
+                guiGraphics.centeredText(LiquidFountainScreen.this.font, dirName, this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
             }
         }
 
@@ -344,7 +342,7 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
 
     /**
      * 带状态颜色的开关按钮（开=绿色，关=红色），auto-resource 风格。
-     * override renderWidget 以确保不使用 vanilla 默认按钮渲染。
+     * override extractContents 以确保不使用 vanilla 默认按钮渲染。
      */
     private class StateButton extends SimpleButton {
         private boolean state;
@@ -359,7 +357,7 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             // 禁用时灰色显示且不可点击（vanilla Button 在 active=false 时不响应点击）
             if (!this.active) {
                 renderButton(guiGraphics, 0xFF666666);
@@ -377,7 +375,7 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
             super(x, y, width, height, label, onPress, DEFAULT_NARRATION);
         }
 
-        protected void renderButton(GuiGraphics guiGraphics, int color) {
+        protected void renderButton(GuiGraphicsExtractor guiGraphics, int color) {
             guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), color);
             // 1px 边框（鼠标悬浮时边框变亮，用于指示可交互）
             int borderColor = this.isHovered() ? 0xFFFFFF00 : 0xFF000000;
@@ -385,7 +383,7 @@ public class LiquidFountainScreen extends AbstractContainerScreen<LiquidFountain
             guiGraphics.fill(this.getX() - 1, this.getY() + this.getHeight(), this.getX() + this.getWidth() + 1, this.getY() + this.getHeight() + 1, borderColor);
             guiGraphics.fill(this.getX() - 1, this.getY(), this.getX(), this.getY() + this.getHeight(), borderColor);
             guiGraphics.fill(this.getX() + this.getWidth(), this.getY(), this.getX() + this.getWidth() + 1, this.getY() + this.getHeight(), borderColor);
-            guiGraphics.drawCenteredString(LiquidFountainScreen.this.font, this.getMessage(), this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
+            guiGraphics.centeredText(LiquidFountainScreen.this.font, this.getMessage(), this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
         }
     }
 }

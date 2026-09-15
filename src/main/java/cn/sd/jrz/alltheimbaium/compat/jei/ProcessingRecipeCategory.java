@@ -6,11 +6,11 @@ import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.gui.widgets.IRecipeExtrasBuilder;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
-import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
+import mezz.jei.api.recipe.types.IRecipeType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
@@ -32,18 +32,17 @@ import java.util.List;
  * </ul>
  * 零刻熔炉只有 1 格原料 → 1 个产物、且不留说明文字，所以卡片很窄，JEI 会自动在一页里并排显示成两栏小卡片。
  * <p>
- * 跨版本坑与 {@link MarkerRecipeCategory} 相同：必须显式给出 {@code getBackground()}，
- * 说明文字不能用 {@code extras.addText}，产物格不能用 {@code setOutputSlotBackground}。
+ * 26.x 渲染迁移与 {@link MarkerRecipeCategory} 相同：{@code GuiGraphics} 换成 {@code GuiGraphicsExtractor}、
+ * {@code getBackground()} 已删除（卡片范围改由 getWidth/getHeight 决定），说明文字仍在 draw() 里自己画。
  */
 public class ProcessingRecipeCategory implements IRecipeCategory<ProcessingRecipe> {
     private static final Logger log = LoggerFactory.getLogger(ProcessingRecipeCategory.class);
-    /** 说明文字颜色：JEI 卡片底衬偏亮，用原版深灰 */
+    /** 说明文字颜色：JEI 卡片底衬偏亮，用原版深灰（26.x 必须是带 alpha 的 ARGB） */
     private static final int NOTE_COLOR = 0xFF404040;
 
-    private final RecipeType<ProcessingRecipe> recipeType;
+    private final IRecipeType<ProcessingRecipe> recipeType;
     private final Component title;
     private final IDrawable icon;
-    private final IDrawable background;
     private final JeiLayout layout;
     /** 输入格是否横排（false = 竖着一列）。横排时卡片更矮，一页能放下更多配方 */
     private final boolean horizontalInputs;
@@ -64,7 +63,7 @@ public class ProcessingRecipeCategory implements IRecipeCategory<ProcessingRecip
      * @param horizontalInputs 输入格是否横排：竖排适合"1 个原料 → 1 个产物"（熔炉），
      *                         横排适合"多个原料 → 少量产物"（压印器组装模式，横排后卡片明显变矮，一页能多放配方）
      */
-    public ProcessingRecipeCategory(@Nonnull IGuiHelper guiHelper, @Nonnull RecipeType<ProcessingRecipe> recipeType,
+    public ProcessingRecipeCategory(@Nonnull IGuiHelper guiHelper, @Nonnull IRecipeType<ProcessingRecipe> recipeType,
                                     @Nonnull Component title, @Nonnull ItemStack icon, @Nonnull JeiLayout layout,
                                     boolean horizontalInputs) {
         this.recipeType = recipeType;
@@ -81,12 +80,11 @@ public class ProcessingRecipeCategory implements IRecipeCategory<ProcessingRecip
         this.noteY = gridY + bodyH + 4;
         this.width = gridX + layout.cols() * JeiLayout.SLOT + JeiLayout.PAD;
         this.height = noteY + (layout.hasNote() ? JeiLayout.NOTE_LINES * JeiLayout.LINE_H : 0) + JeiLayout.PAD;
-        this.background = guiHelper.createBlankDrawable(width, height);
     }
 
     @Override
     @Nonnull
-    public RecipeType<ProcessingRecipe> getRecipeType() {
+    public IRecipeType<ProcessingRecipe> getRecipeType() {
         return recipeType;
     }
 
@@ -100,19 +98,6 @@ public class ProcessingRecipeCategory implements IRecipeCategory<ProcessingRecip
     @Nonnull
     public IDrawable getIcon() {
         return icon;
-    }
-
-    /**
-     * 显式给出卡片区域（空白 drawable，尺寸即布局尺寸）。
-     * <p>
-     * 该方法在 JEI 15.20 起被标记为待删除，但**老版本仍然依赖它来确定配方卡片的范围**：
-     * 不覆写时不同小版本画出来的底衬与实际布局不一致（实测 15.20 会把产物格画到底衬外面）。
-     */
-    @Override
-    @Nonnull
-    @SuppressWarnings("removal")
-    public IDrawable getBackground() {
-        return background;
     }
 
     @Override
@@ -138,7 +123,7 @@ public class ProcessingRecipeCategory implements IRecipeCategory<ProcessingRecip
             int rowY = gridY + (bodyH - JeiLayout.SLOT) / 2;
             for (int i = 0; i < inputs.size(); i++) {
                 builder.addInputSlot(inputX + i * JeiLayout.SLOT, rowY)
-                        .addItemStack(inputs.get(i))
+                        .add(inputs.get(i))
                         .setStandardSlotBackground();
             }
         } else {
@@ -146,7 +131,7 @@ public class ProcessingRecipeCategory implements IRecipeCategory<ProcessingRecip
             int startY = gridY + (bodyH - inputs.size() * JeiLayout.SLOT) / 2;
             for (int i = 0; i < inputs.size(); i++) {
                 builder.addInputSlot(inputX, startY + i * JeiLayout.SLOT)
-                        .addItemStack(inputs.get(i))
+                        .add(inputs.get(i))
                         .setStandardSlotBackground();
             }
         }
@@ -160,7 +145,7 @@ public class ProcessingRecipeCategory implements IRecipeCategory<ProcessingRecip
                             gridStartY + (i / layout.cols()) * JeiLayout.SLOT)
                     .setStandardSlotBackground();
             if (i < outputs.size()) {
-                slot.addItemStack(outputs.get(i));
+                slot.add(outputs.get(i));
             }
         }
     }
@@ -176,8 +161,8 @@ public class ProcessingRecipeCategory implements IRecipeCategory<ProcessingRecip
     }
 
     @Override
-    public void draw(@Nonnull ProcessingRecipe recipe, @Nonnull IRecipeSlotsView slotsView, @Nonnull GuiGraphics guiGraphics,
-                     double mouseX, double mouseY) {
+    public void draw(@Nonnull ProcessingRecipe recipe, @Nonnull IRecipeSlotsView slotsView,
+                     @Nonnull GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
         if (!layout.hasNote()) {
             return;
         }
@@ -194,7 +179,7 @@ public class ProcessingRecipeCategory implements IRecipeCategory<ProcessingRecip
                 lines.addAll(JeiText.wrap(line, width - JeiLayout.PAD * 2, JeiLayout.NOTE_LINES - lines.size()));
             }
             for (int i = 0; i < lines.size(); i++) {
-                guiGraphics.drawString(font, lines.get(i), JeiLayout.PAD, noteY + i * JeiLayout.LINE_H, NOTE_COLOR, false);
+                guiGraphics.text(font, lines.get(i), JeiLayout.PAD, noteY + i * JeiLayout.LINE_H, NOTE_COLOR, false);
             }
         } catch (Throwable e) {
             log.warn("JEI：{} 的配方说明文字绘制失败", recipeType.getUid(), e);

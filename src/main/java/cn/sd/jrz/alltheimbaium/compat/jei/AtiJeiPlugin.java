@@ -17,7 +17,7 @@ import mezz.jei.api.registration.IRecipeRegistration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -27,6 +27,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.level.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +54,13 @@ import java.util.Set;
  * 两类卡片共同的固定规则：**输入格只画实际有的并上下居中**，**产物格始终整片画出并按自然顺序排列**。
  * <p>
  * <b>数据来源与限制</b>：JEI 跑在客户端，而这些机器大多由 serverconfig 白名单驱动。
- * Forge 会把 SERVER 配置同步给客户端（{@code net.minecraftforge.network.ConfigSync}），所以白名单在客户端读得到；
+ * NeoForge 会把 SERVER 配置同步给客户端（{@code net.neoforged.neoforge.network.ConfigSync}），所以白名单在客户端读得到；
  * 但"击杀掉落采样"（{@code KillLootEstimator}）需要 ServerLevel，客户端拿不到——
  * 因此生物农场这里只展示**白名单产物 + 刷怪蛋兜底**，白名单之外、只有采样结果的生物不会出现在 JEI 里。
+ * <p>
+ * <b>26.x 的额外限制</b>：客户端不再同步完整配方表（{@code ClientLevel.recipeAccess()} 只有属性集与切石机配方），
+ * 因此零刻熔炉（读原版烧炼配方）与零刻压印器（读 AE2 配方，客户端同样读不到）三个分类会走空态。
+ * 配置驱动的资源农场 / 生物农场 / 存储方块制造机不受影响。
  * <p>
  * 所有数据收集都单独 try-catch：任何一处解析失败只让那张卡空着，绝不让 JEI 崩在配方页上。
  */
@@ -83,8 +88,8 @@ public class AtiJeiPlugin implements IModPlugin {
 
     @Override
     @Nonnull
-    public ResourceLocation getPluginUid() {
-        return ResourceLocation.fromNamespaceAndPath(Alltheimbaium.MODID, "jei_plugin");
+    public Identifier getPluginUid() {
+        return Identifier.fromNamespaceAndPath(Alltheimbaium.MODID, "jei_plugin");
     }
 
     @Override
@@ -121,12 +126,15 @@ public class AtiJeiPlugin implements IModPlugin {
     @Override
     public void registerRecipeCatalysts(@Nonnull IRecipeCatalystRegistration registration) {
         // 让这些机器出现在对应配方页的"可制作"列表里
-        registration.addRecipeCatalyst(itemIcon(Registration.RESOURCE_FARM_ITEM.get()), JeiRecipeTypes.RESOURCE_FARM);
-        registration.addRecipeCatalyst(itemIcon(Registration.MOB_FARM_ITEM.get()), JeiRecipeTypes.MOB_FARM);
-        registration.addRecipeCatalyst(itemIcon(Registration.STORAGE_FOUNTAIN_ITEM.get()), JeiRecipeTypes.STORAGE_FOUNTAIN);
-        registration.addRecipeCatalyst(itemIcon(Registration.INSTANT_FURNACE_ITEM.get()), JeiRecipeTypes.INSTANT_FURNACE);
-        registration.addRecipeCatalyst(itemIcon(Registration.INSTANT_INSCRIBER_ITEM.get()),
-                JeiRecipeTypes.INSCRIBER_PRESS, JeiRecipeTypes.INSCRIBER_ASSEMBLY);
+        // JEI 20 起 addRecipeCatalyst 已 deprecated-for-removal，改用 addCraftingStation
+        registration.addCraftingStation(JeiRecipeTypes.RESOURCE_FARM, itemIcon(Registration.RESOURCE_FARM_ITEM.get()));
+        registration.addCraftingStation(JeiRecipeTypes.MOB_FARM, itemIcon(Registration.MOB_FARM_ITEM.get()));
+        registration.addCraftingStation(JeiRecipeTypes.STORAGE_FOUNTAIN, itemIcon(Registration.STORAGE_FOUNTAIN_ITEM.get()));
+        registration.addCraftingStation(JeiRecipeTypes.INSTANT_FURNACE, itemIcon(Registration.INSTANT_FURNACE_ITEM.get()));
+        // 压印器同时是两个类别的催化物
+        ItemStack inscriberIcon = itemIcon(Registration.INSTANT_INSCRIBER_ITEM.get());
+        registration.addCraftingStation(JeiRecipeTypes.INSCRIBER_PRESS, inscriberIcon);
+        registration.addCraftingStation(JeiRecipeTypes.INSCRIBER_ASSEMBLY, inscriberIcon);
     }
 
     // ==================== 数据收集 ====================
@@ -261,36 +269,52 @@ public class AtiJeiPlugin implements IModPlugin {
         if (level == null) {
             return List.of();
         }
-        RecipeManager manager = level.getRecipeManager();
+        // 26.x：Level#getRecipeManager() 已删除，改走 Level#recipeAccess()；而 26.x 起客户端不再同步
+        // 完整配方表（ClientLevel.recipeAccess() 只有属性集与切石机配方），所以这里在客户端永远取不到
+        // RecipeManager，本分类会走空态。与 InstantInscriberEntity.recipeManager(level) 同一套判断。
+        if (!(level.recipeAccess() instanceof RecipeManager manager)) {
+            log.info("JEI：客户端没有完整配方表（26.x 起不再同步），零刻熔炉分类为空");
+            return List.of();
+        }
         List<ProcessingRecipe> out = new ArrayList<>();
         Set<Item> seenInputs = new HashSet<>();
         // 这一档不留任何文字：卡片只画"原料 → 产物"，耗能在机器 GUI 与物品 tooltip 里有
         List<Component> notes = List.of();
         for (RecipeType<? extends AbstractCookingRecipe> type : InstantFurnaceEntity.FURNACE_TYPES) {
-            // 1.21：getAllRecipesFor 返回 RecipeHolder 列表；通配 RecipeType 下的类型捕获没法直接循环，
-            // 用 InstantFurnaceEntity 里同样的未检查辅助方法摊平（内部只做 .value()，类型由调用方保证）
+            // 通配 RecipeType 下的类型捕获没法直接循环，用 InstantFurnaceEntity 里同样的未检查辅助方法摊平
+            // （内部只做 .value() 过滤，类型由调用方保证）
             for (RecipeHolder<? extends AbstractCookingRecipe> holder : InstantFurnaceEntity.getAllCookingRecipes(manager, type)) {
                 AbstractCookingRecipe recipe = holder.value();
-                ItemStack result = recipe.getResultItem(level.registryAccess());
+                // 26.x：getIngredients()/getResultItem() 已删除。烧炼配方只有唯一一个输入，
+                // 用 SingleItemRecipe#input() 取原料、assemble(...) 取产物（烧炼的产物的与输入无关）
+                ItemStack input = firstIngredientItem(recipe.input());
+                if (input.isEmpty()) {
+                    continue;
+                }
+                ItemStack result = recipe.assemble(new SingleRecipeInput(input)).copy();
                 if (result.isEmpty()) {
                     continue;
                 }
-                for (Ingredient ingredient : recipe.getIngredients()) {
-                    if (ingredient.isEmpty()) {
-                        continue;
-                    }
-                    ItemStack[] candidates = ingredient.getItems();
-                    if (candidates.length == 0 || candidates[0].isEmpty()) {
-                        continue;
-                    }
-                    if (!seenInputs.add(candidates[0].getItem())) {
-                        continue;
-                    }
-                    out.add(new ProcessingRecipe(List.of(candidates[0].copy()), List.of(result.copy()), notes));
+                if (!seenInputs.add(input.getItem())) {
+                    continue;
                 }
+                out.add(new ProcessingRecipe(List.of(input.copy()), List.of(result), notes));
             }
         }
         return out;
+    }
+
+    /**
+     * 取 {@link Ingredient} 的第一个候选物品（26.x：{@code getItems()} 已删除，改走 {@code items()}，
+     * 它给的是 {@code Holder<Item>} 流）。压印 / 烧炼配方的材料实际都是单一物品，取首个即可。
+     */
+    @Nonnull
+    @SuppressWarnings("deprecation")
+    private static ItemStack firstIngredientItem(@Nonnull Ingredient ingredient) {
+        if (ingredient.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        return ingredient.items().findFirst().map(holder -> new ItemStack(holder.value())).orElse(ItemStack.EMPTY);
     }
 
     /**

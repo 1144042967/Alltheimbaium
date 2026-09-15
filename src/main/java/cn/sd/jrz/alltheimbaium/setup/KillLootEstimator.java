@@ -2,9 +2,10 @@ package cn.sd.jrz.alltheimbaium.setup;
 
 import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -114,9 +115,10 @@ public final class KillLootEstimator {
     private static List<SampledDrop> doEstimate(ServerLevel serverLevel, EntityType<?> type, int rolls) {
         List<SampledDrop> result = new ArrayList<>();
         try {
-            // 1.21：getDefaultLootTable 返回 ResourceKey<LootTable>（不再是 ResourceLocation），
+            // 1.21：getDefaultLootTable 返回 ResourceKey<LootTable>（不再是 Identifier），
             // 且 MinecraftServer#getLootData 已删除，改走 reloadableRegistries()
-            net.minecraft.resources.ResourceKey<LootTable> lootKey = type.getDefaultLootTable();
+            // 26.x：返回值进一步包成了 Optional，没有击杀战利品表的实体直接返回空
+            net.minecraft.resources.ResourceKey<LootTable> lootKey = type.getDefaultLootTable().orElse(null);
             if (lootKey == null) {
                 return result;
             }
@@ -124,7 +126,8 @@ public final class KillLootEstimator {
             int kills = Math.max(1, rolls);
             Entity probe = null;
             try {
-                probe = type.create(serverLevel);
+                // 26.x：EntityType#create(Level) 已删除，必须带上生成原因（这里只为掷表提供一个探测实例）
+                probe = type.create(serverLevel, EntitySpawnReason.COMMAND);
             } catch (Throwable ignored) {
                 // 无法创建探测实例时仍可尝试掷表
             }

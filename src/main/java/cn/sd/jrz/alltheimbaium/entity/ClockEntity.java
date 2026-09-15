@@ -1,5 +1,7 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
+import static cn.sd.jrz.alltheimbaium.setup.Registration.CLOCK_ENTITY;
+import static cn.sd.jrz.alltheimbaium.setup.Registration.CLOCK_ITEM;
 import cn.sd.jrz.alltheimbaium.block.ClockBlock;
 import cn.sd.jrz.alltheimbaium.block.CreativeTransmuterBlock;
 import cn.sd.jrz.alltheimbaium.block.ExtractionInterfaceBlock;
@@ -10,18 +12,18 @@ import cn.sd.jrz.alltheimbaium.block.SupplyCrateBlock;
 import cn.sd.jrz.alltheimbaium.gui.ClockMenu;
 import cn.sd.jrz.alltheimbaium.item.Tip;
 import cn.sd.jrz.alltheimbaium.setup.Config;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -70,7 +72,7 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
     public int speed = 2;
 
     public ClockEntity(BlockPos pos, BlockState state) {
-        super(Registration.CLOCK_ENTITY.get(), pos, state);
+        super(CLOCK_ENTITY.get(), pos, state);
         // 初始化六方向开关为全开
         java.util.Arrays.fill(directionEnabled, true);
     }
@@ -144,7 +146,7 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
     // ==================== 加速逻辑 ====================
 
     public void tick(Level level) {
-        if (!globalActive || !enabled || level.isClientSide) {
+        if (!globalActive || !enabled || level.isClientSide()) {
             return;
         }
         for (Direction direction : Direction.values()) {
@@ -209,7 +211,7 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.clock").withStyle(Tip.rarityColor(Registration.CLOCK_ITEM.get()));
+        return Component.translatable("block.alltheimbaium.clock").withStyle(Tip.rarityColor(CLOCK_ITEM.get()));
     }
 
     @Nullable
@@ -221,39 +223,35 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
     // ==================== NBT 持久化 ====================
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.saveAdditional(nbt, registries);
+    protected void saveAdditional(@Nonnull ValueOutput output) {
+        super.saveAdditional(output);
         try {
-            nbt.putBoolean("enabled", enabled);
+            output.putBoolean("enabled", enabled);
             int[] dirArr = new int[6];
             for (int i = 0; i < 6; i++) {
                 dirArr[i] = directionEnabled[i] ? 1 : 0;
             }
-            nbt.putIntArray("directionEnabled", dirArr);
-            nbt.putInt("speed", speed);
+            output.putIntArray("directionEnabled", dirArr);
+            output.putInt("speed", speed);
         } catch (Throwable e) {
             log.error("ClockEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.loadAdditional(nbt, registries);
+    protected void loadAdditional(@Nonnull ValueInput input) {
+        super.loadAdditional(input);
         try {
-            if (nbt.contains("enabled")) {
-                enabled = nbt.getBoolean("enabled");
-            }
-            if (nbt.contains("directionEnabled")) {
-                int[] arr = nbt.getIntArray("directionEnabled");
+            enabled = input.getBooleanOr("enabled", enabled);
+            int[] arr = input.getIntArray("directionEnabled").orElse(null);
+            if (arr != null) {
                 for (int i = 0; i < Math.min(6, arr.length); i++) {
                     directionEnabled[i] = arr[i] != 0;
                 }
             }
-            if (nbt.contains("speed")) {
-                speed = SPEEDS[indexOfSpeed(nbt.getInt("speed"))];
-            }
+            speed = SPEEDS[indexOfSpeed(input.getIntOr("speed", speed))];
         } catch (Throwable e) {
-            log.error("ClockEntity.load error", e);
+            log.error("ClockEntity.loadAdditional error", e);
         }
     }
 
@@ -262,15 +260,14 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
     /**
      * 区块加载/方块放置时同步全部数据到客户端
      */
+    // 26.x：handleUpdateTag / onDataPacket 的覆写已删除。
+    // 客户端收到 ClientboundBlockEntityDataPacket 后走原版 loadWithComponents(ValueInput)（内部即调 loadAdditional），
+    // 区块更新包同理走 NeoForge 的 IBlockEntityExtension#handleUpdateTag(ValueInput) 默认实现，无需自己接管。
+
     @Override
     @Nonnull
     public CompoundTag getUpdateTag(@Nonnull HolderLookup.Provider registries) {
         return this.saveWithoutMetadata(registries);
-    }
-
-    @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
-        this.loadAdditional(tag, registries);
     }
 
     @Override
@@ -279,18 +276,12 @@ public class ClockEntity extends BlockEntity implements MenuProvider {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
-        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
-        this.loadAdditional(pkt.getTag(), registries);
-    }
-
     /**
      * 状态变化时向附近客户端发送更新包（刷新方块侧面的倍速数值渲染）
      */
     public void sendUpdatePacket() {
         Level level = getLevel();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }

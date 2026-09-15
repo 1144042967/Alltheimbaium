@@ -1,5 +1,7 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
+import static cn.sd.jrz.alltheimbaium.setup.Registration.MOB_FARM_ENTITY;
+import static cn.sd.jrz.alltheimbaium.setup.Registration.MOB_FARM_ITEM;
 import cn.sd.jrz.alltheimbaium.block.MobFarmBlock;
 import cn.sd.jrz.alltheimbaium.connection.MobFarmConnection;
 import cn.sd.jrz.alltheimbaium.gui.MobFarmMenu;
@@ -9,23 +11,21 @@ import cn.sd.jrz.alltheimbaium.setup.MobFarmCatalog;
 import cn.sd.jrz.alltheimbaium.setup.MobFarmInteraction;
 import cn.sd.jrz.alltheimbaium.setup.MobFarmMarkerIndex;
 import cn.sd.jrz.alltheimbaium.setup.MobFarmWhitelist;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -37,10 +37,15 @@ import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +57,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 
 /**
  * 生物农场方块实体。
@@ -116,12 +120,13 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
     /** 六面 + 无方向能力缓存（同 StorageFountainEntity） */
     /**
      * 对外物品能力：按面懒建并缓存。NeoForge 不再实现 ICapabilityProvider，
-     * 由 {@code Registration.registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取（下标 6 = 无方向查询）。
+     * 由 {@code registerCapabilities} 在 RegisterCapabilitiesEvent 里拉取（下标 6 = 无方向查询）。
      */
     private final MobFarmConnection[] itemHandlers = new MobFarmConnection[7];
 
+    /** 26.x：{@link Capabilities.Item#BLOCK} 要求的是 {@code ResourceHandler<ItemResource>}，实现类见 MobFarmConnection */
     @Nullable
-    public MobFarmConnection getItemHandler(@Nullable Direction side) {
+    public ResourceHandler<ItemResource> getItemHandler(@Nullable Direction side) {
         int idx = side == null ? 6 : side.ordinal();
         if (itemHandlers[idx] == null) {
             itemHandlers[idx] = new MobFarmConnection(this, side);
@@ -130,22 +135,27 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
     }
 
     public MobFarmEntity(BlockPos pos, BlockState state) {
-        super(Registration.MOB_FARM_ENTITY.get(), pos, state);
+        super(MOB_FARM_ENTITY.get(), pos, state);
         this.level = Math.max(1, MobFarmBlock.getInitialLevel());
     }
 
     // ==================== 收容生物查询 ====================
 
+    /** 实体 NBT 是否带合法的 {@code id} 字段（26.x：CompoundTag 的取值一律返回 Optional） */
+    private static boolean hasEntityId(@Nullable CompoundTag tag) {
+        return tag != null && tag.getString("id").isPresent();
+    }
+
     public boolean hasContained() {
-        return entityTag != null && entityTag.contains("id", Tag.TAG_STRING);
+        return hasEntityId(entityTag);
     }
 
     @Nullable
     public EntityType<?> getContainedType() {
-        if (entityTag == null || !entityTag.contains("id", Tag.TAG_STRING)) {
+        if (!hasEntityId(entityTag)) {
             return null;
         }
-        Optional<EntityType<?>> type = EntityType.byString(entityTag.getString("id"));
+        Optional<EntityType<?>> type = EntityType.byString(entityTag.getStringOr("id", ""));
         return type.orElse(null);
     }
 
@@ -167,7 +177,9 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
                 return null;
             }
             if (cachedEntity == null && entityTag != null) {
-                cachedEntity = EntityType.loadEntityRecursive(entityTag.copy(), level, Function.identity());
+                // 26.x：loadEntityRecursive 的旧 3 参重载已删除，必须显式给 EntitySpawnReason，
+                // 这里只是客户端渲染用的模板实体，用 LOAD 最贴合语义
+                cachedEntity = EntityType.loadEntityRecursive(entityTag.copy(), level, EntitySpawnReason.LOAD, entity -> entity);
                 if (cachedEntity == null) {
                     return null;
                 }
@@ -189,11 +201,15 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
     public boolean captureEntity(@Nonnull LivingEntity entity) {
         try {
             Level level = getLevel();
-            if (level == null || level.isClientSide) {
+            if (level == null || level.isClientSide()) {
                 return false;
             }
-            CompoundTag tag = new CompoundTag();
-            if (!entity.save(tag) || !tag.contains("id", Tag.TAG_STRING)) {
+            // 26.x：Entity#save(CompoundTag) 已删除，改成写进 ValueOutput（返回是否写成功），
+            // 由 TagValueOutput 负责补 id 等字段
+            TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
+            entity.save(output);
+            CompoundTag tag = output.buildResult();
+            if (!hasEntityId(tag)) {
                 tag = new CompoundTag();
                 tag.putString("id", EntityType.getKey(entity.getType()).toString());
             }
@@ -216,17 +232,26 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
         try {
             Level level = getLevel();
             CompoundTag tag = new CompoundTag();
-            if (level != null && !level.isClientSide) {
+            if (level != null && !level.isClientSide()) {
                 try {
-                    Entity probe = type.create(level);
-                    if (probe != null && probe.save(tag)) {
-                        entityTag = tag;
+                    // 26.x：EntityType#create(Level) 已删除，探测实例用 COMMAND 生成原因
+                    Entity probe = level instanceof net.minecraft.server.level.ServerLevel serverLevel
+                            ? type.create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.COMMAND)
+                            : null;
+                    if (probe != null) {
+                        // 26.x：同上，Entity#save 改收 ValueOutput
+                        TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
+                        probe.save(output);
+                        tag = output.buildResult();
+                        if (hasEntityId(tag)) {
+                            entityTag = tag;
+                        }
                     }
                 } catch (Throwable e) {
                     log.warn("MobFarmEntity.captureByType create fail for {}", type, e);
                 }
             }
-            if (entityTag == null || !entityTag.contains("id", Tag.TAG_STRING)) {
+            if (!hasEntityId(entityTag)) {
                 entityTag = new CompoundTag();
                 entityTag.putString("id", EntityType.getKey(type).toString());
             }
@@ -279,7 +304,7 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
     public void rebuildProducts() {
         try {
             Level level = getLevel();
-            if (level == null || level.isClientSide) {
+            if (level == null || level.isClientSide()) {
                 return;
             }
             EntityType<?> type = getContainedType();
@@ -590,7 +615,7 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
                 return true; // 使用槽：任意物品
             }
             Level lvl = getLevel();
-            if (lvl != null && lvl.isClientSide) {
+            if (lvl != null && lvl.isClientSide()) {
                 return true; // 客户端算不出动态掉落物表：一律放行，由服务端权威判定收容/清退
             }
             return resolveMarkerTarget(stack) != null; // 服务端标记槽：刷怪蛋/静态特征物/动态掉落物
@@ -602,7 +627,7 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
             if (level == null) {
                 return;
             }
-            if (level.isClientSide) {
+            if (level.isClientSide()) {
                 if (!hasContained() && !specialSlot.getStackInSlot(0).isEmpty()) {
                     specialSlot.setStackInSlot(0, ItemStack.EMPTY);
                 }
@@ -619,7 +644,7 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
      */
     private void processSpecialSlotMarker() {
         Level level = getLevel();
-        if (level == null || level.isClientSide) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         try {
@@ -650,7 +675,7 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
      */
     public void tickServer() {
         Level world = getLevel();
-        if (world == null || world.isClientSide) {
+        if (world == null || world.isClientSide()) {
             return;
         }
         try {
@@ -746,7 +771,7 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
     /** 向相邻方块主动输出可输出行的整件物品 */
     private void outputToNeighbors() {
         Level level = getLevel();
-        if (level == null || level.isClientSide) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         Direction[] directions = Direction.values();
@@ -760,7 +785,7 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
         if (neighbor == null) {
             return;
         }
-        var handler = level.getCapability(Capabilities.ItemHandler.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
+        var handler = level.getCapability(Capabilities.Item.BLOCK, neighbor.getBlockPos(), direction.getOpposite());
         if (handler == null) {
             return;
         }
@@ -782,18 +807,18 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
         }
     }
 
-    private void pushRow(net.neoforged.neoforge.items.IItemHandler handler, int index) {
+    private void pushRow(@Nonnull ResourceHandler<ItemResource> handler, int index) {
         Row row = rows.get(index);
         int maxStack = new ItemStack(row.item).getMaxStackSize();
         if (maxStack <= 0) {
             maxStack = 1;
         }
+        ItemResource resource = ItemResource.of(row.item);
         long remaining = row.stock;
         while (remaining > 0) {
             int amount = (int) Math.min(remaining, maxStack);
-            ItemStack stack = new ItemStack(row.item, amount);
-            ItemStack leftover = ItemHandlerHelper.insertItemStacked(handler, stack, false);
-            int inserted = amount - leftover.getCount();
+            // 26.x：insertStacking 内部会开一个根事务并在结束时提交，等价于旧的 ItemHandlerHelper.insertItemStacked
+            int inserted = ResourceHandlerUtil.insertStacking(handler, resource, amount, null);
             if (inserted <= 0) {
                 break;
             }
@@ -809,7 +834,7 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.mob_farm").withStyle(Tip.rarityColor(Registration.MOB_FARM_ITEM.get()));
+        return Component.translatable("block.alltheimbaium.mob_farm").withStyle(Tip.rarityColor(MOB_FARM_ITEM.get()));
     }
 
     @Nullable
@@ -829,50 +854,41 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
     private static final String KEY_SPECIAL = "specialSlot";
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.saveAdditional(nbt, registries);
+    protected void saveAdditional(@Nonnull ValueOutput output) {
+        super.saveAdditional(output);
         try {
             if (entityTag != null) {
-                nbt.put(KEY_ENTITY_TAG, entityTag);
+                output.store(KEY_ENTITY_TAG, CompoundTag.CODEC, entityTag);
             }
-            nbt.putLong(KEY_LEVEL, level);
-            nbt.putLong(KEY_TICK, tickCount);
-            nbt.put(KEY_ROWS, saveRows(registries));
-            nbt.putIntArray(KEY_DIR, directionState);
-            nbt.putBoolean(KEY_OUTPUT, outputEnabled);
-            nbt.put(KEY_SPECIAL, specialSlot.serializeNBT(registries));
+            output.putLong(KEY_LEVEL, level);
+            output.putLong(KEY_TICK, tickCount);
+            // 26.x：产物行改由 ValueOutput 列表托管，物品组件自动按当前注册表访问器编解码
+            Tool.writeRows(output, KEY_ROWS, toWeightedToolRows(), Tool.WeightedToolRow.CODEC);
+            output.putIntArray(KEY_DIR, directionState);
+            output.putBoolean(KEY_OUTPUT, outputEnabled);
+            output.putChild(KEY_SPECIAL, specialSlot);
         } catch (Throwable e) {
             log.error("MobFarmEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.loadAdditional(nbt, registries);
+    protected void loadAdditional(@Nonnull ValueInput input) {
+        super.loadAdditional(input);
         cachedEntity = null;
         try {
-            entityTag = nbt.contains(KEY_ENTITY_TAG, Tag.TAG_COMPOUND) ? nbt.getCompound(KEY_ENTITY_TAG) : null;
-            if (nbt.contains(KEY_LEVEL, Tag.TAG_LONG)) {
-                level = Tool.suit(nbt.getLong(KEY_LEVEL));
-            }
-            if (nbt.contains(KEY_TICK, Tag.TAG_LONG)) {
-                tickCount = Tool.suit(nbt.getLong(KEY_TICK));
-            }
-            if (nbt.contains(KEY_ROWS, Tag.TAG_LIST)) {
-                loadRows((ListTag) nbt.get(KEY_ROWS), registries);
-            }
-            if (nbt.contains(KEY_DIR)) {
-                int[] arr = nbt.getIntArray(KEY_DIR);
+            entityTag = input.read(KEY_ENTITY_TAG, CompoundTag.CODEC).orElse(null);
+            level = Tool.suit(input.getLongOr(KEY_LEVEL, level));
+            tickCount = Tool.suit(input.getLongOr(KEY_TICK, tickCount));
+            loadRows(Tool.readRows(input, KEY_ROWS, Tool.WeightedToolRow.CODEC));
+            int[] arr = input.getIntArray(KEY_DIR).orElse(null);
+            if (arr != null) {
                 for (int i = 0; i < Math.min(6, arr.length); i++) {
                     directionState[i] = Math.max(0, Math.min(getStateCount() - 1, arr[i]));
                 }
             }
-            if (nbt.contains(KEY_OUTPUT, Tag.TAG_BYTE)) {
-                outputEnabled = nbt.getBoolean(KEY_OUTPUT);
-            }
-            if (nbt.contains(KEY_SPECIAL, Tag.TAG_COMPOUND)) {
-                specialSlot.deserializeNBT(registries, nbt.getCompound(KEY_SPECIAL));
-            }
+            outputEnabled = input.getBooleanOr(KEY_OUTPUT, outputEnabled);
+            input.readChild(KEY_SPECIAL, specialSlot);
             // 放置了含收容生物但尚无产物表的方块时，首个服务端 tick 补建产物表
             boolean hasWeight = false;
             for (Row row : rows) {
@@ -883,36 +899,32 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
             }
             needRebuild = hasContained() && !hasWeight;
         } catch (Throwable e) {
-            log.error("MobFarmEntity.load error", e);
+            log.error("MobFarmEntity.loadAdditional error", e);
         }
     }
 
-    private ListTag saveRows(@Nonnull HolderLookup.Provider registries) {
-        ListTag list = new ListTag();
+    /** 内部可变行 → 持久化记录（权重在记录类型里是 int，写入前统一裁剪） */
+    @Nonnull
+    private List<Tool.WeightedToolRow> toWeightedToolRows() {
+        List<Tool.WeightedToolRow> list = new ArrayList<>(rows.size());
         for (Row row : rows) {
-            // 1.21：save 需要注册表访问器，且一律以返回值为准
-            CompoundTag c = (CompoundTag) new ItemStack(row.item, 1).save(registries, new CompoundTag());
-            c.putLong("Stock", row.stock);
-            c.putLong("Weight", row.weight);
-            c.putBoolean("Tool", row.fromTool);
-            list.add(c);
+            list.add(new Tool.WeightedToolRow(Tool.oneOf(new ItemStack(row.item)), row.stock, Tool.suitInt(row.weight), row.fromTool));
         }
         return list;
     }
 
-    private void loadRows(ListTag list, @Nonnull HolderLookup.Provider registries) {
+    private void loadRows(@Nonnull List<Tool.WeightedToolRow> list) {
         rows.clear();
-        for (int i = 0; i < list.size(); i++) {
+        for (Tool.WeightedToolRow record : list) {
             try {
-                CompoundTag c = list.getCompound(i);
-                ItemStack stack = ItemStack.parseOptional(registries, c);
-                if (stack.isEmpty()) {
+                ItemStack stack = record.item();
+                if (stack == null || stack.isEmpty()) {
                     continue;
                 }
                 Row row = new Row(stack.getItem(), 0);
-                row.stock = c.contains("Stock", Tag.TAG_LONG) ? Tool.suit(c.getLong("Stock")) : 0;
-                row.weight = c.contains("Weight", Tag.TAG_LONG) ? Tool.suit(c.getLong("Weight")) : 0;
-                row.fromTool = c.getBoolean("Tool");
+                row.stock = Tool.suit(record.count());
+                row.weight = Math.max(0, record.weight());
+                row.fromTool = record.tool();
                 rows.add(row);
             } catch (Throwable e) {
                 log.warn("MobFarmEntity.loadRows entry error", e);
@@ -922,6 +934,7 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
     }
 
     // ==================== 客户端同步 ====================
+    // 26.x：handleUpdateTag / onDataPacket 的覆写已删除，改由原版 loadWithComponents(ValueInput) 默认接管。
 
     @Override
     @Nonnull
@@ -930,25 +943,14 @@ public class MobFarmEntity extends BlockEntity implements MenuProvider {
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
-        this.loadAdditional(tag, registries);
-    }
-
-    @Override
     @Nonnull
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
-        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
-        this.loadAdditional(pkt.getTag(), registries);
-    }
-
     public void sendUpdatePacket() {
         Level level = getLevel();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }

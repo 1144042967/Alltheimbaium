@@ -2,21 +2,19 @@ package cn.sd.jrz.alltheimbaium.gui;
 
 import cn.sd.jrz.alltheimbaium.setup.SupplyData;
 import cn.sd.jrz.alltheimbaium.setup.SupplyRoll;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * ATI 补给箱 GUI（纯代码绘制，176 宽，无物品栏）。
@@ -27,10 +25,9 @@ import java.util.Optional;
  * 下方：物品槽（显示选中的物品）、兑换按钮（消耗 3 点给 1 件选中物品）、刷新按钮（消耗 1 点重新随机 10 件）。
  * 兑换/刷新后服务端按新状态重新随机；条件不足时按钮置灰不可点，原因在 tooltip 中按需分行显示。
  */
-@OnlyIn(Dist.CLIENT)
 public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> {
     /** GUI 背景贴图（占位图，可直接用 PS 修改替换） */
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/supply_crate_gui.png");
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath("alltheimbaium", "textures/gui/supply_crate_gui.png");
     private static final int IMAGE_W = 176;
     private static final int IMAGE_H = 150;
     // 两排物品按钮
@@ -51,7 +48,7 @@ public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> 
     private static final int REFRESH_W = 50;
     private static final int ACT_H = 16;
     /** GUI 顶部描述文字颜色（与物品名称一致的白色） */
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
     // 顶部“补给说明”帮助图标位置
     private static final int HELP_X = IMAGE_W - 18;
     private static final int HELP_Y = 18;
@@ -61,9 +58,8 @@ public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> 
     private ActionButton refreshButton;
 
     public SupplyCrateScreen(SupplyCrateMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        this.imageWidth = IMAGE_W;
-        this.imageHeight = IMAGE_H;
+        // 26.x：imageWidth/imageHeight 是 final 字段，尺寸经由超类构造器传入
+        super(menu, playerInventory, title, IMAGE_W, IMAGE_H);
     }
 
     @Override
@@ -98,27 +94,29 @@ public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> 
     }
 
     @Override
-    protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 26.x：背景贴图改在 extractBackground 里绘制（renderBg 已删除），先让父类画好暗化/模糊底
+        super.extractBackground(guiGraphics, mouseX, mouseY, partialTick);
         // 背景用贴图绘制（尺寸 = imageWidth × imageHeight），按钮等控件绘制在贴图之上
-        guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         // 界面文字统一带阴影，与按钮内的文字效果一致
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFFFFFFF, true);
-        guiGraphics.drawString(this.font,
+        guiGraphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFFFFFFF, true);
+        guiGraphics.text(this.font,
                 Component.translatable("screen.alltheimbaium.supply_crate.max_point", this.menu.getMax()),
                 10, 20, TEXT_COLOR, true);
-        guiGraphics.drawString(this.font,
+        guiGraphics.text(this.font,
                 Component.translatable("screen.alltheimbaium.supply_crate.used_point", this.menu.getUsed()),
                 10, 30, TEXT_COLOR, true);
         // 兑换列表自动刷新倒计时（到下一个真实小时）
-        guiGraphics.drawString(this.font,
+        guiGraphics.text(this.font,
                 Component.translatable("screen.alltheimbaium.supply_crate.refresh_countdown", countdownText()),
                 10, 40, TEXT_COLOR, true);
         // 右上角“补给说明”帮助图标（黄色 ?，悬停看来源/自动刷新说明）
-        guiGraphics.drawString(this.font, "?", HELP_X, HELP_Y, 0xFFFFD24D, true);
+        guiGraphics.text(this.font, "?", HELP_X, HELP_Y, 0xFFFFD24D, true);
     }
 
     /**
@@ -157,9 +155,8 @@ public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> 
     }
 
     @Override
-    public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.flush();
+    public void extractRenderState(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         // 刷新按钮状态（条件不足置灰不可点）
         boolean canRedeem = hasSelection() && this.menu.getRemaining() >= SupplyData.COST_REDEEM;
         boolean canRefresh = this.menu.getRemaining() >= SupplyData.COST_REFRESH;
@@ -171,21 +168,21 @@ public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> 
         drawSelectedSlot(guiGraphics);
         // 补给说明 tooltip
         if (isHoverHelp(mouseX, mouseY)) {
-            guiGraphics.renderTooltip(this.font, helpTooltip(), Optional.empty(), mouseX, mouseY);
+            guiGraphics.setComponentTooltipForNextFrame(this.font, helpTooltip(), mouseX, mouseY);
         }
         // 其余 tooltip
         for (ItemButton itemButton : this.itemButtons) {
             if (itemButton.isHovered()) {
-                guiGraphics.renderTooltip(this.font, itemButton.buildTooltip(), Optional.empty(), mouseX, mouseY);
+                guiGraphics.setComponentTooltipForNextFrame(this.font, itemButton.buildTooltip(), mouseX, mouseY);
             }
         }
         if (this.redeemButton.isHovered()) {
-            guiGraphics.renderTooltip(this.font, this.redeemButton.buildTooltip(), Optional.empty(), mouseX, mouseY);
+            guiGraphics.setComponentTooltipForNextFrame(this.font, this.redeemButton.buildTooltip(), mouseX, mouseY);
         }
         if (this.refreshButton.isHovered()) {
-            guiGraphics.renderTooltip(this.font, this.refreshButton.buildTooltip(), Optional.empty(), mouseX, mouseY);
+            guiGraphics.setComponentTooltipForNextFrame(this.font, this.refreshButton.buildTooltip(), mouseX, mouseY);
         }
-        super.renderTooltip(guiGraphics, mouseX, mouseY);
+        super.extractTooltip(guiGraphics, mouseX, mouseY);
     }
 
     private boolean hasSelection() {
@@ -196,7 +193,7 @@ public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> 
     /**
      * 绘制底部选中物品槽（槽底 + 选中的物品图标）
      */
-    private void drawSelectedSlot(GuiGraphics guiGraphics) {
+    private void drawSelectedSlot(GuiGraphicsExtractor guiGraphics) {
         int x = this.leftPos + SLOT_X;
         int y = this.topPos + SLOT_Y;
         guiGraphics.fill(x - 1, y - 1, x + SLOT_SIZE + 1, y, 0xFF000000);
@@ -208,12 +205,12 @@ public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> 
         if (selected >= 0 && selected < 10) {
             ItemStack stack = this.menu.getRolledStack(selected);
             if (!stack.isEmpty()) {
-                guiGraphics.renderItem(stack, x + 1, y + 1);
+                guiGraphics.item(stack, x + 1, y + 1);
             }
         }
     }
 
-    private static void drawBorder(GuiGraphics guiGraphics, int x, int y, int w, int h, int border) {
+    private static void drawBorder(GuiGraphicsExtractor guiGraphics, int x, int y, int w, int h, int border) {
         guiGraphics.fill(x - 1, y - 1, x + w + 1, y, border);
         guiGraphics.fill(x - 1, y + h, x + w + 1, y + h + 1, border);
         guiGraphics.fill(x - 1, y, x, y + h, border);
@@ -237,7 +234,7 @@ public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> 
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             ItemStack stack = SupplyCrateScreen.this.menu.getRolledStack(this.index);
             int color = stack.isEmpty() ? 0xFF333333 : (this.selected ? 0xFF00AA00 : 0xFF3A3A6B);
             guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), color);
@@ -252,7 +249,7 @@ public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> 
             drawBorder(guiGraphics, this.getX(), this.getY(), this.getWidth(), this.getHeight(), border);
             if (!stack.isEmpty()) {
                 int off = (ITEM_BOX - 16) / 2;
-                guiGraphics.renderItem(stack, this.getX() + off, this.getY() + off);
+                guiGraphics.item(stack, this.getX() + off, this.getY() + off);
             }
         }
 
@@ -294,12 +291,12 @@ public class SupplyCrateScreen extends AbstractContainerScreen<SupplyCrateMenu> 
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             int color = this.canUse ? 0xFF00AA00 : 0xFF555555;
             guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), color);
             int border = (this.isHovered() && this.canUse) ? 0xFFFFFF00 : 0xFF000000;
             drawBorder(guiGraphics, this.getX(), this.getY(), this.getWidth(), this.getHeight(), border);
-            guiGraphics.drawCenteredString(SupplyCrateScreen.this.font, this.getMessage(),
+            guiGraphics.centeredText(SupplyCrateScreen.this.font, this.getMessage(),
                     this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
         }
 

@@ -1,8 +1,6 @@
 {
   "type": "mekanism:crushing",
-  "input": {
-    "item": "minecraft:cobbled_deepslate"
-  },
+  "input": "minecraft:cobbled_deepslate",
   "output": {
     "id": "exdeorum:crushed_deepslate"
   },

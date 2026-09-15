@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "tag": "c:ores/netherite_scrap"
-    },
+    "#c:ores/netherite_scrap",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 2000

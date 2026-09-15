@@ -1,7 +1,7 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -32,13 +32,13 @@ public final class TransmuteCatalog {
     public static final int INGREDIENT_COUNT = INPUT_SLOTS;
 
     /** 配方条目：输入材料的注册名 → 产物注册名 */
-    private record Entry(ResourceLocation input, ResourceLocation output) {
+    private record Entry(Identifier input, Identifier output) {
     }
 
     /** 固定配方表，自上而下即 tooltip 中的展示顺序 */
     private static final List<Entry> ENTRIES = List.of(
-            new Entry(ResourceLocation.fromNamespaceAndPath("mekanism", "ultimate_chemical_tank"),
-                    ResourceLocation.fromNamespaceAndPath("mekanism", "creative_chemical_tank"))
+            new Entry(Identifier.fromNamespaceAndPath("mekanism", "ultimate_chemical_tank"),
+                    Identifier.fromNamespaceAndPath("mekanism", "creative_chemical_tank"))
     );
 
     /** 已解析的配方（输入物品 + 产物模板）；首次使用时构建，之后不再重算 */

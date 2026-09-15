@@ -1,7 +1,7 @@
 package cn.sd.jrz.alltheimbaium.block;
 
 import cn.sd.jrz.alltheimbaium.setup.Tool;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import cn.sd.jrz.alltheimbaium.entity.LiquidFountainEntity;
 import cn.sd.jrz.alltheimbaium.setup.Config;
 import net.minecraft.core.BlockPos;
@@ -21,10 +21,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.fluids.FluidActionResult;
-import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,7 +84,7 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> type) {
         return (l, p, s, tile) -> {
             try {
-                if (!l.isClientSide && tile instanceof LiquidFountainEntity generator) {
+                if (!l.isClientSide() && tile instanceof LiquidFountainEntity generator) {
                     generator.serverTick();
                 }
             } catch (Throwable e) {
@@ -117,7 +116,7 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
     @SuppressWarnings("deprecation")
     private InteractionResult doUse(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         try {
-            if (level.isClientSide) {
+            if (level.isClientSide()) {
                 return InteractionResult.SUCCESS;
             }
             LiquidFountainEntity generator = (LiquidFountainEntity) level.getBlockEntity(pos);
@@ -125,19 +124,12 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
                 return InteractionResult.FAIL;
             }
             ItemStack held = player.getItemInHand(handIn);
-            // 1.21：本机自己的流体能力直接从实体取（无 LazyOptional，null 面即"不区分方向"）
-            IFluidHandler machine = generator.getFluidHandler(null);
+            // 26.x：流体能力改为 ResourceHandler<FluidResource>（旧的 IFluidHandler 已标 forRemoval，
+            // 且 NeoForge 只提供"新→旧"的适配器），本机自己的流体能力仍直接从实体取（null 面即"不区分方向"）
+            ResourceHandler<FluidResource> machine = generator.getFluidHandler(null);
             if (machine != null && !held.isEmpty()) {
-                // 空桶/空容器：从机器装取液体
-                FluidActionResult filled = FluidUtil.tryFillContainer(held, machine, 1000, player, true);
-                if (filled.isSuccess()) {
-                    player.setItemInHand(handIn, filled.getResult());
-                    return InteractionResult.SUCCESS;
-                }
-                // 带液容器/桶：把液体倒入机器
-                FluidActionResult emptied = FluidUtil.tryEmptyContainer(held, machine, 1000, player, true);
-                if (emptied.isSuccess()) {
-                    player.setItemInHand(handIn, emptied.getResult());
+                // 26.x：transfer 版 FluidUtil 把"先装取、再倒入"两步合并，并自行回写玩家手上的容器
+                if (FluidUtil.interactWithFluidHandler(player, handIn, pos, machine)) {
                     return InteractionResult.SUCCESS;
                 }
             }
@@ -162,15 +154,17 @@ public class LiquidFountainBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected @Nonnull ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
+    protected @Nonnull InteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand handIn, @Nonnull BlockHitResult hit) {
         InteractionResult result = doUse(state, level, pos, player, handIn, hit);
-        if (result == InteractionResult.SUCCESS) {
-            return ItemInteractionResult.SUCCESS;
+        // 26.x：InteractionResult 是 sealed 接口，判定改用 instanceof；
+        // 旧的 ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION 对应 TRY_WITH_EMPTY_HAND（表示"再试一次空手交互"）
+        if (result instanceof InteractionResult.Success) {
+            return InteractionResult.SUCCESS;
         }
-        if (result == InteractionResult.FAIL) {
-            return ItemInteractionResult.FAIL;
+        if (result instanceof InteractionResult.Fail) {
+            return InteractionResult.FAIL;
         }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
 }

@@ -9,9 +9,7 @@
   "category": "blocks",
   "cookingtime": 200,
   "experience": 0.1,
-  "ingredient": {
-    "item": "allthecompressed:sand_9x"
-  },
+  "ingredient": "allthecompressed:sand_9x",
   "result": {
     "id": "allthecompressed:glass_9x"
   }

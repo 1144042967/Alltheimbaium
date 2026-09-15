@@ -7,6 +7,11 @@
   1) 连通时应抽到铁锭
   2) 把导体换成石头后应抽不到
   3) 恢复导体后应重新抽到
+
+前置条件（缺一不可，否则整轮都判「抽不到」）：
+  - server.properties 开 enable-rcon / rcon.password=ati / rcon.port=25575；
+  - server.properties 设 pause-when-empty-seconds=0 —— 26.x 起服务端在无玩家时会自动暂停，
+    整局不 tick，漏斗与机器都不工作（表现为所有用例全失败，与代码无关）。
 """
 import socket
 import struct
@@ -71,7 +76,8 @@ def setup(r):
         "setblock 0 100 1 alltheimbaium:farmland",
         "setblock 0 100 2 alltheimbaium:storage_fountain",
         # 给源机器注入 2 件存量 + 每 tick 5 件的产量，无需 GUI 标记
-        'data merge block 0 100 2 {save_stick:[{id:"minecraft:iron_ingot",Count:1b,Long_Count:2000L}],output:5000L,outputEnabled:0b}',
+        # 26.x 的产物行是 Tool.StockRow：{"item":{"id":"..."},"count":N}
+        'data merge block 0 100 2 {save_stick:[{item:{id:"minecraft:iron_ingot"},count:2000}],output:5000L,outputEnabled:0b}',
     ]:
         print("   >", c, "->", r.cmd(c))
 
@@ -122,8 +128,8 @@ def main():
         r.cmd(c)
     time.sleep(1)
     r.cmd("setblock 0 100 1 alltheimbaium:instant_furnace")
-    r.cmd('data merge block 0 100 1 {input:[{id:"minecraft:iron_ingot",Count:1b,Stock:5000L}],'
-          'output:[{id:"minecraft:iron_ingot",Count:1b,Stock:5000L}],energy:1000000}')
+    r.cmd('data merge block 0 100 1 {input:[{item:{id:"minecraft:iron_ingot"},count:5000}],'
+          'output:[{item:{id:"minecraft:iron_ingot"},count:5000}],energy:1000000}')
     time.sleep(3)
     r.cmd("data merge block 0 99 0 {Items:[]}")
     time.sleep(6)
@@ -133,7 +139,7 @@ def main():
 
     print("\n[用例5] 取出接口 → 零刻熔炉 → 存储方块制造机，熔炉应能传导，仍应抽到")
     r.cmd("setblock 0 100 2 alltheimbaium:storage_fountain")
-    r.cmd('data merge block 0 100 2 {save_stick:[{id:"minecraft:iron_ingot",Count:1b,Long_Count:2000L}],output:5000L,outputEnabled:0b}')
+    r.cmd('data merge block 0 100 2 {save_stick:[{item:{id:"minecraft:iron_ingot"},count:2000}],output:5000L,outputEnabled:0b}')
     time.sleep(3)
     r.cmd("data merge block 0 99 0 {Items:[]}")
     time.sleep(6)

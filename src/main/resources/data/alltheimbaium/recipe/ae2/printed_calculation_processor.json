@@ -11,9 +11,7 @@
   ],
   "type": "extendedae:circuit_cutter",
   "input": {
-    "ingredient": {
-      "item": "ae2:chipped_budding_quartz"
-    }
+    "ingredient": "ae2:chipped_budding_quartz"
   },
   "output": {
     "count": 64,

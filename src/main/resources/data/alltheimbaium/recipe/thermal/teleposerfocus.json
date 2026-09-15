@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "tag": "c:ender_pearls"
-    },
+    "#c:ender_pearls",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 2000

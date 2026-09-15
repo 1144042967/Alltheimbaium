@@ -2,12 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "group": "mystical_agriculture_growth_accelerator",
   "key": {
-    "#": {
-      "item": "mysticalagriculture:tertium_essence"
-    },
-    "S": {
-      "item": "mysticalagriculture:tertium_growth_accelerator"
-    }
+    "#": "mysticalagriculture:tertium_essence",
+    "S": "mysticalagriculture:tertium_growth_accelerator"
   },
   "pattern": [
     "# #",

@@ -7,9 +7,7 @@
   ],
   "type": "extendedae:circuit_cutter",
   "input": {
-    "ingredient": {
-      "item": "extendedae:entro_budding_half"
-    }
+    "ingredient": "extendedae:entro_budding_half"
   },
   "output": {
     "count": 64,

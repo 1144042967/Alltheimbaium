@@ -7,11 +7,11 @@ import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.gui.widgets.IRecipeExtrasBuilder;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
-import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
+import mezz.jei.api.recipe.types.IRecipeType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
@@ -32,19 +32,19 @@ import java.util.List;
  *         按自然顺序（从左到右、从上到下）排列，不做居中也不做额外文字描述。</li>
  * </ul>
  * <p>
- * <b>三个跨版本坑</b>（详见 CLAUDE.md 的 JEI 小节）：必须显式给出 {@code getBackground()}；
- * 说明文字不能用 {@code extras.addText}（参数含义在 15.20 / 15.59 之间是反的）；
- * 产物格不能用 {@code setOutputSlotBackground}（那是 26×26 的贴图，与 18px 网格不兼容）。
+ * <b>26.x 渲染迁移</b>：{@code GuiGraphics} 已删除，JEI 29.x 的 {@code draw(...)} 收到的是
+ * {@code GuiGraphicsExtractor}，文字改用 {@code extractor.text(font, 组件, x, y, 颜色, 阴影)}；
+ * {@code IRecipeCategory#getBackground()} 也已删除，卡片范围完全由 {@link #getWidth()} / {@link #getHeight()} 决定。
+ * 说明文字仍然不能用 {@code extras.addText}（参数含义在 JEI 各小版本之间是反的），一律在 {@code draw} 里自己画。
  */
 public class MarkerRecipeCategory implements IRecipeCategory<MarkerRecipe> {
     private static final Logger log = LoggerFactory.getLogger(MarkerRecipeCategory.class);
-    /** 说明文字颜色：JEI 卡片底衬偏亮，用原版深灰 */
+    /** 说明文字颜色：JEI 卡片底衬偏亮，用原版深灰（26.x 必须是带 alpha 的 ARGB） */
     private static final int NOTE_COLOR = 0xFF404040;
 
-    private final RecipeType<MarkerRecipe> recipeType;
+    private final IRecipeType<MarkerRecipe> recipeType;
     private final Component title;
     private final IDrawable icon;
-    private final IDrawable background;
     private final JeiLayout layout;
 
     private final int bodyH;
@@ -59,7 +59,7 @@ public class MarkerRecipeCategory implements IRecipeCategory<MarkerRecipe> {
     private final int width;
     private final int height;
 
-    public MarkerRecipeCategory(@Nonnull IGuiHelper guiHelper, @Nonnull RecipeType<MarkerRecipe> recipeType,
+    public MarkerRecipeCategory(@Nonnull IGuiHelper guiHelper, @Nonnull IRecipeType<MarkerRecipe> recipeType,
                                 @Nonnull Component title, @Nonnull ItemStack icon, @Nonnull JeiLayout layout) {
         this.recipeType = recipeType;
         this.title = title;
@@ -76,12 +76,11 @@ public class MarkerRecipeCategory implements IRecipeCategory<MarkerRecipe> {
         this.noteY = gridY + bodyH + 4;
         this.width = gridX + layout.cols() * JeiLayout.SLOT + JeiLayout.PAD;
         this.height = noteY + (layout.hasNote() ? JeiLayout.NOTE_LINES * JeiLayout.LINE_H : 0) + JeiLayout.PAD;
-        this.background = guiHelper.createBlankDrawable(width, height);
     }
 
     @Override
     @Nonnull
-    public RecipeType<MarkerRecipe> getRecipeType() {
+    public IRecipeType<MarkerRecipe> getRecipeType() {
         return recipeType;
     }
 
@@ -95,19 +94,6 @@ public class MarkerRecipeCategory implements IRecipeCategory<MarkerRecipe> {
     @Nonnull
     public IDrawable getIcon() {
         return icon;
-    }
-
-    /**
-     * 显式给出卡片区域（空白 drawable，尺寸即布局尺寸）。
-     * <p>
-     * 该方法在 JEI 15.20 起被标记为待删除，但**老版本仍然依赖它来确定配方卡片的范围**：
-     * 不覆写时不同小版本画出来的底衬与实际布局不一致（实测 15.20 会把产物格画到底衬外面）。
-     */
-    @Override
-    @Nonnull
-    @SuppressWarnings("removal")
-    public IDrawable getBackground() {
-        return background;
     }
 
     @Override
@@ -132,7 +118,7 @@ public class MarkerRecipeCategory implements IRecipeCategory<MarkerRecipe> {
             int startY = gridY + (bodyH - inputs.size() * JeiLayout.SLOT) / 2;   // 输入格整组上下居中
             for (int i = 0; i < inputs.size(); i++) {
                 builder.addInputSlot(inputX, startY + i * JeiLayout.SLOT)
-                        .addItemStack(inputs.get(i))
+                        .add(inputs.get(i))
                         .setStandardSlotBackground();
             }
         }
@@ -146,7 +132,7 @@ public class MarkerRecipeCategory implements IRecipeCategory<MarkerRecipe> {
                     .setStandardSlotBackground();
             if (i < products.size()) {
                 MarkerRecipe.MarkerProduct product = products.get(i);
-                slot.addItemStack(product.stack());
+                slot.add(product.stack());
                 Component tooltip = product.tooltip();
                 if (tooltip != null) {
                     slot.addRichTooltipCallback((view, tip) -> tip.add(tooltip));
@@ -169,8 +155,8 @@ public class MarkerRecipeCategory implements IRecipeCategory<MarkerRecipe> {
     }
 
     @Override
-    public void draw(@Nonnull MarkerRecipe recipe, @Nonnull IRecipeSlotsView slotsView, @Nonnull GuiGraphics guiGraphics,
-                     double mouseX, double mouseY) {
+    public void draw(@Nonnull MarkerRecipe recipe, @Nonnull IRecipeSlotsView slotsView,
+                     @Nonnull GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
         if (!layout.hasNote()) {
             return;
         }
@@ -189,7 +175,7 @@ public class MarkerRecipeCategory implements IRecipeCategory<MarkerRecipe> {
             for (int i = 0; i < lines.size(); i++) {
                 // 说明文字整行居中
                 int x = (width - font.width(lines.get(i))) / 2;
-                guiGraphics.drawString(font, lines.get(i), Math.max(JeiLayout.PAD, x),
+                guiGraphics.text(font, lines.get(i), Math.max(JeiLayout.PAD, x),
                         noteY + i * JeiLayout.LINE_H, NOTE_COLOR, false);
             }
         } catch (Throwable e) {

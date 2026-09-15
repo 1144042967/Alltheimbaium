@@ -1,23 +1,27 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
+import static cn.sd.jrz.alltheimbaium.setup.Registration.EXTRACTION_INTERFACE_ENTITY;
 import cn.sd.jrz.alltheimbaium.Alltheimbaium;
 import cn.sd.jrz.alltheimbaium.connection.ExtractionInterfaceConnection;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.Capabilities;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +36,7 @@ import java.util.Set;
 
 /**
  * ATI 取出接口实体：向任意方向暴露 {@link ExtractionInterfaceConnection}
- * （只读 IItemHandler + IFluidHandler），方向无关。
+ * （26.x 的只读 {@code ResourceHandler<ItemResource>} + {@code ResourceHandler<FluidResource>}），方向无关。
  * <p>
  * 聚合范围不是"相邻六面"，而是从本方块出发、沿<b>本模组与联动模组的方块</b>连通搜索到的全部产出机器：
  * <ul>
@@ -63,12 +67,25 @@ public class ExtractionInterfaceEntity extends BlockEntity  {
     private static final String WATER_WHEEL_MOTOR = "water_wheel_motor";
 
 
-    /** 对外只读的物品 / 流体能力（方向无关，同一个实例）。NeoForge 由 RegisterCapabilitiesEvent 拉取。 */
+    /** 对外只读的物品 / 流体能力（方向无关）。NeoForge 由 RegisterCapabilitiesEvent 拉取。 */
     private final ExtractionInterfaceConnection capability = new ExtractionInterfaceConnection(this);
 
+    /**
+     * 对外只读物品能力（方向无关）。
+     * <p>
+     * 26.x：{@link Capabilities.Item#BLOCK} 要求 {@code ResourceHandler<ItemResource>}；
+     * 物品侧与流体侧的类型参数不同，同一个类没法同时实现两份 {@code ResourceHandler}，
+     * 因此聚合逻辑由 {@link ExtractionInterfaceConnection} 内部按物品 / 流体拆成两个视图暴露。
+     */
     @Nonnull
-    public ExtractionInterfaceConnection getHandler(@Nullable Direction side) {
-        return capability;
+    public ResourceHandler<ItemResource> getItemHandler(@Nullable Direction side) {
+        return capability.getItemHandler();
+    }
+
+    /** 对外只读流体能力（方向无关），拆视图的原因同上 */
+    @Nonnull
+    public ResourceHandler<FluidResource> getFluidHandler(@Nullable Direction side) {
+        return capability.getFluidHandler();
     }
 
     /** 连通搜索得到的产出机器位置；只读视图，服务端维护 */
@@ -81,7 +98,7 @@ public class ExtractionInterfaceEntity extends BlockEntity  {
     private boolean truncated;
 
     public ExtractionInterfaceEntity(BlockPos pos, BlockState state) {
-        super(Registration.EXTRACTION_INTERFACE_ENTITY.get(), pos, state);
+        super(EXTRACTION_INTERFACE_ENTITY.get(), pos, state);
     }
 
     // ==================== 连通搜索 ====================
@@ -163,7 +180,7 @@ public class ExtractionInterfaceEntity extends BlockEntity  {
      * 就能传导
      */
     private static boolean isConductor(@Nonnull Level level, @Nonnull BlockPos pos) {
-        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock());
+        Identifier id = BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock());
         if (id == null) {
             return false;
         }
@@ -195,7 +212,7 @@ public class ExtractionInterfaceEntity extends BlockEntity  {
      * 因此它虽然在此列，却抽不出任何物品与流体。
      */
     public static boolean isLinkedSource(@Nonnull BlockEntity be) {
-        ResourceLocation id = BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType());
+        Identifier id = BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType());
         if (id == null || !AUTORESOURCE_MODID.equals(id.getNamespace())) {
             return false;
         }
@@ -208,18 +225,19 @@ public class ExtractionInterfaceEntity extends BlockEntity  {
     // ==================== NBT（无持久字段） ====================
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.saveAdditional(nbt, registries);
+    protected void saveAdditional(@Nonnull ValueOutput output) {
+        super.saveAdditional(output);
     }
 
     @Override
-    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.loadAdditional(nbt, registries);
+    protected void loadAdditional(@Nonnull ValueInput input) {
+        super.loadAdditional(input);
         // 重载后连通范围需要重算
         scanned = false;
     }
 
     // ==================== 客户端同步 ====================
+    // 26.x：handleUpdateTag / onDataPacket 的覆写已删除，改由原版 loadWithComponents(ValueInput) 默认接管。
 
     @Override
     @Nonnull
@@ -228,19 +246,8 @@ public class ExtractionInterfaceEntity extends BlockEntity  {
     }
 
     @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
-        this.loadAdditional(tag, registries);
-    }
-
-    @Override
     @Nonnull
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
-        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
-        this.loadAdditional(pkt.getTag(), registries);
     }
 }

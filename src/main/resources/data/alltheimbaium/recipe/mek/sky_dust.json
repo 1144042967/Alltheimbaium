@@ -1,8 +1,6 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "item_input": {
-    "item": "ae2:certus_quartz_dust"
-  },
+  "item_input": "ae2:certus_quartz_dust",
   "chemical_input": {
     "amount": 5,
     "tag": "mekanism:carbon"

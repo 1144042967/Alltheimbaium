@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "tag": "c:storage_blocks/redstone"
-    },
+    "#c:storage_blocks/redstone",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 5000

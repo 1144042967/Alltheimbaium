@@ -1,23 +1,22 @@
 package cn.sd.jrz.alltheimbaium.entity;
 
+import static cn.sd.jrz.alltheimbaium.setup.Registration.LIQUID_FOUNTAIN_ENTITY;
+import static cn.sd.jrz.alltheimbaium.setup.Registration.LIQUID_FOUNTAIN_ITEM;
 import cn.sd.jrz.alltheimbaium.block.LiquidFountainBlock;
 import cn.sd.jrz.alltheimbaium.connection.LiquidFountainConnection;
 import cn.sd.jrz.alltheimbaium.gui.LiquidFountainMenu;
 import cn.sd.jrz.alltheimbaium.item.Tip;
-import cn.sd.jrz.alltheimbaium.setup.Registration;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
@@ -31,13 +30,20 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
-import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,56 +64,119 @@ import javax.annotation.Nullable;
 public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
     private static final Logger log = LoggerFactory.getLogger(LiquidFountainEntity.class);
 
-    /** 对外流体能力（方向无关） */
+    /** 对外流体能力（方向无关）。26.x 的能力类型是 {@code ResourceHandler<FluidResource>}，实现类见 LiquidFountainConnection */
     private final LiquidFountainConnection fluidHandler = new LiquidFountainConnection(this);
 
     @Nonnull
-    public LiquidFountainConnection getFluidHandler(@Nullable Direction side) {
+    public ResourceHandler<FluidResource> getFluidHandler(@Nullable Direction side) {
         return fluidHandler;
     }
 
     /**
-     * 物品管道能力：+ 槽可插入、- 槽可抽取，保证管道单向流动。
-     * NeoForge 不再实现 ICapabilityProvider，由 {@code Registration.registerCapabilities} 拉取。
+     * 物品管道能力：+ 槽可插入、- 槽可抽取，保证管道单向流动（方向无关）。
+     * NeoForge 不再实现 ICapabilityProvider，由 {@code registerCapabilities} 拉取。
+     * <p>
+     * 26.x：能力类型改成 {@code ResourceHandler<ItemResource>}，改动在事务日志里记录，回滚时恢复两个槽位。
      */
-    private final IItemHandler itemHandler = new IItemHandler() {
+    private final SlotItemHandler itemHandler = new SlotItemHandler();
+
+    @Nonnull
+    public ResourceHandler<ItemResource> getItemHandler(@Nullable Direction side) {
+        return itemHandler;
+    }
+
+    /** 两个槽位（0 = + 槽可插入，1 = - 槽可抽取）的新传输 API 视图 */
+    private final class SlotItemHandler extends SnapshotJournal<ItemStack[]> implements ResourceHandler<ItemResource> {
+
+        @Nonnull
+        private ItemStack stackAt(int index) {
+            if (index == 0) {
+                return inputSlot.getStackInSlot(0);
+            }
+            return index == 1 ? outputSlot.getStackInSlot(0) : ItemStack.EMPTY;
+        }
+
         @Override
-        public int getSlots() {
+        public int size() {
             return 2;
         }
 
         @Override
         @Nonnull
-        public ItemStack getStackInSlot(int slot) {
-            return slot == 0 ? inputSlot.getStackInSlot(0) : outputSlot.getStackInSlot(0);
+        public ItemResource getResource(int index) {
+            ItemStack current = stackAt(index);
+            return current.isEmpty() ? ItemResource.EMPTY : ItemResource.of(current);
         }
 
         @Override
-        @Nonnull
-        public ItemStack insertItem(int slot, @Nonnull ItemStack stack, boolean simulate) {
-            return slot == 0 ? inputSlot.insertItem(0, stack, simulate) : stack;
+        public long getAmountAsLong(int index) {
+            return stackAt(index).getCount();
         }
 
         @Override
-        @Nonnull
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            return slot == 1 ? outputSlot.extractItem(0, amount, simulate) : ItemStack.EMPTY;
+        public long getCapacityAsLong(int index, @Nonnull ItemResource resource) {
+            if (index != 0) {
+                return 1;
+            }
+            return resource.isEmpty() ? Integer.MAX_VALUE : resource.getMaxStackSize();
         }
 
         @Override
-        public int getSlotLimit(int slot) {
-            return slot == 0 ? inputSlot.getSlotLimit(0) : outputSlot.getSlotLimit(0);
+        public boolean isValid(int index, @Nonnull ItemResource resource) {
+            return index == 0 && inputSlot.isItemValid(0, resource.toStack(1));
         }
 
         @Override
-        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            return slot == 0 && inputSlot.isItemValid(0, stack);
+        public int insert(int index, @Nonnull ItemResource resource, int amount, @Nonnull TransactionContext transaction) {
+            if (index != 0 || amount <= 0) {
+                return 0;
+            }
+            ItemStack current = stackAt(0);
+            if ((!current.isEmpty() && !resource.matches(current)) || !isValid(0, resource)) {
+                return 0;
+            }
+            int existing = current.isEmpty() ? 0 : current.getCount();
+            int inserted = (int) Math.min(amount, getCapacityAsLong(0, resource) - existing);
+            if (inserted <= 0) {
+                return 0;
+            }
+            updateSnapshots(transaction);
+            inputSlot.setStackInSlot(0, current.isEmpty()
+                    ? resource.toStack(inserted)
+                    : current.copyWithCount(existing + inserted));
+            return inserted;
         }
-    };
 
-    @Nonnull
-    public IItemHandler getItemHandler(@Nullable Direction side) {
-        return itemHandler;
+        @Override
+        public int extract(int index, @Nonnull ItemResource resource, int amount, @Nonnull TransactionContext transaction) {
+            if (index != 1 || amount <= 0) {
+                return 0;
+            }
+            ItemStack current = stackAt(1);
+            if (!resource.matches(current)) {
+                return 0;
+            }
+            int extracted = Math.min(amount, current.getCount());
+            if (extracted <= 0) {
+                return 0;
+            }
+            updateSnapshots(transaction);
+            outputSlot.setStackInSlot(0, extracted >= current.getCount()
+                    ? ItemStack.EMPTY
+                    : current.copyWithCount(current.getCount() - extracted));
+            return extracted;
+        }
+
+        @Override
+        protected ItemStack[] createSnapshot() {
+            return new ItemStack[]{inputSlot.getStackInSlot(0).copy(), outputSlot.getStackInSlot(0).copy()};
+        }
+
+        @Override
+        protected void revertToSnapshot(ItemStack[] snapshot) {
+            inputSlot.setStackInSlot(0, snapshot[0]);
+            outputSlot.setStackInSlot(0, snapshot[1]);
+        }
     }
 
     /**
@@ -119,22 +188,22 @@ public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
     public final ItemStackHandler inputSlot = new ItemStackHandler(1) {
         @Override
         public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            // 空桶（vanilla 桶无 FLUID_HANDLER_ITEM 能力，需特判）
+            // 空桶（vanilla 桶无流体物品能力，需特判）
             if (stack.is(Items.BUCKET)) {
                 return true;
             }
             // 带液容器：机器为空或容器内流体与机器同种才接受
-            // 1.21.1：ItemStack 的能力查询改走 FluidUtil.getFluidHandler（返回可空），不再有 resolve()/orElse()
-            IFluidHandlerItem handler = FluidUtil.getFluidHandler(stack).orElse(null);
+            // 26.x：物品的流体能力改走 ItemAccess（旧 IFluidHandlerItem 已标 forRemoval 且无新→旧适配器）
+            ResourceHandler<FluidResource> handler = ItemAccess.forStack(stack).getCapability(Capabilities.Fluid.ITEM);
             if (handler == null) {
                 return false;
             }
-            for (int tank = 0; tank < handler.getTanks(); tank++) {
-                FluidStack fluid = handler.getFluidInTank(tank);
-                if (fluid.isEmpty()) {
+            for (int tank = 0; tank < handler.size(); tank++) {
+                FluidResource resource = handler.getResource(tank);
+                if (resource.isEmpty()) {
                     return true;
                 }
-                return getStack().isEmpty() || FluidStack.isSameFluidSameComponents(fluid, getStack());
+                return getStack().isEmpty() || resource.matches(getStack());
             }
             return false;
         }
@@ -195,7 +264,7 @@ public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
     private static final String[] TRANSFER_KEYS = {"transferDown", "transferUp", "transferNorth", "transferSouth", "transferWest", "transferEast"};
 
     public LiquidFountainEntity(BlockPos pos, BlockState state) {
-        super(Registration.LIQUID_FOUNTAIN_ENTITY.get(), pos, state);
+        super(LIQUID_FOUNTAIN_ENTITY.get(), pos, state);
     }
 
 
@@ -204,7 +273,7 @@ public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
      */
     public void serverTick() {
         Level level = getLevel();
-        if (level == null || level.isClientSide) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         try {
@@ -301,26 +370,45 @@ public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
             }
             return;
         }
-        // 带 FLUID_HANDLER_ITEM 能力的容器
-        // 1.21.1：同上，改成可空获取 + if 块（原来的 lambda 会把 handler 捕获在外层作用域之外）
-        IFluidHandlerItem handler = FluidUtil.getFluidHandler(input).orElse(null);
+        // 带流体物品能力的容器
+        // 26.x：改走 ItemAccess.forStack（直接就地改写传入的那份栈），能力类型是 ResourceHandler<FluidResource>，
+        // 读写都要包在事务里，成功才 commit
+        ItemStack container = input.copy();
+        container.setCount(1);
+        ResourceHandler<FluidResource> handler = ItemAccess.forStack(container).getCapability(Capabilities.Fluid.ITEM);
         if (handler != null) {
             boolean changed = false;
-            FluidStack inTank = handler.getTanks() > 0 ? handler.getFluidInTank(0) : FluidStack.EMPTY;
-            if (!inTank.isEmpty()) {
+            FluidResource contained = handler.size() > 0 ? handler.getResource(0) : FluidResource.EMPTY;
+            if (!contained.isEmpty()) {
                 // 带液容器：把液体输入机器（机器为空或同种且未无限）
-                if (!isInfinity() && (stack == FluidStack.EMPTY || FluidStack.isSameFluidSameComponents(inTank, stack))) {
-                    int accepted = fillMachine(inTank.copy());
+                if (!isInfinity() && (stack == FluidStack.EMPTY || contained.matches(stack))) {
+                    int available = Tool.suitInt(handler.getAmountAsLong(0));
+                    int accepted = fillMachineLimit(contained, available);
                     if (accepted > 0) {
-                        handler.drain(accepted, IFluidHandler.FluidAction.EXECUTE);
-                        changed = true;
+                        int extracted = 0;
+                        try (Transaction tx = Transaction.open(null)) {
+                            extracted = handler.extract(0, contained, accepted, tx);
+                            if (extracted > 0) {
+                                tx.commit();
+                            }
+                        }
+                        if (extracted > 0) {
+                            addFluid(contained, extracted);
+                            changed = true;
+                        }
                     }
                 }
             } else if (stack != FluidStack.EMPTY) {
                 // 空容器：从机器装液体（无限时不消耗机器存量）
-                int maxFill = isInfinity() ? Integer.MAX_VALUE : (int) Math.min(Integer.MAX_VALUE, (long) stack.getAmount());
+                int maxFill = isInfinity() ? Integer.MAX_VALUE : Tool.suitInt(stack.getAmount());
                 if (maxFill > 0) {
-                    int filled = handler.fill(stack.copy(), IFluidHandler.FluidAction.EXECUTE);
+                    int filled = 0;
+                    try (Transaction tx = Transaction.open(null)) {
+                        filled = handler.insert(0, FluidResource.of(stack.getFluid()), maxFill, tx);
+                        if (filled > 0) {
+                            tx.commit();
+                        }
+                    }
                     if (filled > 0) {
                         if (!isInfinity()) {
                             stack.shrink(filled);
@@ -333,12 +421,9 @@ public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
                 }
             }
             // 操作完毕 → 容器移到 - 槽（单件处理，避免共享 NBT 的组造成输出超限）
+            // ItemAccess.forStack 直接就地改写传入的那份栈，container 就是处理后的容器
             if (changed) {
-                ItemStack result = handler.getContainer();
-                if (result.isEmpty()) {
-                    result = input.copy();
-                }
-                result = result.copy();
+                ItemStack result = container.copy();
                 result.setCount(1);
                 if (canInsertOutput(result)) {
                     insertOutput(result);
@@ -350,25 +435,31 @@ public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
     }
 
     /**
-     * 把流体输入机器，返回接受量（类型不匹配或已无限返回 0）
+     * 机器还能接收多少该流体（类型不匹配或已无限返回 0），只计算不写入
      */
-    private int fillMachine(FluidStack fs) {
-        if (fs.isEmpty() || isInfinity()) {
+    private int fillMachineLimit(@Nonnull FluidResource resource, int requested) {
+        if (resource.isEmpty() || requested <= 0 || isInfinity()) {
             return 0;
         }
-        if (stack != FluidStack.EMPTY && !FluidStack.isSameFluidSameComponents(stack, fs)) {
+        if (stack != FluidStack.EMPTY && !resource.matches(stack)) {
             return 0;
         }
-        int maxInput = (int) Math.min(fs.getAmount(), Tool.suitInt(getMax() - stack.getAmount()));
-        if (maxInput <= 0) {
-            return 0;
+        long remaining = Tool.suitInt(getMax() - stack.getAmount());
+        return (int) Math.min(requested, remaining);
+    }
+
+    /**
+     * 把已确认可接收的流体真正写入机器
+     */
+    private void addFluid(@Nonnull FluidResource resource, int amount) {
+        if (amount <= 0) {
+            return;
         }
         if (stack == FluidStack.EMPTY) {
-            stack = new FluidStack(fs.getFluid(), maxInput);
+            stack = new FluidStack(resource.getFluid(), amount);
         } else {
-            stack.grow(maxInput);
+            stack.grow(amount);
         }
-        return maxInput;
     }
 
     /**
@@ -389,13 +480,12 @@ public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
                 if (entity == null) {
                     continue;
                 }
-                IFluidHandler handler = level.getCapability(Capabilities.FluidHandler.BLOCK, entity.getBlockPos(), direction.getOpposite());
+                ResourceHandler<FluidResource> handler = level.getCapability(Capabilities.Fluid.BLOCK, entity.getBlockPos(), direction.getOpposite());
                 if (handler == null) {
                     continue;
                 }
-                FluidStack fs = stack.copy();
-                fs.setAmount(Integer.MAX_VALUE);
-                handler.fill(fs, IFluidHandler.FluidAction.EXECUTE);
+                // 26.x：insertStacking 内部会开一个根事务并在结束时提交，等价于旧的 fill(..., EXECUTE)
+                ResourceHandlerUtil.insertStacking(handler, FluidResource.of(stack.getFluid()), Integer.MAX_VALUE, null);
             } catch (Throwable e) {
                 log.error("LiquidFountainEntity.outputToSides error", e);
             }
@@ -501,7 +591,7 @@ public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
     @Override
     @Nonnull
     public Component getDisplayName() {
-        return Component.translatable("block.alltheimbaium.liquid_fountain").withStyle(Tip.rarityColor(Registration.LIQUID_FOUNTAIN_ITEM.get()));
+        return Component.translatable("block.alltheimbaium.liquid_fountain").withStyle(Tip.rarityColor(LIQUID_FOUNTAIN_ITEM.get()));
     }
 
     @Nullable
@@ -510,67 +600,58 @@ public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
         return new LiquidFountainMenu(id, inv, worldPosition);
     }
 
+    private static final String KEY_FLUID_ID = "fluid_id";
+    private static final String KEY_FLUID_AMOUNT = "fluid_amount";
+    private static final String KEY_OUTPUT_ENABLED = "outputEnabled";
+    private static final String KEY_INPUT_SLOT = "inputSlot";
+    private static final String KEY_OUTPUT_SLOT = "outputSlot";
+
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.saveAdditional(nbt, registries);
+    protected void saveAdditional(@Nonnull ValueOutput output) {
+        super.saveAdditional(output);
         try {
-            if (stack != FluidStack.EMPTY) {
-                //noinspection deprecation
-                nbt.putString("fluid_id", BuiltInRegistries.FLUID.getKey(stack.getFluid()).toString());
-                nbt.putInt("fluid_amount", stack.getAmount());
-            } else {
-                //noinspection deprecation
-                nbt.putString("fluid_id", BuiltInRegistries.FLUID.getKey(Fluids.EMPTY).toString());
-                nbt.putInt("fluid_amount", stack.getAmount());
-            }
+            //noinspection deprecation
+            output.putString(KEY_FLUID_ID, BuiltInRegistries.FLUID.getKey(stack == FluidStack.EMPTY ? Fluids.EMPTY : stack.getFluid()).toString());
+            output.putInt(KEY_FLUID_AMOUNT, stack.getAmount());
             for (Direction direction : Direction.values()) {
-                nbt.putBoolean(TRANSFER_KEYS[direction.ordinal()], isTransferEnabled(direction));
+                output.putBoolean(TRANSFER_KEYS[direction.ordinal()], isTransferEnabled(direction));
             }
-            nbt.putBoolean("outputEnabled", outputEnabled);
-            nbt.put("inputSlot", inputSlot.serializeNBT(registries));
-            nbt.put("outputSlot", outputSlot.serializeNBT(registries));
+            output.putBoolean(KEY_OUTPUT_ENABLED, outputEnabled);
+            // 26.x：ItemStackHandler 改实现 ValueIOSerializable，用 putChild 存取（serializeNBT 已删除）
+            output.putChild(KEY_INPUT_SLOT, inputSlot);
+            output.putChild(KEY_OUTPUT_SLOT, outputSlot);
         } catch (Throwable e) {
             log.error("LiquidFountainEntity.saveAdditional error", e);
         }
     }
 
     @Override
-    public void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
-        super.loadAdditional(nbt, registries);
+    protected void loadAdditional(@Nonnull ValueInput input) {
+        super.loadAdditional(input);
         try {
-            if (nbt.contains("fluid_id", Tag.TAG_STRING)) {
+            String fluidRaw = input.getString(KEY_FLUID_ID).orElse(null);
+            if (fluidRaw != null) {
                 Fluid fluid = null;
                 try {
                     //noinspection deprecation
-                    fluid = BuiltInRegistries.FLUID.get(ResourceLocation.tryParse(nbt.getString("fluid_id")));
+                    fluid = BuiltInRegistries.FLUID.getValue(Identifier.tryParse(fluidRaw));
                 } catch (Exception ignored) {
                 }
                 if (fluid != null && fluid != Fluids.EMPTY) {
                     this.stack = new FluidStack(fluid, 0);
                 }
             }
-            if (nbt.contains("fluid_amount", Tag.TAG_INT)) {
-                if (stack != FluidStack.EMPTY) {
-                    stack.setAmount(nbt.getInt("fluid_amount"));
-                }
+            if (stack != FluidStack.EMPTY) {
+                stack.setAmount(input.getIntOr(KEY_FLUID_AMOUNT, stack.getAmount()));
             }
             for (Direction direction : Direction.values()) {
-                String key = TRANSFER_KEYS[direction.ordinal()];
-                if (nbt.contains(key, Tag.TAG_BYTE)) {
-                    setTransferEnabled(direction, nbt.getBoolean(key));
-                }
+                setTransferEnabled(direction, input.getBooleanOr(TRANSFER_KEYS[direction.ordinal()], isTransferEnabled(direction)));
             }
-            if (nbt.contains("outputEnabled", Tag.TAG_BYTE)) {
-                outputEnabled = nbt.getBoolean("outputEnabled");
-            }
-            if (nbt.contains("inputSlot", Tag.TAG_COMPOUND)) {
-                inputSlot.deserializeNBT(registries, nbt.getCompound("inputSlot"));
-            }
-            if (nbt.contains("outputSlot", Tag.TAG_COMPOUND)) {
-                outputSlot.deserializeNBT(registries, nbt.getCompound("outputSlot"));
-            }
+            outputEnabled = input.getBooleanOr(KEY_OUTPUT_ENABLED, outputEnabled);
+            input.readChild(KEY_INPUT_SLOT, inputSlot);
+            input.readChild(KEY_OUTPUT_SLOT, outputSlot);
         } catch (Throwable e) {
-            log.error("LiquidFountainEntity.load error", e);
+            log.error("LiquidFountainEntity.loadAdditional error", e);
         }
     }
 
@@ -584,11 +665,6 @@ public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
         return this.saveWithoutMetadata(registries);
     }
 
-    @Override
-    public void handleUpdateTag(@Nonnull CompoundTag tag, @Nonnull HolderLookup.Provider registries) {
-        this.loadAdditional(tag, registries);
-    }
-
     /**
      * 实时数据同步：液体存量/流体类型变化时（服务端 setChanged），向客户端发送更新包。
      */
@@ -596,11 +672,5 @@ public class LiquidFountainEntity extends BlockEntity implements MenuProvider {
     @Nonnull
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt, @Nonnull HolderLookup.Provider registries) {
-        // 1.21：改走 NeoForge 扩展的 IBlockEntityExtension#onDataPacket(Connection, Packet, Provider)
-        this.loadAdditional(pkt.getTag(), registries);
     }
 }

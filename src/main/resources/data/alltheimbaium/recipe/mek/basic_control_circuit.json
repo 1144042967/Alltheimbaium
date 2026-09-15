@@ -1,8 +1,6 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "item_input": {
-    "tag": "c:storage_blocks/osmium"
-  },
+  "item_input": "#c:storage_blocks/osmium",
   "chemical_input": {
     "amount": 180,
     "tag": "mekanism:redstone"

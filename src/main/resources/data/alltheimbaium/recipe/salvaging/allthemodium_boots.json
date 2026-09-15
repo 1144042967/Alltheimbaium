@@ -1,8 +1,6 @@
 {
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "allthemodium:allthemodium_boots"
-  },
+  "ingredient": "allthemodium:allthemodium_boots",
   "results": [
     {
       "id": "allthemodium:allthemodium_ingot",

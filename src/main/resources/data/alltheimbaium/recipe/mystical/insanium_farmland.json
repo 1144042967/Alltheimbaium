@@ -3,9 +3,7 @@
   "group": "mystical_agriculture_farmland",
   "category": "misc",
   "ingredients": [
-    {
-      "item": "mysticalagradditions:insanium_farmland"
-    }
+    "mysticalagradditions:insanium_farmland"
   ],
   "result": {
     "count": 1,

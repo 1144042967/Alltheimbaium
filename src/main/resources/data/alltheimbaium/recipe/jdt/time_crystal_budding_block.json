@@ -7,9 +7,7 @@
   ],
   "type": "minecraft:crafting_shaped",
   "key": {
-    "#": {
-      "item": "justdirethings:time_crystal_block"
-    }
+    "#": "justdirethings:time_crystal_block"
   },
   "pattern": [
     "##",

@@ -5,7 +5,7 @@ import cn.sd.jrz.alltheimbaium.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -71,7 +71,7 @@ public class ResourceFarmMenu extends AbstractContainerMenu {
         this(id, playerInventory, pos, new int[0][]);
     }
 
-    public ResourceFarmMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
+    public ResourceFarmMenu(int id, Inventory playerInventory, RegistryFriendlyByteBuf data) {
         this(id, playerInventory, data.readBlockPos(), readHelpRows(data));
     }
 
@@ -125,7 +125,7 @@ public class ResourceFarmMenu extends AbstractContainerMenu {
     // ==================== 展示 getter ====================
 
     private boolean serverSide() {
-        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide;
+        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide();
     }
 
     public long getLevel() {
@@ -206,7 +206,7 @@ public class ResourceFarmMenu extends AbstractContainerMenu {
         return BuiltInRegistries.ITEM.byId(helpRows[row][k + 1]);
     }
 
-    private static int[][] readHelpRows(FriendlyByteBuf data) {
+    private static int[][] readHelpRows(RegistryFriendlyByteBuf data) {
         try {
             int rows = Math.max(0, Math.min(data.readVarInt(), HELP_MAX_ROWS));
             int[][] out = new int[rows][];
@@ -230,7 +230,7 @@ public class ResourceFarmMenu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(@Nonnull Player player, int id) {
-        if (entity == null || player.level().isClientSide) {
+        if (entity == null || player.level().isClientSide()) {
             return false;
         }
         if (id >= BUTTON_DIR_BASE && id < BUTTON_DIR_BASE + 6) {

@@ -1,8 +1,6 @@
 {
   "type": "mekanism:metallurgic_infusing",
-  "item_input": {
-    "item": "ae2:chipped_budding_quartz"
-  },
+  "item_input": "ae2:chipped_budding_quartz",
   "chemical_input": {
     "amount": 80,
     "tag": "mekanism:carbon"

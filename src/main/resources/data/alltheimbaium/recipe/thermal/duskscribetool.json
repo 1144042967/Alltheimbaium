@@ -1,9 +1,7 @@
 {
   "type": "thermal:bottler",
   "ingredients": [
-    {
-      "tag": "c:storage_blocks/coal"
-    },
+    "#c:storage_blocks/coal",
     {
       "fluid": "bloodmagic:life_essence_fluid",
       "amount": 2000

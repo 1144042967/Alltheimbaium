@@ -7,15 +7,9 @@
     "BBB"
   ],
   "key": {
-    "X": {
-      "item": "alltheimbaium:package_material"
-    },
-    "B": {
-      "item": "minecraft:diamond_block"
-    },
-    "C": {
-      "item": "minecraft:glass_bottle"
-    }
+    "X": "alltheimbaium:package_material",
+    "B": "minecraft:diamond_block",
+    "C": "minecraft:glass_bottle"
   },
   "result": {
     "id": "alltheimbaium:mob_farm"

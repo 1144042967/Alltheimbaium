@@ -47,7 +47,7 @@ public class PlatformMenu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(@Nonnull Player player, int id) {
-        if (player.level().isClientSide) {
+        if (player.level().isClientSide()) {
             return false;
         }
         if (id == BUTTON_DISGUISE) {

@@ -6,10 +6,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -28,7 +27,7 @@ import javax.annotation.Nonnull;
 public record SupplyCrateRollsPacket(@Nonnull ItemStack[] rolls) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<SupplyCrateRollsPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(Alltheimbaium.MODID, "supply_crate_rolls"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(Alltheimbaium.MODID, "supply_crate_rolls"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SupplyCrateRollsPacket> STREAM_CODEC = StreamCodec.of(
             (buf, packet) -> SupplyCrateMenu.writeRolls(buf, packet.rolls()),
@@ -43,13 +42,15 @@ public record SupplyCrateRollsPacket(@Nonnull ItemStack[] rolls) implements Cust
     public static void handle(SupplyCrateRollsPacket payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             // NeoForge 没有 DistExecutor，用 FMLEnvironment 判断；客户端分支只在客户端执行，不会在服务端加载客户端类
-            if (FMLEnvironment.dist == Dist.CLIENT) {
+            // 26.x：FMLEnvironment.dist 字段已删，改用 FMLEnvironment.getDist()
+            if (FMLEnvironment.getDist() == Dist.CLIENT) {
                 applyOnClient(payload);
             }
         });
     }
 
-    @OnlyIn(Dist.CLIENT)
+    // 26.x：@OnlyIn 会触发 NeoForge 的 OnlyInWarningsHandler 报错，已删除该注解；
+    // 本方法只在客户端执行（上面的 getDist() 分支保证），服务端不会解析到 Minecraft 类
     private static void applyOnClient(SupplyCrateRollsPacket payload) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player != null && minecraft.player.containerMenu instanceof SupplyCrateMenu menu) {

@@ -8,12 +8,8 @@
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
-    {
-      "item": "justdirethings:gooblock_tier3"
-    },
-    {
-      "item": "minecraft:diamond_block"
-    }
+    "justdirethings:gooblock_tier3",
+    "minecraft:diamond_block"
   ],
   "result": {
     "count": 9,

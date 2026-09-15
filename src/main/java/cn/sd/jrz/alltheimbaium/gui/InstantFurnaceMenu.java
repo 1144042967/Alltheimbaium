@@ -113,7 +113,7 @@ public class InstantFurnaceMenu extends AbstractContainerMenu {
     }
 
     private boolean serverSide() {
-        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide;
+        return entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide();
     }
 
     public int getEnergy() {
@@ -174,7 +174,7 @@ public class InstantFurnaceMenu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(@Nonnull Player player, int id) {
-        if (entity == null || player.level().isClientSide) {
+        if (entity == null || player.level().isClientSide()) {
             return false;
         }
         if (id >= BUTTON_FACE_BASE && id < BUTTON_FACE_BASE + 6) {

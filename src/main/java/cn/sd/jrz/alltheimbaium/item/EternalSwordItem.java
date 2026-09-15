@@ -1,19 +1,19 @@
 package cn.sd.jrz.alltheimbaium.item;
 
 import cn.sd.jrz.alltheimbaium.setup.Tool;
+import com.mojang.serialization.DynamicOps;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -25,23 +25,29 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.*;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
-import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.enchantment.EnchantedItemInUse;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.EnchantmentTarget;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -53,47 +59,14 @@ import java.util.function.Consumer;
  * - ALT+右击打开配置界面（击杀模式 / 攻击距离 / 27 格物品槽位）
  * - 剑附魔来自槽位中的附魔书：按点数叠加（等级 1~10 计 1/2/4/…/512 点），上限 10 级
  * - 禁止附魔台 / 铁砧附魔；对 Draconic-Evolution 混沌守卫可突破免伤限制
+ * <p>
+ * 26.x：{@code SwordItem} 与 {@code Tier} 已删除。这里直接继承 {@link Item}，不走
+ * {@code Item.Properties#sword(...)}——那会把攻击力/攻速写死成 ATTRIBUTE_MODIFIERS 组件，
+ * 而组件一旦存在，下面的 {@link #getDefaultAttributeModifiers(ItemStack)} 就被完全绕过
+ * （NeoForge 只在组件为空时才问物品要默认属性），剑的伤害随槽位内容实时变化这一条就没了。
+ * 代价只是失去原版剑的挖掘/格挡语义，本物品本来也不当工具用。
  */
-public class EternalSwordItem extends SwordItem {
-
-    /**
-     * 自定义工具等级：攻击力加成 0、耐久 0、附魔等级 0，保证剑本身攻击伤害为 0。
-     * <p>
-     * 1.21 删除了 {@code ForgeTier}，直接实现 {@link Tier}；原 {@code getLevel()} 改名为
-     * {@link Tier#getIncorrectBlocksForDrops()}，返回的是"本等级挖了也不掉落的方块"标签。
-     * 剑的 Tool 组件由 {@link SwordItem} 自己写入，因此这里的取值不影响任何行为。
-     */
-    private static final Tier SWORD_TIER = new Tier() {
-        @Override
-        public int getUses() {
-            return 0;
-        }
-
-        @Override
-        public float getSpeed() {
-            return 0.0F;
-        }
-
-        @Override
-        public float getAttackDamageBonus() {
-            return 0.0F;
-        }
-
-        @Override
-        public TagKey<Block> getIncorrectBlocksForDrops() {
-            return BlockTags.INCORRECT_FOR_WOODEN_TOOL;
-        }
-
-        @Override
-        public int getEnchantmentValue() {
-            return 0;
-        }
-
-        @Override
-        public Ingredient getRepairIngredient() {
-            return Ingredient.of(Items.AIR);
-        }
-    };
+public class EternalSwordItem extends Item {
 
     /**
      * 物品槽位数量
@@ -119,10 +92,13 @@ public class EternalSwordItem extends SwordItem {
      */
     private static final float ATTACK_SPEED = -2.4F;
 
-    public EternalSwordItem() {
+    /**
+     * 26.x：注册 id 由 Registration 的 itemProps(key) 灌进属性里，构造器只负责堆叠上限/品级等自身属性
+     */
+    public EternalSwordItem(Item.Properties properties) {
         // 1.21 的 SwordItem 只有 (Tier, Properties)：伤害/攻速不再走构造器参数，
         // 而是由下面的 getDefaultAttributeModifiers 动态给出（伤害随槽位内容变化，写死进属性组件反而会被覆盖）
-        super(SWORD_TIER, new Item.Properties()
+        super(properties
                 .stacksTo(1)
                 .rarity(Rarity.EPIC)
                 .fireResistant());
@@ -130,9 +106,10 @@ public class EternalSwordItem extends SwordItem {
 
     // ==================== 无耐久条 ====================
     /**
-     * 1.21 删除了 {@code canBeDepleted()}，是否耗耐久完全由 MAX_DAMAGE / DAMAGE 数据组件决定，
-     * 而 {@code TieredItem} 一定会用 {@code getUses()}（0）写进 MAX_DAMAGE。这里从两个口子掐掉耐久：
-     * 一是不再产生任何耐久消耗，二是让"伤害值 ≥ 上限即损毁"的判定永远不成立。
+     * 1.21 删除了 {@code canBeDepleted()}，是否耗耐久完全由 MAX_DAMAGE / DAMAGE 数据组件决定。
+     * 本物品不再声明耐久（构造器里没有 {@code .durability(...)}，属性里也就没有 MAX_DAMAGE 组件），
+     * 因此本来就不会有耐久条；这里再从"不产生任何耐久消耗"和"伤害值 ≥ 上限即损毁的判定不成立"
+     * 两个口子各掐一道，作为兜底。
      */
     @Override
     public <T extends LivingEntity> int damageItem(ItemStack stack, int amount, @Nullable T entity, Consumer<Item> onBroken) {
@@ -169,26 +146,24 @@ public class EternalSwordItem extends SwordItem {
     }
 
     // ==================== 禁止附魔 ====================
-    @Override
-    public boolean isEnchantable(@Nonnull ItemStack stack) {
-        return false;
-    }
-
-    @Override
-    public boolean isBookEnchantable(@Nonnull ItemStack stack, @Nonnull ItemStack book) {
-        return false;
-    }
+    // 26.x：{@code isEnchantable(ItemStack)} / {@code isBookEnchantable(ItemStack, ItemStack)}
+    // 两个覆写点已被删除，可否附魔改由数据组件 ENCHANTABLE 决定——构造器里没有
+    // {@code .enchantable(...)}，属性里就没有该组件，附魔台自然不会收；铁砧一侧由
+    // EternalSwordEventHandler 取消 AnvilUpdateEvent 兜住。
 
     // ==================== 右击：范围攻击 ====================
+    /**
+     * 26.x：{@code InteractionResultHolder} 已删除，改用 {@link InteractionResult}
+     */
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             player.swing(hand);
         } else {
             doAttack(level, player, stack);
         }
-        return InteractionResultHolder.success(stack);
+        return InteractionResult.SUCCESS.heldItemTransformedTo(stack);
     }
 
     /**
@@ -227,7 +202,8 @@ public class EternalSwordItem extends SwordItem {
                 // 混沌守卫本体：反射突破免伤，命中则跳过普通伤害
                 if (Tool.bypassGuardianDamage(living, source, damage)) continue;
                 clearInvulnerable(living);
-                living.hurt(source, damage);
+                // 26.x：LivingEntity.hurt(DamageSource, float) 已删除，命中结算统一走 hurtServer(ServerLevel, ...)
+                living.hurtServer(serverLevel, source, damage);
                 // 第二段：剑上附魔的命中效果（火焰附加 / 击退 / 节肢杀手的迟缓）
                 applyWeaponEffects(serverLevel, stack, player, living, source);
                 // 第三段：槽位里每把武器各打一次
@@ -252,19 +228,48 @@ public class EternalSwordItem extends SwordItem {
             return weapons;
         }
         Set<String> seen = new HashSet<>();
-        ListTag list = tag.getList(TAG_ITEMS, Tag.TAG_COMPOUND);
+        DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
+        ListTag list = tag.getListOrEmpty(TAG_ITEMS);
         for (Tag t : list) {
             if (!(t instanceof CompoundTag ct)) continue;
-            ItemStack s = ItemStack.parseOptional(registries, ct);
+            ItemStack s = decodeStack(ct, ops);
             if (s.isEmpty() || getDamageContribution(s) <= 0F) {
                 continue;
             }
-            ResourceLocation key = BuiltInRegistries.ITEM.getKey(s.getItem());
+            Identifier key = BuiltInRegistries.ITEM.getKey(s.getItem());
             if (key != null && seen.add(key.toString())) {
                 weapons.add(s);
             }
         }
         return weapons;
+    }
+
+    /**
+     * 物品栈 → NBT；编码失败只丢这一格
+     */
+    @Nonnull
+    private static CompoundTag encodeStack(@Nonnull ItemStack stack, @Nonnull DynamicOps<Tag> ops) {
+        if (stack.isEmpty()) {
+            return new CompoundTag();
+        }
+        try {
+            return (CompoundTag) ItemStack.OPTIONAL_CODEC.encodeStart(ops, stack).result()
+                    .orElseGet(CompoundTag::new);
+        } catch (Throwable e) {
+            return new CompoundTag();
+        }
+    }
+
+    /**
+     * NBT → 物品栈；解不出来只当空格处理（格子里原本就存着 "Slot" 等额外键，解码时会自动忽略）
+     */
+    @Nonnull
+    private static ItemStack decodeStack(@Nonnull CompoundTag tag, @Nonnull DynamicOps<Tag> ops) {
+        try {
+            return ItemStack.OPTIONAL_CODEC.parse(ops, tag).result().orElse(ItemStack.EMPTY);
+        } catch (Throwable e) {
+            return ItemStack.EMPTY;
+        }
     }
 
     /**
@@ -279,19 +284,20 @@ public class EternalSwordItem extends SwordItem {
             return;
         }
         clearInvulnerable(target);
-        target.hurt(source, damage);
+        // 26.x：命中结算统一走 hurtServer(ServerLevel, ...)
+        target.hurtServer(level, source, damage);
         applyWeaponEffects(level, weapon, player, target, source);
     }
 
     /**
      * 清除目标的受击无敌帧，让同一 tick 内的多段伤害真正叠加。
      * <p>
-     * 原版 {@code LivingEntity.hurt} 在 {@code invulnerableTime > 10} 时，会直接丢弃
+     * 原版 {@code LivingEntity.hurtServer} 在 {@code invulnerableTime > 10} 时，会直接丢弃
      * 不高于 {@code lastHurt} 的伤害（只补上超出的差额），而三段结算全部发生在同一 tick、
      * 第一段就已经把无敌帧顶到 20 刻，于是第 2 段起基本被整段吃掉，最终只有最大的一段生效。
      * 每段命中前把无敌帧归零，下一段就会走完整伤害分支。
      * <p>
-     * 目标已死亡时后续段本就不会结算（{@code hurt} 开头即返回），因此不会打出超额伤害。
+     * 目标已死亡时后续段本就不会结算（{@code hurtServer} 开头即返回），因此不会打出超额伤害。
      */
     private static void clearInvulnerable(@Nonnull LivingEntity target) {
         target.invulnerableTime = 0;
@@ -340,10 +346,14 @@ public class EternalSwordItem extends SwordItem {
     }
 
     // ==================== tooltip ====================
+    /**
+     * 26.x：tooltip 出口由 List&lt;Component&gt; 换成 Consumer&lt;Component&gt;，@OnlyIn 已删除
+     */
     @Override
-    @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context,
+                                @Nonnull TooltipDisplay display, @Nonnull Consumer<Component> tooltip,
+                                @Nonnull TooltipFlag flag) {
+        super.appendHoverText(stack, context, display, tooltip, flag);
         // 伤害由原版"在主手时"属性行给出，这里不再重复
         Tip.of(tooltip)
                 .head(stack, "tip.alltheimbaium.type.combat")
@@ -363,13 +373,15 @@ public class EternalSwordItem extends SwordItem {
     // ==================== 自定义数据读写 ====================
     // 1.20.1 的 getTag()/getOrCreateTag() 已删除，改走 CUSTOM_DATA 数据组件（见 Tool）。
     // 组件里的 tag 是副本，改完必须 Tool.setCustomTag 写回。
+    // 26.x：ItemStack.save / ItemStack.parseOptional 也已删除，物品栈一律走 ItemStack.CODEC +
+    //       带注册表的序列化上下文（附魔、药水这类组件按注册名书写，与注册表实例无关）。
 
     /**
      * 击杀模式：0=敌对生物，1=所有生物
      */
     public static int getKillAll(ItemStack stack) {
         CompoundTag tag = Tool.getCustomTag(stack);
-        return tag != null && tag.getInt(TAG_KILL_ALL) == 1 ? 1 : 0;
+        return tag != null && tag.getIntOr(TAG_KILL_ALL, 0) == 1 ? 1 : 0;
     }
 
     /**
@@ -378,7 +390,7 @@ public class EternalSwordItem extends SwordItem {
     public static int getRange(ItemStack stack) {
         CompoundTag tag = Tool.getCustomTag(stack);
         if (tag == null || !tag.contains(TAG_RANGE)) return RANGES[0];
-        int range = tag.getInt(TAG_RANGE);
+        int range = tag.getIntOr(TAG_RANGE, RANGES[0]);
         for (int r : RANGES) {
             if (r == range) return range;
         }
@@ -390,24 +402,25 @@ public class EternalSwordItem extends SwordItem {
      */
     public static float getSwordDamage(ItemStack stack) {
         CompoundTag tag = Tool.getCustomTag(stack);
-        float damage = tag == null ? 0F : tag.getFloat(TAG_DAMAGE);
+        float damage = tag == null ? 0F : tag.getFloatOr(TAG_DAMAGE, 0F);
         return Math.max(1F, damage);
     }
 
     /**
      * 从剑的自定义数据加载 27 格槽位
      *
-     * @param registries 解析物品栈需要的注册表（1.21 的物品序列化带数据组件，取世界注册表）
+     * @param registries 解析物品栈需要的注册表（物品序列化带数据组件，取世界注册表）
      */
     public static void loadInventory(ItemStack sword, SimpleContainer inv, @Nonnull HolderLookup.Provider registries) {
         CompoundTag tag = Tool.getCustomTag(sword);
         if (tag == null || !tag.contains(TAG_ITEMS)) return;
-        ListTag list = tag.getList(TAG_ITEMS, Tag.TAG_COMPOUND);
+        DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
+        ListTag list = tag.getListOrEmpty(TAG_ITEMS);
         for (Tag t : list) {
             if (!(t instanceof CompoundTag ct)) continue;
-            int slot = ct.getByte("Slot");
+            int slot = ct.getByteOr("Slot", (byte) -1);
             if (slot >= 0 && slot < INVENTORY_SIZE) {
-                inv.setItem(slot, ItemStack.parseOptional(registries, ct));
+                inv.setItem(slot, decodeStack(ct, ops));
             }
         }
     }
@@ -420,6 +433,7 @@ public class EternalSwordItem extends SwordItem {
     public static void saveInventory(ItemStack sword, SimpleContainer inv, @Nonnull HolderLookup.Provider registries) {
         if (sword == null || sword.isEmpty()) return;
         CompoundTag tag = Tool.getCustomTagOrEmpty(sword);
+        DynamicOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
         ListTag list = new ListTag();
         List<ItemStack> stacks = new ArrayList<>();
         for (int i = 0; i < INVENTORY_SIZE; i++) {
@@ -427,8 +441,8 @@ public class EternalSwordItem extends SwordItem {
             if (!s.isEmpty()) {
                 CompoundTag ct = new CompoundTag();
                 ct.putByte("Slot", (byte) i);
-                // 1.21 的物品 NBT 必须由带注册表的 save 产生（附魔书等组件要查数据包注册表）
-                ct.merge((CompoundTag) s.save(registries));
+                // 物品栈走 ItemStack.CODEC（附魔书等组件要查注册表）
+                ct.merge(encodeStack(s, ops));
                 list.add(ct);
                 stacks.add(s);
             }
@@ -464,7 +478,7 @@ public class EternalSwordItem extends SwordItem {
         Set<String> seen = new HashSet<>();
         for (ItemStack s : stacks) {
             if (s == null || s.isEmpty()) continue;
-            ResourceLocation key = BuiltInRegistries.ITEM.getKey(s.getItem());
+            Identifier key = BuiltInRegistries.ITEM.getKey(s.getItem());
             if (key == null) continue;
             if (!seen.add(key.toString())) continue;
             damage += getDamageContribution(s);

@@ -2,7 +2,7 @@ package cn.sd.jrz.alltheimbaium.setup;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
@@ -149,7 +149,7 @@ public final class MobFarmWhitelist {
                         continue;
                     }
                     if (token.startsWith("tag:")) {
-                        ResourceLocation tagId = ResourceLocation.tryParse(token.substring(4).trim());
+                        Identifier tagId = Identifier.tryParse(token.substring(4).trim());
                         if (tagId == null) {
                             log.warn("MobFarmWhitelist.parseSignature: 非法标签 id {}", token);
                             continue;
@@ -208,28 +208,29 @@ public final class MobFarmWhitelist {
     }
 
     // ==================== 解析工具 ====================
-    // 注意：ITEM / ENTITY_TYPE 都被 Forge 包成了"带默认值"的注册表——get() 查不到时返回默认值
+    // 注意：ITEM / ENTITY_TYPE 都被包成了"带默认值"的注册表——查不到时返回默认值
     // （AIR / PIG）而不是 null，所以 `!= null` 恒真、永远拦不住拼错的 id（拼错会静默变成猪/空气）。
     // 一律用 containsKey 判定"是否注册"。
+    // 26.x：取值走 getValue(Identifier)（可空语义不变），get(Identifier) 已改成返回 Optional<Holder>。
 
     /** 实体 id 解析：非法 id 或未注册返回 null */
     @Nullable
     private static EntityType<?> lookupEntity(@Nonnull String id) {
-        ResourceLocation key = ResourceLocation.tryParse(id.trim());
+        Identifier key = Identifier.tryParse(id.trim());
         if (key == null || !BuiltInRegistries.ENTITY_TYPE.containsKey(key)) {
             return null;
         }
-        return BuiltInRegistries.ENTITY_TYPE.get(key);
+        return BuiltInRegistries.ENTITY_TYPE.getValue(key);
     }
 
     /** 物品 id 解析：非法 id、未注册或 air 一律返回 null（生物没有对应刷怪蛋时按此跳过） */
     @Nullable
     private static Item lookupItem(@Nonnull String id) {
-        ResourceLocation key = ResourceLocation.tryParse(id.trim());
+        Identifier key = Identifier.tryParse(id.trim());
         if (key == null || !BuiltInRegistries.ITEM.containsKey(key)) {
             return null;
         }
-        Item item = BuiltInRegistries.ITEM.get(key);
+        Item item = BuiltInRegistries.ITEM.getValue(key);
         return item == null || item == Items.AIR ? null : item;
     }
 

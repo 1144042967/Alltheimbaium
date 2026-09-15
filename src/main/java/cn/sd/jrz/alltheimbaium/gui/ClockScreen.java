@@ -1,23 +1,21 @@
 package cn.sd.jrz.alltheimbaium.gui;
 
 import cn.sd.jrz.alltheimbaium.entity.ClockEntity;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 加速时钟配置 GUI（纯配置界面，176 宽，无物品栏）。
@@ -26,9 +24,8 @@ import java.util.Optional;
  * 中间六个方向按钮（2×3，显示该方向实际相邻方块的物品图标，绿=生效/红=禁用，无相邻方块时显示方向名）；
  * 下方十个倍速档位按钮（快速选择 2~1024，当前档位高亮）。
  */
-@OnlyIn(Dist.CLIENT)
 public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("alltheimbaium", "textures/gui/clock_gui.png");
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath("alltheimbaium", "textures/gui/clock_gui.png");
 
     // 顶部两个开关按钮
     private static final int SWITCH_W = 78;
@@ -53,9 +50,8 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
     private SwitchButton selfButton;
 
     public ClockScreen(ClockMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = 120;
+        // 26.x：imageWidth/imageHeight 是 final 字段，尺寸经由超类构造器传入
+        super(menu, playerInventory, title, 176, 120);
     }
 
     @Override
@@ -93,20 +89,22 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
     }
 
     @Override
-    protected void renderBg(@Nonnull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 26.x：背景贴图改在 extractBackground 里绘制（renderBg 已删除），先让父类画好暗化/模糊底
+        super.extractBackground(guiGraphics, mouseX, mouseY, partialTick);
         // 主背景（标题条、开关按钮区域、方向按钮区域、速度档位区域均已绘制在图上）
-        guiGraphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         // 深色标题条上用白色文字
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFFFFFFF, true);
+        guiGraphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFFFFFFFF, true);
     }
 
     @Override
-    public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         // 刷新开关与档位按钮状态
         this.globalButton.setState(this.menu.isGlobalActive());
         this.selfButton.setState(this.menu.isSelfEnabled());
@@ -118,11 +116,11 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
             if (directionButton.isHovered()) {
                 List<Component> lines = directionButton.buildTooltip();
                 if (lines != null) {
-                    guiGraphics.renderTooltip(this.font, lines, Optional.empty(), mouseX, mouseY);
+                    guiGraphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
                 }
             }
         }
-        super.renderTooltip(guiGraphics, mouseX, mouseY);
+        super.extractTooltip(guiGraphics, mouseX, mouseY);
     }
 
     /**
@@ -143,13 +141,13 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             renderButton(guiGraphics, this.state ? 0xFF00AA00 : 0xFFAA0000);
             String stateText = Component.translatable(this.state
                     ? "screen.alltheimbaium.clock.enabled"
                     : "screen.alltheimbaium.clock.disabled").getString();
             String label = Component.translatable("screen.alltheimbaium.clock." + this.key).getString() + ": " + stateText;
-            guiGraphics.drawCenteredString(ClockScreen.this.font, label, this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
+            guiGraphics.centeredText(ClockScreen.this.font, label, this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
         }
     }
 
@@ -166,7 +164,7 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             boolean on = ClockScreen.this.menu.isDirectionEnabled(this.direction);
             renderButton(guiGraphics, on ? 0xFF00AA00 : 0xFFAA0000);
             ItemStack neighbor = ClockScreen.this.menu.getNeighborStack(this.direction);
@@ -174,11 +172,11 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
                 // 有相邻方块：只显示物品图标，整体居中
                 int iconX = this.getX() + (this.getWidth() - 16) / 2;
                 int iconY = this.getY() + (this.getHeight() - 16) / 2;
-                guiGraphics.renderItem(neighbor, iconX, iconY);
+                guiGraphics.item(neighbor, iconX, iconY);
             } else {
                 // 无相邻方块：显示方向名，居中
                 String dirName = Component.translatable("screen.alltheimbaium.clock.face." + this.direction.getName()).getString();
-                guiGraphics.drawCenteredString(ClockScreen.this.font, dirName, this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
+                guiGraphics.centeredText(ClockScreen.this.font, dirName, this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
             }
         }
 
@@ -216,9 +214,9 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
         }
 
         @Override
-        protected void renderWidget(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             renderButton(guiGraphics, this.selected ? 0xFF00AA00 : 0xFF3A3A6B);
-            guiGraphics.drawCenteredString(ClockScreen.this.font, String.valueOf(ClockEntity.SPEEDS[this.index]), this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
+            guiGraphics.centeredText(ClockScreen.this.font, String.valueOf(ClockEntity.SPEEDS[this.index]), this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFFFF);
         }
     }
 
@@ -230,7 +228,7 @@ public class ClockScreen extends AbstractContainerScreen<ClockMenu> {
             super(x, y, width, height, Component.literal(""), onPress, DEFAULT_NARRATION);
         }
 
-        protected void renderButton(GuiGraphics guiGraphics, int color) {
+        protected void renderButton(GuiGraphicsExtractor guiGraphics, int color) {
             guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), color);
             // 1px 边框（鼠标悬浮时边框变亮，用于指示可交互）
             int borderColor = this.isHovered() ? 0xFFFFFF00 : 0xFF000000;

@@ -10,9 +10,7 @@
     }
   ],
   "type": "silentgear:salvaging",
-  "ingredient": {
-    "item": "allthemodium:unobtainium_mace"
-  },
+  "ingredient": "allthemodium:unobtainium_mace",
   "results": [
     {
       "count": 2,

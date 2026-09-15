@@ -2,15 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "group": "mystical_agriculture_crux",
   "key": {
-    "S": {
-      "item": "mysticalagradditions:insanium_farmland"
-    },
-    "A": {
-      "item": "mysticalagradditions:dragon_scale"
-    },
-    "#": {
-      "item": "mysticalagradditions:insanium_block"
-    }
+    "S": "mysticalagradditions:insanium_farmland",
+    "A": "mysticalagradditions:dragon_scale",
+    "#": "mysticalagradditions:insanium_block"
   },
   "pattern": [
     "#A#",

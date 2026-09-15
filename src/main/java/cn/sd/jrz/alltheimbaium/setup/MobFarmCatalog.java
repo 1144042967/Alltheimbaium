@@ -1,5 +1,6 @@
 package cn.sd.jrz.alltheimbaium.setup;
 
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
@@ -46,8 +47,8 @@ public final class MobFarmCatalog {
             if (item != null) {
                 return item;
             }
-            // 兜底：有的刷怪蛋的实体类型只登记在原版反查表里（DeferredSpawnEggItem 注册时就填了）
-            return SpawnEggItem.byId(type);
+            // 兜底：档位表里没建到就直接问原版反查表（26.x 返回 Optional<Holder<Item>>）
+            return SpawnEggItem.byId(type).map(Holder::value).orElse(null);
         } catch (Throwable e) {
             log.error("MobFarmCatalog.spawnEggOf error", e);
         }
@@ -57,19 +58,20 @@ public final class MobFarmCatalog {
     /**
      * 扫描物品注册表建立"实体类型 → 刷怪蛋"表。
      * <p>
-     * 1.21 的 {@code SpawnEggItem#getType(ItemStack)} 不再是可空参数（传 null 直接 NPE），
-     * 要读默认类型必须传该物品的默认实例；且**每件必须单独 try**——否则一个蛋抛异常就让整张表
-     * 永远建不出来，表现为所有刷怪蛋都识别不了。
+     * 26.x 的 {@code SpawnEggItem#getType(ItemStack)} 改成了静态方法，实体类型从
+     * {@code ENTITY_DATA} 组件读（刷怪蛋由 {@code Item.Properties#spawnEgg} 在注册时写入），
+     * 所以这里仍要读该物品的默认实例——默认实例带着原型物品的组件；且**每件必须单独 try**——
+     * 否则一个蛋抛异常就让整张表永远建不出来，表现为所有刷怪蛋都识别不了。
      */
     @Nonnull
     private static Map<EntityType<?>, Item> buildEggCache() {
         Map<EntityType<?>, Item> map = new HashMap<>();
         for (Item item : BuiltInRegistries.ITEM) {
-            if (!(item instanceof SpawnEggItem egg)) {
+            if (!(item instanceof SpawnEggItem)) {
                 continue;
             }
             try {
-                EntityType<?> eggType = egg.getType(item.getDefaultInstance());
+                EntityType<?> eggType = SpawnEggItem.getType(item.getDefaultInstance());
                 if (eggType != null) {
                     map.putIfAbsent(eggType, item);
                 }
@@ -83,11 +85,12 @@ public final class MobFarmCatalog {
 
     /** 物品是否为某实体类型的刷怪蛋 */
     public static boolean isSpawnEggFor(@Nonnull ItemStack stack, @Nonnull EntityType<?> type) {
-        if (!(stack.getItem() instanceof SpawnEggItem egg)) {
+        if (!(stack.getItem() instanceof SpawnEggItem)) {
             return false;
         }
         try {
-            return egg.getType(stack) == type;
+            // 26.x：原版提供了等价的静态判定 spawnsEntity(stack, type)
+            return SpawnEggItem.spawnsEntity(stack, type);
         } catch (Throwable e) {
             log.warn("MobFarmCatalog.isSpawnEggFor error", e);
         }

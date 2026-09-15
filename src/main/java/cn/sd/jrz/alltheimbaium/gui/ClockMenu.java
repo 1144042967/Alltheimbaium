@@ -65,28 +65,28 @@ public class ClockMenu extends AbstractContainerMenu {
     // ==================== 客户端/服务端都能访问的展示值 ====================
 
     public boolean isGlobalActive() {
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             return ClockEntity.isGlobalActive();
         }
         return clientGlobal;
     }
 
     public boolean isSelfEnabled() {
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             return entity.enabled;
         }
         return clientSelf;
     }
 
     public int getSpeed() {
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             return entity.speed;
         }
         return clientSpeed;
     }
 
     public boolean isDirectionEnabled(Direction direction) {
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             return entity.directionEnabled[direction.ordinal()];
         }
         return clientDirEnabled[direction.ordinal()];
@@ -98,7 +98,7 @@ public class ClockMenu extends AbstractContainerMenu {
     @Nonnull
     public ItemStack getNeighborStack(Direction direction) {
         int id;
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             id = entity.getNeighborBlockId(direction);
         } else {
             id = clientNeighborBlockId[direction.ordinal()];
@@ -117,7 +117,7 @@ public class ClockMenu extends AbstractContainerMenu {
     @Nonnull
     public Component getNeighborName(Direction direction) {
         int id;
-        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide) {
+        if (entity != null && entity.getLevel() != null && !entity.getLevel().isClientSide()) {
             id = entity.getNeighborBlockId(direction);
         } else {
             id = clientNeighborBlockId[direction.ordinal()];
@@ -136,7 +136,7 @@ public class ClockMenu extends AbstractContainerMenu {
      */
     @Override
     public boolean clickMenuButton(@Nonnull Player player, int id) {
-        if (entity == null || player.level().isClientSide) {
+        if (entity == null || player.level().isClientSide()) {
             return false;
         }
         if (id == BUTTON_GLOBAL) {

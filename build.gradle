@@ -1,8 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version '2.0.103'
-    id 'idea'
+    id 'net.neoforged.gradle.userdev' version '7.1.26'
 }
 tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
@@ -19,58 +18,44 @@ repositories {
 base {
     archivesName = "alltheimbaium-${minecraft_version}"
 }
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
-
-neoForge {
-    version = project.neo_version
-    parchment {
-        mappingsVersion = project.parchment_mappings_version
-        minecraftVersion = project.parchment_minecraft_version
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+runs {
+    configureEach {
+        systemProperty 'forge.logging.markers', 'REGISTRIES'
+        systemProperty 'forge.logging.console.level', 'debug'
+        workingDirectory project.layout.projectDirectory.dir('run').dir(name)
+        modSource project.sourceSets.main
+        jvmArgument '--enable-preview'
     }
-    runs {
-        client {
-            client()
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        }
-        server {
-            server()
-            programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        }
-        gameTestServer {
-            type = "gameTestServer"
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        }
-        data {
-            data()
-            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
-        }
-        configureEach {
-            systemProperty 'forge.logging.markers', 'REGISTRIES'
-            logLevel = org.slf4j.event.Level.DEBUG
-        }
+    client {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        // 临时：自动进入既有存档，用于验证配方同步包能否编码
+        programArguments.addAll '--quickPlaySingleplayer', '26_1_2'
     }
-    mods {
-        "${mod_id}" {
-            sourceSet(sourceSets.main)
-        }
+    server {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        argument '--nogui'
+    }
+    gameTestServer {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
     }
 }
-sourceSets.main.resources { srcDir 'src/generated/resources' }
 configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 dependencies {
+    implementation "net.neoforged:neoforge:${neo_version}"
     // JEI 是可选联动：只用 api 制品，不打进 jar、也不进运行时依赖
     compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+    // 临时：把 JEI 本体拉进开发运行时，用于复现 ATM11 里的配方同步场景
+    localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:29.36.0.96"
 }
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
     var replaceProperties = [
             minecraft_version      : minecraft_version,
             minecraft_version_range: minecraft_version_range,
             neo_version            : neo_version,
-            loader_version_range   : loader_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,
@@ -84,7 +69,6 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
     into "build/generated/sources/modMetadata"
 }
 sourceSets.main.resources.srcDir generateModMetadata
-neoForge.ideSyncTask generateModMetadata
 publishing {
     publications {
         register('mavenJava', MavenPublication) {
@@ -99,6 +83,7 @@ publishing {
 }
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.compilerArgs += ['--enable-preview']
     // 移植期一次看全所有报错，避免被 javac 默认的 100 条上限截断
     options.compilerArgs.addAll(['-Xmaxerrs', '5000'])
 }
@@ -106,5 +91,14 @@ idea {
     module {
         downloadSources = true
         downloadJavadoc = true
+    }
+}
+
+
+
+tasks.register('dumpCp') {
+    def cp = project.sourceSets.main.runtimeClasspath.asPath
+    doLast {
+        new File('C:/Users/10177/IdeaProjects/alltheimbaium-26.1.2/cp.txt').text = cp
     }
 }

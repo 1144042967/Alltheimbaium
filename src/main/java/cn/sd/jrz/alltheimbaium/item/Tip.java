@@ -7,7 +7,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * 物品 tooltip 统一规范构建器。
@@ -66,20 +68,32 @@ public final class Tip {
     private static final String KEY_TIER_RARE = "tip.alltheimbaium.tier.rare";
     private static final String KEY_TIER_EPIC = "tip.alltheimbaium.tier.epic";
 
-    private final List<Component> tooltip;
+    /**
+     * 已写出的行（自留一份副本：段间空行的判定要看末行是不是空行，而 26.x 的 tooltip 出口只有一个
+     * {@link Consumer}，没法回读）
+     */
+    private final List<Component> tooltip = new ArrayList<>();
+    /** 26.x 的 tooltip 出口：{@code appendHoverText(..., Consumer<Component> builder, ...)} */
+    private final Consumer<Component> sink;
     /** 是否已经写过第一段；第一段不补空行，让它紧跟物品名 */
     private boolean started;
 
-    private Tip(@Nonnull List<Component> tooltip) {
-        this.tooltip = tooltip;
+    private Tip(@Nonnull Consumer<Component> sink) {
+        this.sink = sink;
     }
 
     /**
-     * 以现有 tooltip 列表创建构建器
+     * 以 tooltip 消费者创建构建器（26.x 的 {@code appendHoverText} 传进来的那个 builder）
      */
     @Nonnull
-    public static Tip of(@Nonnull List<Component> tooltip) {
-        return new Tip(tooltip);
+    public static Tip of(@Nonnull Consumer<Component> sink) {
+        return new Tip(sink);
+    }
+
+    /** 写出一行：既记进本地副本，也立刻交给 tooltip 消费者 */
+    private void add(@Nonnull Component line) {
+        tooltip.add(line);
+        sink.accept(line);
     }
 
     // ==================== 各段 ====================
@@ -95,7 +109,7 @@ public final class Tip {
     @Nonnull
     public Tip head(@Nonnull ItemStack stack, @Nonnull String typeKey) {
         separator();
-        tooltip.add(Component.literal(HEAD + translate(typeKey) + " · " + translate(tierKey(stack.getRarity()))));
+        add(Component.literal(HEAD + translate(typeKey) + " · " + translate(tierKey(stack.getRarity()))));
         return this;
     }
 
@@ -105,7 +119,7 @@ public final class Tip {
     @Nonnull
     public Tip summary(@Nonnull String key, Object... args) {
         separator();
-        tooltip.add(Component.literal(BODY + translate(key, args)));
+        add(Component.literal(BODY + translate(key, args)));
         return this;
     }
 
@@ -116,7 +130,7 @@ public final class Tip {
     @Nonnull
     public Tip state(@Nonnull String key, Object... args) {
         separator();
-        tooltip.add(Component.literal(BULLET + translate(key, args)));
+        add(Component.literal(BULLET + translate(key, args)));
         return this;
     }
 
@@ -127,7 +141,7 @@ public final class Tip {
     public Tip usage(@Nonnull String... keys) {
         section(KEY_SECTION_USAGE, false);
         for (String key : keys) {
-            tooltip.add(Component.literal(BULLET + translate(key)));
+            add(Component.literal(BULLET + translate(key)));
         }
         return this;
     }
@@ -139,7 +153,7 @@ public final class Tip {
     public Tip params(@Nonnull String... keys) {
         section(KEY_SECTION_PARAMS, false);
         for (String key : keys) {
-            tooltip.add(Component.literal(BULLET + translate(key)));
+            add(Component.literal(BULLET + translate(key)));
         }
         return this;
     }
@@ -160,7 +174,7 @@ public final class Tip {
     public Tip warn(@Nonnull String... keys) {
         section(KEY_SECTION_NOTES, true);
         for (String key : keys) {
-            tooltip.add(Component.literal(WARN_BULLET + translate(key)));
+            add(Component.literal(WARN_BULLET + translate(key)));
         }
         return this;
     }
@@ -171,7 +185,7 @@ public final class Tip {
      */
     @Nonnull
     public Tip raw(@Nonnull Component line) {
-        tooltip.add(line);
+        add(line);
         return this;
     }
 
@@ -190,7 +204,7 @@ public final class Tip {
      */
     @Nonnull
     public Tip bullet(@Nonnull String key, Object... args) {
-        tooltip.add(Component.literal(BULLET + translate(key, args)));
+        add(Component.literal(BULLET + translate(key, args)));
         return this;
     }
 
@@ -233,7 +247,7 @@ public final class Tip {
      */
     private void section(@Nonnull String titleKey, boolean warnStyle) {
         separator();
-        tooltip.add(Component.literal((warnStyle ? SECTION_WARN : SECTION) + translate(titleKey)));
+        add(Component.literal((warnStyle ? SECTION_WARN : SECTION) + translate(titleKey)));
     }
 
     /**
@@ -245,7 +259,7 @@ public final class Tip {
             return;
         }
         if (!tooltip.isEmpty() && !tooltip.get(tooltip.size() - 1).getString().isEmpty()) {
-            tooltip.add(Component.empty());
+            add(Component.empty());
         }
     }
 
