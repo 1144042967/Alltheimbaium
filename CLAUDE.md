@@ -73,7 +73,7 @@
 - **不写**"右击打开 GUI""放下去即可生效"这类与原版方块一致的通用操作，也不写显而易见的说明。
 - **只写**：如何开始工作、如何配置、非显然的限制、具体数值。
 - 正文一律 `§7`，参数值一律 `§e`，警告一律 `§c`；段标题分隔符用 `■`。
-- 中英文语言文件的段落数与顺序**逐行对齐**，键集必须完全一致。
+- 48 份语言文件的键集与顺序必须完全一致（以 en_us 为基准），改完执行 `python tools/check_lang.py` 校验。
 
 用法：`Tip.of(tooltip).head(stack, "tip.alltheimbaium.type.xxx").summary(...).usage(...).params(...).warn(...)`。
 条目过多时（如农场的 27 行产物）用 `Tip.inline(entries, "tip.alltheimbaium.more")` 压成一行，或 `Tip.join(...)` 自行控制上限。
@@ -182,7 +182,7 @@ assets/alltheimbaium/models/item/<name>.json          物品模型（继承方�
 assets/alltheimbaium/blockstates/<name>.json          variants 通常只有 "" 一个分支
 data/alltheimbaium/loot_tables/blocks/<name>.json
 data/alltheimbaium/recipes/main/<name>.json
-assets/alltheimbaium/lang/zh_cn.json + en_us.json
+assets/alltheimbaium/lang/<语言码>.json（48 份）
 ```
 
 - 机器模型统一 `minecraft:block/cube_bottom_top` + `top` / `bottom` / `side` / `particle` 四个槽；单面贴图的方块（platform）用 `cube_all`；耕地类用 `minecraft:block/block` 手写 15/16 高的 `elements`（见 `models/block/farmland.json`），两者的 elements 结构完全一致，复制即可。
@@ -264,7 +264,11 @@ public class XxxItem extends BlockItem {
 - **含 2 个打包材料的配方一律把这两个材料放在中间一行的左右两端**（`BBB` / `XCX` / `BBB`，耕地类为 `FFF` / `XRX` / `FFF`），不要摆在四个角或对角线上；永恒系列因环上材料不单一，空出的上排两角补下界合金块（`ABA` / `XCX` / `BBB`）。
 - **改完配方必须同步配方总表**：执行 `python tools/gen_recipe_docs.py` 重新生成根目录的 `RECIPES.md`。该文件由脚本扫描全部配方 JSON 生成（按目录分类、自动列出内层配方类型与生效前置 MOD），**不要手改**——它是全项目配方的唯一索引，漏同步会导致文档与实际不符。
 - **有持久数据的机器**：战利品表要 `copy_name` + `copy_nbt`，把 `saveAdditional` 写下的每个键逐个搬到 `BlockEntityTag.<键>`，拆下重放才不丢数据。**无持久数据的机器**（platform / supply_crate / extraction_interface）用普通战利品表即可。
-- 语言文件 `zh_cn.json` 与 `en_us.json` **键集必须完全一致、段落顺序逐行对齐**，改完用脚本比对一次（键数相等且差集为空）。
+- 语言文件共 **48 份**（与 auto-resource 的语言列表一致，含 en_ud / lol_us 两个整活语言），
+  **键集与顺序必须完全一致、段落顺序逐行对齐**。`en_ud` 由 `python tools/gen_en_ud.py` 从 en_us 自动倒置生成，**不要手改**。
+  新增键时先用 `python tools/add_lang_keys.py` 的思路补齐全语言，改完执行 `python tools/check_lang.py`
+  （校验键集/顺序/`%s` 占位符；`§` 颜色码差异只报警告，因为改写语序时着色位置本就会移动）。
+  玩家可见的文本一律走语言键——`python tools/scan_hardcoded_text.py` 可扫出 Java 里残留的硬编码中文。
 
 ## 项目架构
 
@@ -607,7 +611,7 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 ## 资源文件
 
 - `src/main/resources/assets/alltheimbaium/blockstates/`、`models/block/`、`models/item/`、`textures/block/`、`textures/item/`
-- `src/main/resources/assets/alltheimbaium/lang/zh_cn.json` + `en_us.json` — 两份键集必须完全一致
+- `src/main/resources/assets/alltheimbaium/lang/` — 48 份语言文件（见上文「数据文件」一节的约定），键集必须完全一致；校验用 `tools/check_lang.py`
 - `src/main/resources/data/alltheimbaium/recipes/`（复数，1.20.1 正确）— 按来源分子目录：`main/` 本模组机器、`crafting/` 原版简化、`ae2/`、`mek/`、`mystical/`、`thermal/`、`blood/`、`create/`、`draconicevolution/`、`salvaging/`；**根目录下还有三个无子目录的 `.json`**，是代码驱动配方的类型标记（`smelting_craft` / `brewing_craft` / `potion_combine`）
 - `src/main/resources/data/alltheimbaium/loot_tables/blocks/`（复数）
 - 本模组机器配方统一写在 `recipes/main/`，`group` 统一为 `alltheimbaium`；成本随品级递增

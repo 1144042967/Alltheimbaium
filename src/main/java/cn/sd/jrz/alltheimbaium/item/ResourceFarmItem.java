@@ -110,7 +110,9 @@ public class ResourceFarmItem extends BlockItem {
                 }
                 BigDecimal speed = new BigDecimal(weight).multiply(new BigDecimal(level))
                         .divide(new BigDecimal(500), 3, RoundingMode.HALF_UP);
-                products.add("§e" + speed.stripTrailingZeros().toPlainString() + "/秒§7 " + rowStack.getHoverName().getString());
+                products.add("§e" + speed.stripTrailingZeros().toPlainString()
+                        + Component.translatable("item.alltheimbaium.tooltip.per_second").getString()
+                        + "§7 " + rowStack.getHoverName().getString());
             } catch (Throwable ignored) {
             }
         }
