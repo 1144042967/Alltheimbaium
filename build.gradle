@@ -29,8 +29,6 @@ runs {
     }
     client {
         systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        // 临时：自动进入既有存档，用于验证配方同步包能否编码
-        programArguments.addAll '--quickPlaySingleplayer', '26_1_2'
     }
     server {
         systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
@@ -48,8 +46,6 @@ dependencies {
     // JEI 是可选联动：只用 api 制品，不打进 jar、也不进运行时依赖
     compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
-    // 临时：把 JEI 本体拉进开发运行时，用于复现 ATM11 里的配方同步场景
-    localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:29.36.0.96"
 }
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
     var replaceProperties = [
@@ -96,9 +92,3 @@ idea {
 
 
 
-tasks.register('dumpCp') {
-    def cp = project.sourceSets.main.runtimeClasspath.asPath
-    doLast {
-        new File('C:/Users/10177/IdeaProjects/alltheimbaium-26.1.2/cp.txt').text = cp
-    }
-}
