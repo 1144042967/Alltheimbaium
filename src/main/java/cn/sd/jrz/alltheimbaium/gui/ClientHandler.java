@@ -1,6 +1,9 @@
 package cn.sd.jrz.alltheimbaium.gui;
 
+import cn.sd.jrz.alltheimbaium.setup.RecipeSource;
 import cn.sd.jrz.alltheimbaium.setup.Registration;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.RecipesReceivedEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
@@ -51,5 +54,25 @@ public class ClientHandler {
         event.registerBlockEntityRenderer(Registration.CLOCK_ENTITY.get(), ClockRenderer::new);
         event.registerBlockEntityRenderer(Registration.MOB_FARM_ENTITY.get(), MobFarmRenderer::new);
         event.registerBlockEntityRenderer(Registration.RESOURCE_FARM_ENTITY.get(), ResourceFarmRenderer::new);
+    }
+
+    /**
+     * 接收服务端同步来的配方子集（零刻熔炉的烧炼配方、零刻压印器的 AE2 压印配方）。
+     * <p>
+     * 26.x 起客户端不再持有完整配方表，这是客户端拿到这些配方的唯一途径；
+     * 服务端声明了哪些类型见 {@code setup/RecipeSync}。
+     * <p>
+     * 本监听器用默认优先级，早于 JEI 的（{@code EventPriority.LOWEST}）启动判定，
+     * 因此 JEI 装载配方时缓存已经就绪。连原版服务器时该事件会带空表触发，缓存随之清空。
+     */
+    @SubscribeEvent
+    public static void onRecipesReceived(RecipesReceivedEvent event) {
+        RecipeSource.setClientRecipes(event.getRecipeMap());
+    }
+
+    /** 断开连接后配方缓存即失效，清掉，避免下一个世界沿用上一个服务器的配方 */
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        RecipeSource.setClientRecipes(null);
     }
 }

@@ -25,7 +25,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.level.Level;
@@ -58,9 +57,10 @@ import java.util.Set;
  * 但"击杀掉落采样"（{@code KillLootEstimator}）需要 ServerLevel，客户端拿不到——
  * 因此生物农场这里只展示**白名单产物 + 刷怪蛋兜底**，白名单之外、只有采样结果的生物不会出现在 JEI 里。
  * <p>
- * <b>26.x 的额外限制</b>：客户端不再同步完整配方表（{@code ClientLevel.recipeAccess()} 只有属性集与切石机配方），
- * 因此零刻熔炉（读原版烧炼配方）与零刻压印器（读 AE2 配方，客户端同样读不到）三个分类会走空态。
- * 配置驱动的资源农场 / 生物农场 / 存储方块制造机不受影响。
+ * <b>26.x 的配方来源</b>：客户端不再持有完整配方表（{@code ClientLevel.recipeAccess()} 只有属性集与切石机配方），
+ * 零刻熔炉（原版烧炼配方）与零刻压印器（AE2 压印配方）这两类配方改由服务端按类型同步下来，
+ * 统一的读取入口是 {@link cn.sd.jrz.alltheimbaium.setup.RecipeSource}（服务端声明见 {@code setup/RecipeSync}）。
+ * 三个分类在客户端因此都能正常出数据。配置驱动的资源农场 / 生物农场 / 存储方块制造机不走配方表，不受影响。
  * <p>
  * 所有数据收集都单独 try-catch：任何一处解析失败只让那张卡空着，绝不让 JEI 崩在配方页上。
  */
@@ -269,13 +269,8 @@ public class AtiJeiPlugin implements IModPlugin {
         if (level == null) {
             return List.of();
         }
-        // 26.x：Level#getRecipeManager() 已删除，改走 Level#recipeAccess()；而 26.x 起客户端不再同步
-        // 完整配方表（ClientLevel.recipeAccess() 只有属性集与切石机配方），所以这里在客户端永远取不到
-        // RecipeManager，本分类会走空态。与 InstantInscriberEntity.recipeManager(level) 同一套判断。
-        if (!(level.recipeAccess() instanceof RecipeManager manager)) {
-            log.info("JEI：客户端没有完整配方表（26.x 起不再同步），零刻熔炉分类为空");
-            return List.of();
-        }
+        // 26.x：客户端不再持有完整配方表，烧炼配方由服务端按类型同步下来（见 RecipeSource / RecipeSync），
+        // 因此这里走 RecipeSource.all(level)：服务端取本机配方表，客户端取同步来的子集，两端都能出数据。
         List<ProcessingRecipe> out = new ArrayList<>();
         Set<Item> seenInputs = new HashSet<>();
         // 这一档不留任何文字：卡片只画"原料 → 产物"，耗能在机器 GUI 与物品 tooltip 里有
@@ -283,7 +278,7 @@ public class AtiJeiPlugin implements IModPlugin {
         for (RecipeType<? extends AbstractCookingRecipe> type : InstantFurnaceEntity.FURNACE_TYPES) {
             // 通配 RecipeType 下的类型捕获没法直接循环，用 InstantFurnaceEntity 里同样的未检查辅助方法摊平
             // （内部只做 .value() 过滤，类型由调用方保证）
-            for (RecipeHolder<? extends AbstractCookingRecipe> holder : InstantFurnaceEntity.getAllCookingRecipes(manager, type)) {
+            for (RecipeHolder<? extends AbstractCookingRecipe> holder : InstantFurnaceEntity.getAllCookingRecipes(level, type)) {
                 AbstractCookingRecipe recipe = holder.value();
                 // 26.x：getIngredients()/getResultItem() 已删除。烧炼配方只有唯一一个输入，
                 // 用 SingleItemRecipe#input() 取原料、assemble(...) 取产物（烧炼的产物的与输入无关）
@@ -319,6 +314,9 @@ public class AtiJeiPlugin implements IModPlugin {
 
     /**
      * 零刻压印器 · 压板模式：1 份中间原料 → 它支持的全部压板（一个独立类别，只列压板配方）。
+     * <p>
+     * 摘要方法内部读的是 {@link cn.sd.jrz.alltheimbaium.setup.RecipeSource}，
+     * 客户端因此能拿到服务端同步下来的 AE2 压印配方；未装 AE2 时为空。
      */
     @Nonnull
     private List<ProcessingRecipe> inscriberPressRecipes() {

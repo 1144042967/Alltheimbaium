@@ -5,13 +5,12 @@ import static cn.sd.jrz.alltheimbaium.setup.Registration.INSTANT_INSCRIBER_ITEM;
 import cn.sd.jrz.alltheimbaium.connection.InstantInscriberConnection;
 import cn.sd.jrz.alltheimbaium.gui.InstantInscriberMenu;
 import cn.sd.jrz.alltheimbaium.item.Tip;
+import cn.sd.jrz.alltheimbaium.setup.RecipeSource;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
-import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -26,10 +25,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.PlacementInfo;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.SlotDisplayContext;
@@ -56,6 +53,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -146,8 +144,8 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
     public int mode = MODE_INSCRIBE;
     public int findIndex = 0;
 
-    /** AE2 inscribe/press 配方缓存，随 RecipeManager 实例变化重建，避免每 tick 全表扫配方（AE2 未装为空列表） */
-    private RecipeManager recipeCacheManager;
+    /** AE2 inscribe/press 配方缓存，随配方表版本变化重建，避免每 tick 全表扫配方（AE2 未装为空列表） */
+    private Object recipeCacheStamp;
     private List<InscribeEntry> inscribeCache = new ArrayList<>();
     private List<AssemblyEntry> assemblyCache = new ArrayList<>();
 
@@ -349,29 +347,14 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
         return mode == MODE_ASSEMBLY ? runAssembly() : runInscribe();
     }
 
-    /** 缓存失效重建：RecipeManager 引用变化即重建（其余 tick / 切模式不再重扫配方表） */
+    /** 缓存失效重建：配方表版本变化即重建（其余 tick / 切模式不再重扫配方表） */
     private void ensureRecipeCache(Level level) {
-        RecipeManager rm = recipeManager(level);
-        if (rm != recipeCacheManager) {
-            recipeCacheManager = rm;
+        Object stamp = RecipeSource.stamp(level);
+        if (stamp != recipeCacheStamp) {
+            recipeCacheStamp = stamp;
             inscribeCache = readInscribe(level);
             assemblyCache = readAssembly(level);
         }
-    }
-
-    /**
-     * 取当前可用的配方管理器；取不到（客户端 / 未就绪）返回 null。
-     * <p>
-     * 26.x：{@code Level#getRecipeManager()} 已删除，改走 {@code Level#recipeAccess()}；且 26.x 起
-     * <b>客户端不再同步完整配方表</b>（{@code ClientLevel.recipeAccess()} 只有属性集与切石机配方），
-     * 因此客户端的帮助卡拿不到任何配方，会走空态文案。
-     */
-    @Nullable
-    private static RecipeManager recipeManager(@Nonnull Level level) {
-        if (level.isClientSide()) {
-            return null;
-        }
-        return level.recipeAccess() instanceof RecipeManager manager ? manager : null;
     }
 
     /**
@@ -538,41 +521,6 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
 
     // ==================== AE2 配方读取（可选联动，无 AE2 时不产出） ====================
 
-    @Nullable
-    private static RecipeType<?> findInscriberType(Level level) {
-        for (String id : new String[]{"ae2:inscriber", "appliedenergistics2:inscriber"}) {
-            try {
-                Identifier key = Identifier.tryParse(id);
-                if (key == null) {
-                    continue;
-                }
-                // 直接查内置注册表：RECIPE_TYPE 不是"带默认值"的注册表，未注册时 getValue 返回 null
-                RecipeType<?> type = BuiltInRegistries.RECIPE_TYPE.getValue(key);
-                if (type != null) {
-                    return type;
-                }
-                // 兜底：部分环境下 RECIPE_TYPE 只出现在 level 的 registryAccess 里
-                var registry = level.registryAccess().lookupOrThrow(Registries.RECIPE_TYPE);
-                if (registry != null) {
-                    type = registry.getValue(key);
-                    if (type != null) {
-                        return type;
-                    }
-                }
-            } catch (Throwable e) {
-                log.error("InstantInscriberEntity.findInscriberType error for {}", id, e);
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 取出配方本体。
-     * <p>
-     * 1.21 起 {@code RecipeManager#getAllRecipesFor} 返回的是 {@code RecipeHolder} 列表，
-     * 元素本身不是 {@code Recipe}——直接 {@code instanceof Recipe} 判类型会把整表跳过，
-     * 表现为"装了 AE2 却读不到任何配方"。
-     */
     /** 反射读取 Inscriber 配方 processType 名（INSCRIBE / PRESS），读不到返回 null */
     @Nullable
     private static String processName(Recipe<?> recipe) {
@@ -590,26 +538,41 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
     /**
      * 把配方的材料还原到"上 / 中 / 下"三个固定槽位。
      * <p>
-     * 26.x：{@code Recipe#getIngredients()} 已删除，改读 {@link PlacementInfo}——
-     * 它给的是"紧凑后的材料表 + 槽位到材料下标的映射"，按映射还原即可拿回原始槽位顺序。
+     * <b>不能用 {@code recipe.placementInfo()} 通用还原</b>：AE2 的压印配方基类
+     * {@code appeng.recipes.MechanicsRecipe} 把它固定覆写成 {@code PlacementInfo.NOT_PLACEABLE}
+     * ——压印器不是工作台式摆放，AE2 有意声明"配方书不可自动摆放"。照搬通用还原只会拿到空映射，
+     * 三格全是 null，表现为<b>装了 AE2 却一条配方都读不到</b>（1.20.1 时代读的是
+     * {@code getIngredients()}，该 API 在 26.x 已删除，这里踩的就是这个坑）。
+     * <p>
+     * 改用 AE2 自己的公开访问器，语义与槽位一一对应：
+     * {@code getTopOptional()} / {@code getMiddleInput()} / {@code getBottomOptional()}。
+     * 三者都是 AE2 的稳定公开 API（{@code InscriberRecipe} 上可直接反射调用）。
      */
     @Nonnull
     private static Ingredient[] positionalIngredients(@Nonnull Recipe<?> recipe) {
         Ingredient[] slots = new Ingredient[3];
-        try {
-            PlacementInfo info = recipe.placementInfo();
-            List<Ingredient> ingredients = info.ingredients();
-            IntList mapping = info.slotsToIngredientIndex();
-            for (int slot = 0; slot < mapping.size() && slot < slots.length; slot++) {
-                int index = mapping.getInt(slot);
-                if (index >= 0 && index < ingredients.size()) {
-                    slots[slot] = ingredients.get(index);
-                }
-            }
-        } catch (Throwable e) {
-            log.error("InstantInscriberEntity.positionalIngredients error", e);
-        }
+        slots[0] = callIngredient(recipe, "getTopOptional");
+        slots[1] = callIngredient(recipe, "getMiddleInput");
+        slots[2] = callIngredient(recipe, "getBottomOptional");
         return slots;
+    }
+
+    /**
+     * 反射调用 AE2 压印配方的一个材料访问器，支持两种返回形式：
+     * 直接返回 {@code Ingredient}（如 {@code getMiddleInput}）与返回
+     * {@code Optional<Ingredient>}（如 {@code getTopOptional}）。
+     * 读不到（非 AE2 压印配方 / 方法改名）返回 null，按"该槽位为空"处理。
+     */
+    @Nullable
+    private static Ingredient callIngredient(@Nonnull Recipe<?> recipe, @Nonnull String method) {
+        try {
+            Object value = recipe.getClass().getMethod(method).invoke(recipe);
+            Object ingredient = value instanceof Optional<?> optional ? optional.orElse(null) : value;
+            return ingredient instanceof Ingredient ing ? ing : null;
+        } catch (Throwable e) {
+            // 忽略：非 AE2 压印配方或无该方法
+            return null;
+        }
     }
 
     /**
@@ -636,13 +599,12 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
     /** 读取全部 inscribe(压板) 配方：middle=消耗原料、输出=结果 */
     private static List<InscribeEntry> readInscribe(Level level) {
         List<InscribeEntry> result = new ArrayList<>();
-        RecipeType<?> type = findInscriberType(level);
-        RecipeManager manager = recipeManager(level);
-        if (type == null || manager == null) {
+        RecipeType<?> type = RecipeSource.findAe2InscriberType(level);
+        if (type == null) {
             return result;
         }
         try {
-            for (RecipeHolder<?> holder : manager.getRecipes()) {
+            for (RecipeHolder<?> holder : RecipeSource.all(level)) {
                 try {
                     Recipe<?> recipe = holder.value();
                     if (recipe.getType() != type || !"INSCRIBE".equals(processName(recipe))) {
@@ -672,13 +634,12 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
     /** 读取全部 press(组装) 配方：消耗 top/middle/bottom 全部非空材料 */
     private static List<AssemblyEntry> readAssembly(Level level) {
         List<AssemblyEntry> result = new ArrayList<>();
-        RecipeType<?> type = findInscriberType(level);
-        RecipeManager manager = recipeManager(level);
-        if (type == null || manager == null) {
+        RecipeType<?> type = RecipeSource.findAe2InscriberType(level);
+        if (type == null) {
             return result;
         }
         try {
-            for (RecipeHolder<?> holder : manager.getRecipes()) {
+            for (RecipeHolder<?> holder : RecipeSource.all(level)) {
                 try {
                     Recipe<?> recipe = holder.value();
                     if (recipe.getType() != type || !"PRESS".equals(processName(recipe))) {
@@ -732,8 +693,8 @@ public class InstantInscriberEntity extends BlockEntity implements MenuProvider 
      *     <li><b>去重</b>：计算后 (输入, 产物) 完全一致的组合只保留一份；</li>
      *     <li><b>按输入聚合</b>：输入的注册名相同的产物并进同一条，界面上就是一行。</li>
      * </ol>
-     * <b>26.x 注意</b>：客户端不再同步完整配方表（{@code ClientLevel.recipeAccess()} 只有属性集与切石机配方），
-     * 因此这个方法在客户端会返回空列表，界面走空态文案；未装 AE2 时同样为空。
+     * <b>26.x 注意</b>：客户端不再持有完整配方表，本方法在客户端读的是服务端同步下来的子集
+     * （见 {@link RecipeSource}）——只要服务端装了 AE2 就有数据；未装 AE2 或同步未到达时才为空。
      */
     @Nonnull
     public static List<PressSummary> inscribeSummaries(@Nonnull Level level) {

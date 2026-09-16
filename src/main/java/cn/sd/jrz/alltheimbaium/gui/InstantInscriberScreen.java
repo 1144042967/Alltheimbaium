@@ -1,6 +1,7 @@
 package cn.sd.jrz.alltheimbaium.gui;
 
 import cn.sd.jrz.alltheimbaium.entity.InstantInscriberEntity;
+import cn.sd.jrz.alltheimbaium.setup.RecipeSource;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -78,7 +79,7 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     private int helpX2 = 0;
     private int helpPageA = 0;
     private int helpPageB = 0;
-    /** 配方摘要缓存：客户端 RecipeManager 在会话内不变，首次用到时取一次 */
+    /** 配方摘要缓存：服务端同步下来的配方表在会话内不变，首次用到时取一次 */
     private List<InstantInscriberEntity.PressSummary> pressRecipes;
     private List<InstantInscriberEntity.RecipeSummary> assemblyRecipes;
 
@@ -263,11 +264,15 @@ public class InstantInscriberScreen extends AbstractContainerScreen<InstantInscr
     // ==================== 两个 "?" 配方帮助卡 ====================
 
     /**
-     * 压板模式配方摘要。客户端 {@code RecipeManager} 在会话内不变，取到一次就缓存。
+     * 压板模式配方摘要。客户端读的是服务端同步下来的 AE2 压印配方（见 {@code setup/RecipeSource}），
+     * 一次会话内不重载，取到一次就缓存。
+     * <p>
+     * 同步尚未到达时（配方缓存为空）不缓存，留待下次取用重算——否则那一份空结果会一直沿用到会话结束。
      */
     @Nonnull
     private List<InstantInscriberEntity.PressSummary> pressRecipes() {
-        if (this.pressRecipes == null && this.minecraft != null && this.minecraft.level != null) {
+        if (this.pressRecipes == null && this.minecraft != null && this.minecraft.level != null
+                && RecipeSource.clientRecipesReady()) {
             this.pressRecipes = InstantInscriberEntity.inscribeSummaries(this.minecraft.level);
             this.assemblyRecipes = InstantInscriberEntity.assemblySummaries(this.minecraft.level);
         }

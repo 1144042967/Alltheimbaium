@@ -5,6 +5,7 @@ import static cn.sd.jrz.alltheimbaium.setup.Registration.INSTANT_FURNACE_ITEM;
 import cn.sd.jrz.alltheimbaium.connection.InstantFurnaceConnection;
 import cn.sd.jrz.alltheimbaium.gui.InstantFurnaceMenu;
 import cn.sd.jrz.alltheimbaium.item.Tip;
+import cn.sd.jrz.alltheimbaium.setup.RecipeSource;
 import cn.sd.jrz.alltheimbaium.setup.Tool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -286,24 +287,24 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
 
     // ==================== 熔炼（每 tick 批量） ====================
 
-    /** 烧炼配方结果缓存：Item → 产物（EMPTY = 不可烧哨兵）；随 RecipeManager 实例变化重建，避免每 tick 全表扫配方 */
-    private RecipeManager cookCacheManager;
+    /** 烧炼配方结果缓存：Item → 产物（EMPTY = 不可烧哨兵）；随配方表版本变化重建，避免每 tick 全表扫配方 */
+    private Object cookCacheStamp;
     private final Map<Item, ItemStack> cookCache = new HashMap<>();
 
     private void ensureCookCache(@Nonnull Level level) {
-        RecipeManager rm = recipeManager(level);
-        if (rm != cookCacheManager) {
-            cookCacheManager = rm;
+        Object stamp = RecipeSource.stamp(level);
+        if (stamp != cookCacheStamp) {
+            cookCacheStamp = stamp;
             cookCache.clear();
         }
     }
 
     /**
-     * 取当前可用的配方管理器。
+     * 取服务端的完整配方管理器，用于按输入精确查表（{@code getRecipeFor}）。
      * <p>
-     * 26.x：{@code Level#getRecipeManager()} 已删除，改走 {@code Level#recipeAccess()}；而 26.x 起
-     * <b>客户端不再同步完整配方表</b>（{@code ClientLevel.recipeAccess()} 只有属性集与切石机配方），
-     * 因此这里做类型判定，取不到时按"没有配方"处理。熔炉的产物查询本来就只在服务端生效。
+     * 26.x：{@code Level#getRecipeManager()} 已删除，改走 {@code Level#recipeAccess()}；且客户端持有的
+     * 不是 {@code RecipeManager}，这里直接判类型并只在服务端返回。客户端的配方展示走
+     * {@link RecipeSource}（服务端同步下来的子集），但熔炼本身只在服务端发生，用不到它。
      */
     @Nullable
     private static RecipeManager recipeManager(@Nonnull Level level) {
@@ -360,12 +361,13 @@ public class InstantFurnaceEntity extends BlockEntity implements MenuProvider {
      * 通配 {@code RecipeType<? extends AbstractCookingRecipe>} 下的配方表读取（消除类型捕获带来的编译错误）。
      * <p>
      * 26.x：{@code RecipeManager#getAllRecipesFor} 已删除，改成从全表里按配方类型筛。
+     * 数据源走 {@link RecipeSource}，因此客户端（JEI 展示）也能读到服务端同步下来的烧炼配方。
      */
     @SuppressWarnings("unchecked")
     public static List<RecipeHolder<? extends AbstractCookingRecipe>> getAllCookingRecipes(
-            @Nonnull RecipeManager manager, @Nonnull RecipeType<? extends AbstractCookingRecipe> type) {
+            @Nonnull Level level, @Nonnull RecipeType<? extends AbstractCookingRecipe> type) {
         List<RecipeHolder<? extends AbstractCookingRecipe>> list = new ArrayList<>();
-        for (RecipeHolder<?> holder : manager.getRecipes()) {
+        for (RecipeHolder<?> holder : RecipeSource.all(level)) {
             if (holder.value() instanceof AbstractCookingRecipe cooking && cooking.getType() == type) {
                 list.add((RecipeHolder<? extends AbstractCookingRecipe>) holder);
             }
