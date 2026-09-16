@@ -27,7 +27,7 @@
   "item.alltheimbaium.auto_farmland.warn.1": "頂面的右鍵交互保留給種植，介面需從側面或底面開啟",
   "item.alltheimbaium.clock.summary": "額外驅動相鄰機器，最高以 §e1024 倍§7 速度運行。",
   "item.alltheimbaium.clock.usage.1": "只對帶有方塊實體的機器生效；一般方塊的隨機刻固定只額外觸發 §e1 次§7",
-  "item.alltheimbaium.clock.usage.2": "六個方向可逐一開關，速度範圍為 §e2 ~ 1024§7　共　§e10 檔",
+  "item.alltheimbaium.clock.usage.2": "六個方向可逐一開關，速度範圍為 §e2 ~ 1024§7，共 §e10 檔",
   "item.alltheimbaium.clock.usage.3": "全域開關對所有時鐘同時生效，重新登入後會恢復預設",
   "item.alltheimbaium.clock.warn.1": "不會加速其他加速時鐘，避免互相疊加",
   "item.alltheimbaium.creative_transmuter.param.1": "每份配方消耗 §e9 個§7 材料，產出 §e1 個§7 產物",
