@@ -22,8 +22,8 @@ import java.util.function.IntSupplier;
 /**
  * 零刻压印器容器。
  * <p>
- * 槽位：0~17 输入行（两行）、18~26 输出行（一行 9）、27~62 玩家背包。
- * 数据槽同步 能量/六面状态/模式/18 输入 + 9 输出的 物品id+存量(long)。
+ * 槽位：0~17 输入行（两行）、18~35 输出行（两行 9）、36~71 玩家背包。
+ * 数据槽同步 能量/六面状态/模式/18 输入 + 18 输出的 物品id+存量(long)。
  * 交互：点击虚拟格取物、点输入格投料、背包 Shift 投料、模式切换、六面推送开关。
  */
 public class InstantInscriberMenu extends AbstractContainerMenu {
@@ -41,8 +41,8 @@ public class InstantInscriberMenu extends AbstractContainerMenu {
     public static final int SLOT_OUTPUT_BASE = InstantInscriberEntity.INPUT_MAX_TYPES;
     public static final int SLOT_PLAYER_BASE = InstantInscriberEntity.INPUT_MAX_TYPES + InstantInscriberEntity.OUTPUT_MAX_TYPES;
 
-    /** GUI 总高度（像素），对应 176×196 贴图 */
-    public static final int IMAGE_HEIGHT = 196;
+    /** GUI 总高度（像素），对应 176×214 贴图 */
+    public static final int IMAGE_HEIGHT = 214;
 
     public final InstantInscriberEntity entity;
 
@@ -64,11 +64,11 @@ public class InstantInscriberMenu extends AbstractContainerMenu {
         for (int i = 0; i < InstantInscriberEntity.INPUT_MAX_TYPES; i++) {
             addSlot(new RowSlot(i, true, 8 + (i % 9) * 18, 26 + (i / 9) * 18));
         }
-        // 输出行 18~26：一行 9（y 83）
+        // 输出行 18~35：两行 9（y 83 / 101）
         for (int i = 0; i < InstantInscriberEntity.OUTPUT_MAX_TYPES; i++) {
-            addSlot(new RowSlot(i, false, 8 + i * 18, 83));
+            addSlot(new RowSlot(i, false, 8 + (i % 9) * 18, 83 + (i / 9) * 18));
         }
-        // 玩家背包 27~62
+        // 玩家背包 36~71
         addPlayerInventory(playerInventory);
 
         // 数据同步
