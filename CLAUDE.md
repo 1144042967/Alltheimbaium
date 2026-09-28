@@ -470,8 +470,9 @@ src/main/java/cn/sd/jrz/alltheimbaium/
 读 AE2 `ae2:inscriber`（兼容旧 id `appliedenergistics2:inscriber`）配方；**未装 AE2 则配方缓存为空、不产出**。
 
 - **压板模式 `MODE_INSCRIBE`（默认）**：取 `processType=INSCRIBE` 配方，只认 `getIngredients().get(1)`（middle）作为被消耗的原料；**上/下模板既不要求也不消耗**。每消耗 1 份原料，产出该原料命中的全部压板配方各一份
-- **组装模式 `MODE_ASSEMBLY`**：取 `processType=PRESS` 配方，消耗 top/middle/bottom 中全部非空材料；**3 材料配方优先于 2 材料**，外层循环直到无配方可执行（guard 1024）
-- 每件产物 1000 FE，上限 2,000,000,000 FE（20 亿）；输入 **18 种**、输出 **9 种**
+- **组装模式 `MODE_ASSEMBLY`**：取 `processType=PRESS` 配方，消耗 top/middle/bottom 中全部非空材料；按 `nonEmpty` 降序执行（**3 → 2 → 1**），外层循环直到无配方可执行（guard 1024）。**必须全取值**：AE2 允许 top/bottom 都为空、只吃中间那格的一材料配方（AdvancedAE 的破碎奇点 → 量子注入粉、AE2 的 `simple_circuit_print` 都是），只挑 2 和 3 会让它们永远不执行
+- 每件产物 1000 FE，上限 2,000,000,000 FE（20 亿）；输入 **18 种**、输出 **18 种**（两行 9；`InstantInscriberMenu` 输出槽 y=83/101、`IMAGE_HEIGHT = 214`、贴图 176×214）
+  - **输出上限不能小于"单份原料在压板模式下的最大命中数"**。压板模式一次产出命中全部模板，命中数超过上限时 `canFitOutputTypes` 永远为 false：机器既不产出、也不报错，看起来就是"这台机器坏了"。大整合包里光铁块就能命中 10 套模板（AE2 基础 4 压板 + AdvancedAE / appflux / megacells / appgen / 数据能源学各一 + NeoEcoAE 走 `c:storage_blocks/iron` 标签的那条），所以上限从 9 提到 18
 - 交互与零刻熔炉同构：`BUTTON_MODE` 切模式、`BUTTON_DEPOSIT_INPUT` 投料、三档取出、六面推送/禁用两态；**六面默认全为禁用**（同熔炉）
 - **标题栏右侧两个 "?" 帮助卡**（参考 `MobFarmScreen`）：左=压板配方、右=组装配方；点击可翻页，纯客户端逻辑。
   - 配方数据来自 `InstantInscriberEntity.inscribeSummaries(level)` / `assemblySummaries(level)`——**客户端可用**，因为 `ClientLevel.getRecipeManager()` 返回登录时同步下来的配方管理器（与 JEI、配方书同源）。未装 AE2 时返回空列表，卡片显示"未安装 AE2"。

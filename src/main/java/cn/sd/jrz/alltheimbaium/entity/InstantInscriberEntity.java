@@ -63,7 +63,7 @@ import java.util.Set;
  *     <li>{@link #MODE_INSCRIBE 压板}：读取 AE2 <code>mode:inscribe</code> 配方。模板(top/bottom)不消耗，
  *         每消耗 1 份原料(middle 命中物)，同时生成它支持的所有配方各一份产物；</li>
  *     <li>{@link #MODE_ASSEMBLY 组装}：读取 AE2 <code>mode:press</code> 配方，消耗其全部输入材料，
- *         优先级 = 3 种材料配方先于 2 种材料配方。</li>
+ *         优先级 = 材料数多的配方先于材料数少的（3 → 2 → 1，1 种材料的压印配方也是合法配方）。</li>
  * </ul>
  * 生成无耗时：每 tick 服务端按当前模式对输入做一轮批量合成（按优先级直到无配方可做），每生成一件扣
  * {@link #ENERGY_PER_OP} FE（上限 {@link #MAX_ENERGY}），合成完成后执行输出推送；
@@ -79,12 +79,19 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
     public static final int MAX_ENERGY = 2_000_000_000;
     public static final int ENERGY_PER_OP = 1000;
     public static final int INPUT_MAX_TYPES = 18;
-    public static final int OUTPUT_MAX_TYPES = 9;
+    /**
+     * 输出行上限：18（两行 9）。
+     * <p>
+     * 不能小于"单份原料在压板模式下的最大命中数"——一个物品可能同时命中多套模板，
+     * 大整合包里（基础 4 压板 + 各 AE 扩展）轻松超过 9 种。上限一旦小于命中数，
+     * {@link #canFitOutputTypes} 会永远为 false，该原料就再也不出产、也不报错。
+     */
+    public static final int OUTPUT_MAX_TYPES = 18;
 
     // 模式
     /** 压板：AE2 mode:inscribe（模板不消耗，耗 1 原料产出全部命中结果） */
     public static final int MODE_INSCRIBE = 0;
-    /** 组装：AE2 mode:press（消耗全部材料，先 3 后 2） */
+    /** 组装：AE2 mode:press（消耗全部材料，材料多的配方优先） */
     public static final int MODE_ASSEMBLY = 1;
     public static final int MODE_COUNT = 2;
 
@@ -390,29 +397,24 @@ public class InstantInscriberEntity extends BlockEntity implements ICapabilityPr
 
     /**
      * 组装模式批量合成：消耗配方全部输入材料生成结果。
-     * 优先级 = 3 材料配方先于 2 材料配方；每个配方按整批算完，外层 do-while 直到某轮无配方可执行
-     * （guard 仅防未来回归）。
+     * 优先级 = 材料数多的配方先于材料数少的（3 → 2 → 1）；每个配方按整批算完，
+     * 外层 do-while 直到某轮无配方可执行（guard 仅防未来回归）。
+     * <p>
+     * 材料数必须按<b>全部取值</b>排序，不能只挑 2 和 3：AE2 允许 top/bottom 都为空、
+     * 只吃中间那格的一材料压印配方（如 AdvancedAE 的破碎奇点 → 量子注入粉），
+     * 漏掉 1 会让这类配方永远不执行。
      */
     private boolean runAssembly() {
         if (assemblyCache.isEmpty()) {
             return false;
         }
-        List<AssemblyEntry> three = new ArrayList<>();
-        List<AssemblyEntry> two = new ArrayList<>();
-        for (AssemblyEntry entry : assemblyCache) {
-            if (entry.nonEmpty == 3) {
-                three.add(entry);
-            } else if (entry.nonEmpty == 2) {
-                two.add(entry);
-            }
-        }
+        List<AssemblyEntry> ordered = new ArrayList<>(assemblyCache);
+        ordered.sort(Comparator.comparingInt((AssemblyEntry entry) -> -entry.nonEmpty));
         boolean moved = false;
         int guard = 0;
         boolean progressed;
         do {
-            progressed = false;
-            progressed |= runExecutables(three); // 3 材料优先，直到本轮该组无配方可执行
-            progressed |= runExecutables(two);
+            progressed = runExecutables(ordered);
             if (progressed) {
                 moved = true;
             }
